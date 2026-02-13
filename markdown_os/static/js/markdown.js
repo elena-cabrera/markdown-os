@@ -1,5 +1,14 @@
 (() => {
   const panZoomKey = "data-panzoom-initialized";
+  const mermaidState = {
+    initialized: false,
+    theme: null,
+  };
+  function currentMermaidTheme() {
+    return document.documentElement.getAttribute("data-theme") === "dark"
+      ? "dark"
+      : "default";
+  }
 
   function configureMarked() {
     if (!window.marked) {
@@ -106,18 +115,35 @@
   }
 
   function ensureMermaidInitialized() {
-    if (!window.mermaid || ensureMermaidInitialized.initialized) {
+    if (!window.mermaid) {
+      return;
+    }
+
+    const theme = currentMermaidTheme();
+    if (mermaidState.initialized && mermaidState.theme === theme) {
       return;
     }
 
     window.mermaid.initialize({
       startOnLoad: false,
       securityLevel: "loose",
-      theme: "default",
+      theme,
     });
-    ensureMermaidInitialized.initialized = true;
+    mermaidState.initialized = true;
+    mermaidState.theme = theme;
   }
-  ensureMermaidInitialized.initialized = false;
+
+  function renderMermaidErrorBlocks(preview) {
+    preview
+      .querySelectorAll(".mermaid-container .mermaid")
+      .forEach((mermaidElement) => {
+        const container = mermaidElement.parentElement;
+        if (!container) {
+          return;
+        }
+        container.innerHTML = `<div class="mermaid-error">Invalid mermaid syntax:\n${mermaidElement.getAttribute("data-original-content") || mermaidElement.textContent || ""}</div>`;
+      });
+  }
 
   async function renderMermaidDiagrams() {
     if (!window.mermaid) {
@@ -145,7 +171,9 @@
 
       const mermaidElement = document.createElement("div");
       mermaidElement.className = "mermaid";
-      mermaidElement.textContent = codeElement.textContent || "";
+      const sourceContent = codeElement.textContent || "";
+      mermaidElement.textContent = sourceContent;
+      mermaidElement.setAttribute("data-original-content", sourceContent);
 
       mermaidContainer.appendChild(mermaidElement);
       preElement.replaceWith(mermaidContainer);
@@ -157,15 +185,46 @@
       });
     } catch (error) {
       console.error("Mermaid rendering error.", error);
-      preview
-        .querySelectorAll(".mermaid-container .mermaid")
-        .forEach((mermaidElement) => {
-          const container = mermaidElement.parentElement;
-          if (!container) {
-            return;
-          }
-          container.innerHTML = `<div class="mermaid-error">Invalid mermaid syntax:\n${mermaidElement.textContent || ""}</div>`;
-        });
+      renderMermaidErrorBlocks(preview);
+    }
+  }
+
+  async function rerenderMermaidDiagramsForTheme() {
+    if (!window.mermaid) {
+      return;
+    }
+
+    const preview = document.getElementById("markdown-preview");
+    if (!preview) {
+      return;
+    }
+
+    const mermaidElements = preview.querySelectorAll(
+      ".mermaid-container .mermaid[data-original-content]",
+    );
+    if (mermaidElements.length === 0) {
+      return;
+    }
+
+    ensureMermaidInitialized();
+    mermaidElements.forEach((mermaidElement) => {
+      const sourceContent = mermaidElement.getAttribute("data-original-content");
+      if (!sourceContent) {
+        return;
+      }
+
+      mermaidElement.removeAttribute("data-processed");
+      mermaidElement.textContent = sourceContent;
+    });
+
+    try {
+      await window.mermaid.run({
+        querySelector: ".mermaid-container .mermaid",
+      });
+      applyZoomToDiagrams();
+    } catch (error) {
+      console.error("Mermaid re-rendering error.", error);
+      renderMermaidErrorBlocks(preview);
     }
   }
 
@@ -204,6 +263,10 @@
       window.generateTOC();
     }
   }
+
+  window.addEventListener("markdown-os:theme-changed", () => {
+    rerenderMermaidDiagramsForTheme();
+  });
 
   configureMarked();
   window.renderMarkdown = renderMarkdown;
