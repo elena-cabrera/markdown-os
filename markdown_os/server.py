@@ -177,17 +177,28 @@ class MarkdownFileEventHandler(FileSystemEventHandler):
         if event.is_directory:
             return
 
-        event_path = getattr(event, "dest_path", event.src_path)
+        # Get the event path, preferring dest_path for move events, but only if non-empty
+        event_path = getattr(event, "dest_path", None) or event.src_path
+
+        # Debug logging
+        print(f"[Watchdog] Event type: {event.event_type}")
+        print(f"[Watchdog] Event path: '{event_path}'")
+        print(f"[Watchdog] Target file: '{self._target_file}'")
+
         if not self._is_target(event_path):
+            print(f"[Watchdog] Event ignored: not target file")
             return
 
         if self._should_ignore():
+            print(f"[Watchdog] Event ignored: within 0.5s of internal write")
             return
 
         now = time.monotonic()
         if now - self._last_notified_at < 0.2:
+            print(f"[Watchdog] Event throttled: too soon after last notification")
             return
 
+        print(f"[Watchdog] Event accepted: notifying clients")
         self._last_notified_at = now
         self._notify_callback()
 
@@ -257,9 +268,14 @@ def create_app(file_handler: FileHandler) -> FastAPI:
             should_ignore=lambda: _should_ignore_watcher_event(app),
         )
 
+        watch_path = str(app.state.file_handler.filepath.parent)
+        target_file = app.state.file_handler.filepath
+        print(f"[Watchdog] Starting observer for: {target_file}")
+        print(f"[Watchdog] Watching directory: {watch_path}")
+
         observer.schedule(
             event_handler,
-            path=str(app.state.file_handler.filepath.parent),
+            path=watch_path,
             recursive=False,
         )
         observer.start()
@@ -267,6 +283,7 @@ def create_app(file_handler: FileHandler) -> FastAPI:
         try:
             yield
         finally:
+            print(f"[Watchdog] Stopping observer")
             observer.stop()
             observer.join(timeout=3)
 
@@ -386,14 +403,17 @@ async def _broadcast_external_change(app: FastAPI) -> None:
     - None: Sends a websocket message when fresh file content can be read.
     """
 
+    print(f"[Watchdog] Broadcasting external change to websocket clients")
     try:
         content = app.state.file_handler.read()
     except FileReadError:
+        print(f"[Watchdog] Failed to read file for broadcast")
         return
 
     await app.state.websocket_hub.broadcast_json(
         {"type": "file_changed", "content": content}
     )
+    print(f"[Watchdog] Broadcast complete")
 
 
 def _status_for_read_error(error: FileReadError) -> int:
