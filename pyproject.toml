@@ -25,3 +25,4 @@ markdown-os = "markdown_os.cli:run"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
