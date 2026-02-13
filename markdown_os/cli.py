@@ -13,7 +13,25 @@ import uvicorn
 from markdown_os.file_handler import FileHandler
 from markdown_os.server import create_app
 
-app = typer.Typer(help="Open and edit markdown files in a local browser UI.")
+app = typer.Typer(
+    help="Open and edit markdown files in a local browser UI.",
+    no_args_is_help=True,
+)
+
+
+@app.callback()
+def markdown_os() -> None:
+    """
+    Provide a command group root for Markdown-OS subcommands.
+
+    Args:
+    - None (None): This callback receives no positional arguments.
+
+    Returns:
+    - None: Callback only exists to preserve explicit subcommands.
+    """
+
+    return
 
 
 def _validate_markdown_file(filepath: Path) -> Path:

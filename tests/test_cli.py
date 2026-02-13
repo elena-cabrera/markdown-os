@@ -5,8 +5,9 @@ from pathlib import Path
 
 import pytest
 import typer
+from typer.testing import CliRunner
 
-from markdown_os.cli import _validate_markdown_file, find_available_port
+from markdown_os.cli import _validate_markdown_file, app, find_available_port
 
 
 def test_validate_markdown_file_returns_resolved_path(tmp_path: Path) -> None:
@@ -67,3 +68,21 @@ def test_find_available_port_skips_bound_port() -> None:
 
     assert discovered_port != occupied_port
     assert discovered_port > occupied_port
+
+
+def test_cli_exposes_open_subcommand() -> None:
+    """
+    Verify CLI help shows the explicit open subcommand entry.
+
+    Args:
+    - None (None): Test uses Typer's in-process CLI runner.
+
+    Returns:
+    - None: Assertion validates command-group style help output.
+    """
+
+    runner = CliRunner()
+    result = runner.invoke(app, ["--help"])
+
+    assert result.exit_code == 0
+    assert "open" in result.stdout
