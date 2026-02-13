@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Markdown-OS is a developer-focused, CLI-driven markdown editor that runs as a local web server. It provides real-time editing with live preview, Mermaid diagram support, syntax highlighting, and auto-saving.
+Markdown-OS is a developer-focused, CLI-driven markdown editor that runs as a local web server. It provides real-time editing with live preview, Mermaid diagram support, syntax highlighting, auto-saving, and light/dark theme switching.
 
 **Tech Stack:**
 - Backend: Python 3.11+ with FastAPI, Typer CLI, Uvicorn ASGI server, Watchdog for file monitoring
@@ -90,6 +90,7 @@ External file change → Watchdog detects → WebSocket notifies browser
 - **index.html**: Main editor page with tabbed interface (Edit/Preview modes)
 - **js/editor.js**: Content loading, tab switching, auto-save with 1s debouncing
 - **js/markdown.js**: Markdown rendering with Marked.js, Mermaid diagram rendering, syntax highlighting, code block enhancements (copy button, language labels)
+- **js/theme.js**: Theme preference management, system preference detection, highlight theme switching, Mermaid re-render trigger
 - **js/toc.js**: Auto-generated table of contents from headings with smooth scrolling
 - **js/websocket.js**: WebSocket connection for external file change notifications
 - **css/styles.css**: Layout and styling
@@ -114,6 +115,12 @@ External file change → Watchdog detects → WebSocket notifies browser
 - Preview updates immediately on editor input (not debounced)
 - Save status indicator shows "Saving...", "Saved", or error states
 - Server timestamps internal writes to distinguish from external changes
+
+#### Theme Behavior
+- Theme defaults to system preference (`prefers-color-scheme`) when no manual choice exists
+- Manual theme toggles are persisted in `localStorage` key `markdown-os-theme`
+- Syntax highlighting switches between `github` and `github-dark` highlight.js stylesheets
+- Mermaid diagrams are re-rendered on theme changes using source stored in `data-original-content`
 
 ## Testing Conventions
 
