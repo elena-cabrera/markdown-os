@@ -200,13 +200,9 @@ def test_generate_example_open_flag_calls_open_command(
     """
 
     output_path = tmp_path / "showcase.md"
-    call_log: dict[str, Path] = {}
+    call_log: dict[str, object] = {}
 
-    def _fake_open_markdown_file(
-        filepath: Path,
-        host: str = "127.0.0.1",
-        port: int = 8000,
-    ) -> None:
+    def _fake_open_markdown_file(filepath: Path, host: str, port: int) -> None:
         """
         Capture open command arguments during test execution.
 
@@ -219,9 +215,9 @@ def test_generate_example_open_flag_calls_open_command(
         - None: Stores filepath in a local call log for assertions.
         """
 
-        del host
-        del port
         call_log["filepath"] = filepath
+        call_log["host"] = host
+        call_log["port"] = port
 
     monkeypatch.setattr(cli_module, "open_markdown_file", _fake_open_markdown_file)
     runner = CliRunner()
@@ -231,6 +227,8 @@ def test_generate_example_open_flag_calls_open_command(
     assert result.exit_code == 0
     assert "Opening in editor..." in result.stdout
     assert call_log["filepath"] == output_path.resolve()
+    assert call_log["host"] == "127.0.0.1"
+    assert call_log["port"] == 8000
 
 
 def test_generate_example_reports_missing_template(

@@ -240,7 +240,11 @@ def generate_example(
 
     if open_after:
         typer.echo("Opening in editor...")
-        open_markdown_file(filepath=resolved_output)
+        open_markdown_file(
+            filepath=resolved_output,
+            host="127.0.0.1",
+            port=8000,
+        )
 
 
 def run() -> None:
