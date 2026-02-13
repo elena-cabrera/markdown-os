@@ -20,6 +20,12 @@ uv sync
 # Run the editor
 uv run markdown-os open ./notes.md
 
+# Generate a feature showcase markdown file
+uv run markdown-os example
+
+# Generate showcase and open it immediately
+uv run markdown-os example --open
+
 # Run all tests
 uv run pytest
 

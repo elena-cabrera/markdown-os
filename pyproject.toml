@@ -33,3 +33,6 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["markdown_os"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"markdown_os/templates" = "markdown_os/templates"
