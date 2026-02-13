@@ -7,6 +7,7 @@ import threading
 import webbrowser
 from importlib.resources import files
 from pathlib import Path
+from typing import Annotated
 
 import typer
 import uvicorn
@@ -150,10 +151,20 @@ def _load_example_template() -> str:
 @app.command("open")
 def open_markdown_file(
     filepath: Path = typer.Argument(..., help="Path to a .md file."),
-    host: str = typer.Option("127.0.0.1", "--host", help="Host interface to bind."),
-    port: int = typer.Option(
-        8000, "--port", help="Preferred start port; auto-increments when occupied."
-    ),
+    host: Annotated[
+        str,
+        typer.Option(
+            "--host",
+            help="Host interface to bind.",
+        ),
+    ] = "127.0.0.1",
+    port: Annotated[
+        int,
+        typer.Option(
+            "--port",
+            help="Preferred start port; auto-increments when occupied.",
+        ),
+    ] = 8000,
 ) -> None:
     """
     Start a local web editor for the provided markdown file.
@@ -240,11 +251,7 @@ def generate_example(
 
     if open_after:
         typer.echo("Opening in editor...")
-        open_markdown_file(
-            filepath=resolved_output,
-            host="127.0.0.1",
-            port=8000,
-        )
+        open_markdown_file(filepath=resolved_output)
 
 
 def run() -> None:
