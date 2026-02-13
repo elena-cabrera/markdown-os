@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Markdown-OS</title>
+    <link rel="stylesheet" href="/static/css/styles.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  </head>
+  <body>
+    <div id="app-loading" class="loading-banner">Loading markdown document...</div>
+    <div class="container hidden" id="app-container">
+      <aside id="toc-sidebar">
+        <h3>Contents</h3>
+        <nav id="toc"></nav>
+      </aside>
+
+      <main id="main-content">
+        <div class="tab-nav">
+          <div class="tab-group">
+            <button id="edit-tab" class="tab-button active" type="button">Edit</button>
+            <button id="preview-tab" class="tab-button" type="button">Preview</button>
+          </div>
+          <span id="save-status" aria-live="polite">Idle</span>
+        </div>
+
+        <section id="editor-container" class="view active">
+          <textarea
+            id="markdown-editor"
+            spellcheck="false"
+            aria-label="Markdown editor"
+          ></textarea>
+        </section>
+
+        <section id="preview-container" class="view">
+          <article id="markdown-preview"></article>
+        </section>
+      </main>
+    </div>
+
+    <script src="/static/js/websocket.js"></script>
+    <script src="/static/js/markdown.js"></script>
+    <script src="/static/js/toc.js"></script>
+    <script src="/static/js/editor.js"></script>
+  </body>
+</html>
