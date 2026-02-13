@@ -8,3 +8,7 @@ wheels/
 
 # Virtual environments
 .venv
+
+# lock files except uv.lock
+*.lock
+!uv.lock
