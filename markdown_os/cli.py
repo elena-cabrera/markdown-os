@@ -18,23 +18,24 @@ from markdown_os.server import create_app
 
 app = typer.Typer(
     help="Open and edit markdown files in a local browser UI.",
-    no_args_is_help=True,
+    invoke_without_command=True,
 )
 
 
 @app.callback()
-def markdown_os() -> None:
+def markdown_os(ctx: typer.Context) -> None:
     """
     Provide a command group root for Markdown-OS subcommands.
+    With no subcommand, opens the current working directory.
 
     Args:
-    - None (None): This callback receives no positional arguments.
+    - ctx (typer.Context): Typer context; used to detect invoked subcommand.
 
     Returns:
-    - None: Callback only exists to preserve explicit subcommands.
+    - None: Either runs default open or defers to the invoked subcommand.
     """
-
-    return
+    if ctx.invoked_subcommand is None:
+        open_markdown_file(filepath=Path.cwd())
 
 
 def _validate_markdown_file(filepath: Path) -> Path:
