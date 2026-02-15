@@ -5,7 +5,9 @@ from __future__ import annotations
 import socket
 import threading
 import webbrowser
+from importlib.resources import files
 from pathlib import Path
+from typing import Annotated
 
 import typer
 import uvicorn
@@ -114,13 +116,55 @@ def _open_browser(url: str) -> None:
     timer.start()
 
 
+def _resolve_example_output_path(output: Path) -> Path:
+    """
+    Normalize the example output argument into a final markdown file path.
+
+    Args:
+    - output (Path): User-provided output argument from the CLI command.
+
+    Returns:
+    - Path: Resolved file path where the example markdown will be written.
+    """
+
+    expanded_output = output.expanduser()
+    if expanded_output.exists() and expanded_output.is_dir():
+        expanded_output = expanded_output / "example.md"
+    return expanded_output.resolve()
+
+
+def _load_example_template() -> str:
+    """
+    Read the bundled showcase template used by the example command.
+
+    Args:
+    - None (None): Template location is fixed within package resources.
+
+    Returns:
+    - str: UTF-8 markdown content loaded from the bundled template file.
+    """
+
+    template_resource = files("markdown_os").joinpath("templates", "example_template.md")
+    return template_resource.read_text(encoding="utf-8")
+
+
 @app.command("open")
 def open_markdown_file(
     filepath: Path = typer.Argument(..., help="Path to a .md file."),
-    host: str = typer.Option("127.0.0.1", "--host", help="Host interface to bind."),
-    port: int = typer.Option(
-        8000, "--port", help="Preferred start port; auto-increments when occupied."
-    ),
+    host: Annotated[
+        str,
+        typer.Option(
+            "--host",
+            help="Host interface to bind.",
+        ),
+    ] = "127.0.0.1",
+    port: Annotated[
+        int,
+        typer.Option(
+            "--port",
+            help="Preferred start port; auto-increments when occupied.",
+        ),
+    ] = 8000,
 ) -> None:
     """
     Start a local web editor for the provided markdown file.
@@ -144,6 +188,70 @@ def open_markdown_file(
     file_handler = FileHandler(resolved_path)
     application = create_app(file_handler)
     uvicorn.run(application, host=host, port=selected_port)
+
+
+@app.command("example")
+def generate_example(
+    output: Path = typer.Argument(
+        Path("example.md"),
+        help="Output path for the generated showcase markdown file.",
+    ),
+    open_after: bool = typer.Option(
+        False,
+        "--open",
+        help="Open the generated example file in the editor after creation.",
+    ),
+    force: bool = typer.Option(
+        False,
+        "--force",
+        "-f",
+        help="Overwrite an existing file without prompting.",
+    ),
+) -> None:
+    """
+    Generate a showcase markdown file that demonstrates Markdown-OS features.
+
+    Args:
+    - output (Path): Destination path for the generated markdown example.
+    - open_after (bool): Whether to launch the local editor after writing output.
+    - force (bool): Whether to skip overwrite confirmation for existing files.
+
+    Returns:
+    - None: Writes a markdown file and optionally launches the editor command.
+    """
+
+    resolved_output = _resolve_example_output_path(output)
+
+    if resolved_output.exists() and not force:
+        overwrite = typer.confirm(
+            f"File {resolved_output} already exists. Overwrite?",
+            default=False,
+        )
+        if not overwrite:
+            typer.echo("Cancelled.")
+            raise typer.Exit(code=0)
+
+    try:
+        resolved_output.parent.mkdir(parents=True, exist_ok=True)
+        template_content = _load_example_template()
+        resolved_output.write_text(template_content, encoding="utf-8")
+    except (FileNotFoundError, ModuleNotFoundError):
+        typer.secho(
+            "Template file is missing. Expected markdown_os/templates/example_template.md.",
+            fg=typer.colors.RED,
+        )
+        raise typer.Exit(code=1) from None
+    except OSError as error:
+        typer.secho(f"Failed to create example file: {error}", fg=typer.colors.RED)
+        raise typer.Exit(code=1) from error
+
+    typer.secho(f"Created example file: {resolved_output}", fg=typer.colors.GREEN)
+    typer.echo("Next step:")
+    typer.echo(f"  markdown-os open {resolved_output}")
+
+    if open_after:
+        typer.echo("Opening in editor...")
+        open_markdown_file(filepath=resolved_output)
 
 
 def run() -> None:

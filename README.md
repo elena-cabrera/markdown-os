@@ -21,3 +21,16 @@ If port `8000` is occupied, Markdown-OS auto-selects the next available port.
 - The editor detects your system color preference on first load.
 - Use the sun/moon toggle in the top-right header to switch between light and dark themes.
 - Manual selection is persisted in `localStorage` and restored on reload.
+
+## Generate a showcase file
+
+```bash
+# Create example.md in current directory
+uv run markdown-os example
+
+# Create at a custom location
+uv run markdown-os example ./docs/showcase.md
+
+# Generate and open immediately
+uv run markdown-os example --open
+```
