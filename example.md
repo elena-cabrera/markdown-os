@@ -111,7 +111,7 @@ Heading depth influences:
 ### Task Lists
 
 - [x] Create markdown file
-- [x] Open file in editor
+- [ ] Open file in editor
 - [x] Add project-specific notes
 - [x] Share with team
 
