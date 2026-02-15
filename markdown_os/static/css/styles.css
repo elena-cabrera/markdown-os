@@ -448,6 +448,71 @@ body {
   white-space: pre-wrap;
 }
 
+#markdown-preview .task-list {
+  margin-top: 0.2em;
+  margin-bottom: 0.2em;
+}
+
+#markdown-preview .task-list-item {
+  list-style: none;
+  position: relative;
+  padding-left: 1.8em;
+  margin: 0.35em 0;
+}
+
+#markdown-preview .task-list-item > input[type="checkbox"] {
+  position: absolute;
+  left: 0;
+  top: 0.35em;
+  width: 1em;
+  height: 1em;
+  margin: 0;
+  border: 2px solid var(--border);
+  border-radius: 4px;
+  background: var(--panel-bg);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  display: grid;
+  place-content: center;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    transform 0.1s ease;
+}
+
+#markdown-preview .task-list-item > input[type="checkbox"]:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+#markdown-preview .task-list-item > input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+#markdown-preview .task-list-item > input[type="checkbox"]:active {
+  transform: scale(0.96);
+}
+
+#markdown-preview .task-list-item > input[type="checkbox"]:checked {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+#markdown-preview .task-list-item > input[type="checkbox"]:checked::before {
+  content: "";
+  width: 0.28em;
+  height: 0.52em;
+  border: solid #ffffff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translate(-5%, -5%);
+}
+
+#markdown-preview .task-list-item:has(> input[type="checkbox"]:checked) {
+  color: var(--text-muted);
+}
+
 .modal-overlay {
   position: fixed;
   inset: 0;

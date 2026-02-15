@@ -322,6 +322,11 @@
     });
   }
 
+  window.loadContent = loadContent;
+  window.checkForExternalChanges = checkForExternalChanges;
+  window.showConflictDialog = showConflictDialog;
+  window.saveContent = saveContent;
+
   document.addEventListener("DOMContentLoaded", async () => {
     bindEvents();
     await loadContent();

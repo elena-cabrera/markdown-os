@@ -35,6 +35,12 @@ If port `8000` is occupied, Markdown-OS auto-selects the next available port.
 - Use the sun/moon toggle in the top-right header to switch between light and dark themes.
 - Manual selection is persisted in `localStorage` and restored on reload.
 
+## Interactive task lists
+
+- In `Preview`, markdown task list items (`- [ ]` and `- [x]`) are clickable.
+- Clicking a checkbox updates markdown source immediately and auto-saves to disk.
+- External-change conflicts use the same `Save My Changes` / `Discard My Changes` / `Cancel` flow.
+
 ## Generate a showcase file
 
 ```bash
