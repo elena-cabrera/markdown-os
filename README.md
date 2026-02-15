@@ -1,6 +1,26 @@
 # Markdown-OS
 
+[![PyPI version](https://img.shields.io/pypi/v/markdown-os)](https://pypi.org/project/markdown-os/)
+
 Markdown-OS is a local, developer-focused markdown editor served by FastAPI and launched from a Typer CLI.
+
+## Quick Install
+
+```bash
+pip install markdown-os
+```
+
+Or install as a global tool with uv:
+
+```bash
+uv tool install markdown-os
+```
+
+Then run:
+
+```bash
+markdown-os open ./notes.md
+```
 
 ## Read-first workflow
 
