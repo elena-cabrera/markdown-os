@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Callable
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
@@ -293,6 +293,11 @@ def create_app(file_handler: FileHandler) -> FastAPI:
     app.state.file_handler = file_handler
     app.state.websocket_hub = WebSocketHub()
     app.state.last_internal_write_at = 0.0
+
+    @app.get("/favicon.ico")
+    async def favicon() -> RedirectResponse:
+        """Redirect browser default favicon.ico requests to the SVG favicon."""
+        return RedirectResponse(url="/static/favicon.svg", status_code=302)
 
     @app.get("/")
     async def read_root() -> FileResponse:
