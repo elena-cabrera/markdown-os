@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Markdown-OS is a developer-focused, CLI-driven markdown editor that runs as a local web server. It provides real-time editing with live preview, Mermaid diagram support, syntax highlighting, auto-saving, and light/dark theme switching.
+Markdown-OS is a developer-focused, CLI-driven markdown editor that runs as a local web server. It provides real-time editing with a read-first workflow, Mermaid diagram support, syntax highlighting, auto-saving, and light/dark theme switching.
 
 **Tech Stack:**
 - Backend: Python 3.11+ with FastAPI, Typer CLI, Uvicorn ASGI server, Watchdog for file monitoring
@@ -94,7 +94,7 @@ External file change → Watchdog detects → WebSocket notifies browser
 
 #### 4. Frontend (`markdown_os/static/`)
 - **index.html**: Main editor page with tabbed interface (Edit/Preview modes)
-- **js/editor.js**: Content loading, tab switching, auto-save with 1s debouncing
+- **js/editor.js**: Content loading, tab switching, conflict handling, auto-save with 1s debouncing
 - **js/markdown.js**: Markdown rendering with Marked.js, Mermaid diagram rendering, syntax highlighting, code block enhancements (copy button, language labels)
 - **js/theme.js**: Theme preference management, system preference detection, highlight theme switching, Mermaid re-render trigger
 - **js/toc.js**: Auto-generated table of contents from headings with smooth scrolling
@@ -116,10 +116,14 @@ External file change → Watchdog detects → WebSocket notifies browser
 - Events are throttled to max one notification per 0.2s
 - Browser receives `{"type": "file_changed", "content": "<new content>"}` via WebSocket
 
-#### Auto-save Behavior
+#### Auto-save and Mode Behavior
+- Files open in `Preview` mode by default (`read-first` behavior).
+- `Edit` mode is active only when the Edit tab is selected.
 - Editor input triggers debounced save after 1 second of inactivity
-- Preview updates immediately on editor input (not debounced)
+- Preview renders on demand when Preview tab is active (not on every edit keystroke)
 - Save status indicator shows "Saving...", "Saved", or error states
+- Switching `Edit → Preview` auto-saves unless a conflict is detected
+- Conflict detection compares `/api/content` against `lastSavedContent`; if different and there are unsaved edits, a 3-button modal is shown (`Save My Changes`, `Discard My Changes`, `Cancel`)
 - Server timestamps internal writes to distinguish from external changes
 
 #### Theme Behavior

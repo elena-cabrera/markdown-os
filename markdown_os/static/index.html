@@ -54,8 +54,8 @@
       <main id="main-content">
         <div class="tab-nav">
           <div class="tab-group">
-            <button id="edit-tab" class="tab-button active" type="button">Edit</button>
-            <button id="preview-tab" class="tab-button" type="button">Preview</button>
+            <button id="edit-tab" class="tab-button" type="button">Edit</button>
+            <button id="preview-tab" class="tab-button active" type="button">Preview</button>
           </div>
           <div class="tab-controls">
             <button
@@ -108,7 +108,7 @@
           </div>
         </div>
 
-        <section id="editor-container" class="view active">
+        <section id="editor-container" class="view">
           <textarea
             id="markdown-editor"
             spellcheck="false"
@@ -116,10 +116,29 @@
           ></textarea>
         </section>
 
-        <section id="preview-container" class="view">
+        <section id="preview-container" class="view active">
           <article id="markdown-preview"></article>
         </section>
       </main>
+    </div>
+
+    <div id="conflict-overlay" class="modal-overlay hidden"></div>
+    <div id="conflict-modal" class="modal hidden" role="dialog" aria-modal="true">
+      <div class="modal-content">
+        <h3 class="modal-title">File Modified Externally</h3>
+        <p class="modal-message">
+          This file was changed externally and you have unsaved changes in the editor. What
+          would you like to do?
+        </p>
+        <div class="modal-actions">
+          <button id="conflict-save" class="btn btn-primary" type="button">Save My Changes</button>
+          <button id="conflict-discard" class="btn btn-secondary" type="button">
+            Discard My Changes
+          </button>
+          <button id="conflict-cancel" class="btn btn-tertiary" type="button">Cancel</button>
+        </div>
+        <p class="modal-hint">Press ESC or click outside to cancel</p>
+      </div>
     </div>
 
     <script src="/static/js/theme.js"></script>
