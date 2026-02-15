@@ -620,7 +620,6 @@ body {
 #markdown-preview .task-list-item:has(> input[type="checkbox"]:checked) {
   color: var(--text-muted);
 }
-
 .modal-overlay {
   position: fixed;
   inset: 0;
