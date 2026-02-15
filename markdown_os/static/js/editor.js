@@ -28,6 +28,13 @@
     }
   }
 
+  function setPageTitle(metadata) {
+    const displayName =
+      metadata?.relative_path ||
+      (metadata?.path ? metadata.path.replace(/^.*[/\\]/, "") : null);
+    document.title = displayName ? `${displayName}` : "Markdown-OS";
+  }
+
   function setLoadingState(isLoading) {
     const loading = document.getElementById("app-loading");
     const container = document.getElementById("app-container");
@@ -84,6 +91,7 @@
       editorState.lastSavedContent = "";
       await window.renderMarkdown("");
       setSaveStatus("Select a file");
+      setPageTitle(null);
       setLoadingState(false);
       return false;
     }
@@ -99,6 +107,8 @@
       const initialContent = payload.content || "";
       editor.value = initialContent;
       editorState.lastSavedContent = initialContent;
+
+      setPageTitle(payload.metadata);
 
       if (editorState.mode === "folder") {
         const relativePath = payload.metadata?.relative_path || filePath || null;
