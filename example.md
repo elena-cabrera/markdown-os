@@ -112,8 +112,8 @@ Heading depth influences:
 
 - [x] Create markdown file
 - [x] Open file in editor
-- [ ] Add project-specific notes
-- [ ] Share with team
+- [x] Add project-specific notes
+- [x] Share with team
 
 ---
 
