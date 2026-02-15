@@ -2,6 +2,19 @@
 
 Markdown-OS is a local, developer-focused markdown editor served by FastAPI and launched from a Typer CLI.
 
+## Read-first workflow
+
+- Files open in `Preview` mode by default for safer browsing.
+- Switch to `Edit` when you want to type.
+- Switching from `Edit` to `Preview` auto-saves changes when there is no external conflict.
+- If the file changed externally and you have unsaved edits, Markdown-OS shows a conflict dialog:
+  - `Save My Changes` overwrites disk with your editor content.
+  - `Discard My Changes` reloads content from disk.
+  - `Cancel` keeps you in edit mode with unsaved changes intact.
+- External file changes auto-reload without prompts when safe:
+  - always in preview mode
+  - in edit mode when there are no unsaved changes
+
 ## Install dependencies
 
 ```bash

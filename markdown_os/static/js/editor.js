@@ -5,6 +5,7 @@
     saveTimeout: null,
     lastSavedContent: "",
     isSaving: false,
+    isEditMode: false,
   };
 
   function setSaveStatus(message, variant = "neutral") {
@@ -59,7 +60,6 @@
       const initialContent = payload.content || "";
       editor.value = initialContent;
       editorState.lastSavedContent = initialContent;
-      await window.renderMarkdown(initialContent);
       setSaveStatus("Loaded", "saved");
     } catch (error) {
       console.error("Failed to load markdown content.", error);
@@ -69,7 +69,87 @@
     }
   }
 
-  function switchToTab(tabName) {
+  async function checkForExternalChanges() {
+    try {
+      const response = await fetch("/api/content");
+      if (!response.ok) {
+        return false;
+      }
+
+      const payload = await response.json();
+      const diskContent = payload.content || "";
+      return diskContent !== editorState.lastSavedContent;
+    } catch (error) {
+      console.error("Failed to check for external changes.", error);
+      return false;
+    }
+  }
+
+  async function showConflictDialog() {
+    return new Promise((resolve) => {
+      const modal = document.getElementById("conflict-modal");
+      const overlay = document.getElementById("conflict-overlay");
+      const saveButton = document.getElementById("conflict-save");
+      const discardButton = document.getElementById("conflict-discard");
+      const cancelButton = document.getElementById("conflict-cancel");
+
+      if (
+        !modal ||
+        !overlay ||
+        !saveButton ||
+        !discardButton ||
+        !cancelButton
+      ) {
+        console.error("Conflict modal elements not found.");
+        resolve("cancel");
+        return;
+      }
+
+      const previousFocus = document.activeElement;
+      let choiceMade = false;
+
+      const cleanup = () => {
+        document.removeEventListener("keydown", handleEscape);
+        overlay.onclick = null;
+        saveButton.onclick = null;
+        discardButton.onclick = null;
+        cancelButton.onclick = null;
+      };
+
+      const choose = (choice) => {
+        if (choiceMade) {
+          return;
+        }
+
+        choiceMade = true;
+        modal.classList.add("hidden");
+        overlay.classList.add("hidden");
+        cleanup();
+        if (previousFocus && typeof previousFocus.focus === "function") {
+          previousFocus.focus();
+        }
+        resolve(choice);
+      };
+
+      const handleEscape = (event) => {
+        if (event.key === "Escape") {
+          choose("cancel");
+        }
+      };
+
+      saveButton.onclick = () => choose("save");
+      discardButton.onclick = () => choose("discard");
+      cancelButton.onclick = () => choose("cancel");
+      overlay.onclick = () => choose("cancel");
+      document.addEventListener("keydown", handleEscape);
+
+      modal.classList.remove("hidden");
+      overlay.classList.remove("hidden");
+      saveButton.focus();
+    });
+  }
+
+  async function switchToTab(tabName) {
     const editTab = document.getElementById("edit-tab");
     const previewTab = document.getElementById("preview-tab");
     const editorContainer = document.getElementById("editor-container");
@@ -85,20 +165,45 @@
       previewTab.classList.remove("active");
       editorContainer.classList.add("active");
       previewContainer.classList.remove("active");
+      editorState.isEditMode = true;
       return;
+    }
+
+    const hasUnsavedChanges = editor.value !== editorState.lastSavedContent;
+    if (hasUnsavedChanges) {
+      const hasConflict = await checkForExternalChanges();
+      if (hasConflict) {
+        const choice = await showConflictDialog();
+        if (choice === "save") {
+          const saved = await saveContent();
+          if (!saved) {
+            return;
+          }
+        } else if (choice === "discard") {
+          await loadContent();
+        } else {
+          return;
+        }
+      } else {
+        const saved = await saveContent();
+        if (!saved) {
+          return;
+        }
+      }
     }
 
     editTab.classList.remove("active");
     previewTab.classList.add("active");
     editorContainer.classList.remove("active");
     previewContainer.classList.add("active");
-    window.renderMarkdown(editor.value);
+    editorState.isEditMode = false;
+    await window.renderMarkdown(editor.value);
   }
 
   async function saveContent() {
     const editor = document.getElementById("markdown-editor");
     if (!editor || editorState.isSaving) {
-      return;
+      return false;
     }
 
     editorState.isSaving = true;
@@ -120,9 +225,11 @@
 
       editorState.lastSavedContent = content;
       setSaveStatus("Saved", "saved");
+      return true;
     } catch (error) {
       console.error("Failed to save markdown content.", error);
       setSaveStatus("Save failed", "error");
+      return false;
     } finally {
       editorState.isSaving = false;
     }
@@ -144,7 +251,6 @@
       return;
     }
 
-    window.renderMarkdown(editor.value);
     if (editor.value !== editorState.lastSavedContent) {
       setSaveStatus("Unsaved changes");
       queueAutosave();
@@ -161,8 +267,24 @@
       return;
     }
 
+    if (!editorState.isEditMode) {
+      editor.value = detail.content;
+      editorState.lastSavedContent = detail.content;
+      await window.renderMarkdown(detail.content);
+      setSaveStatus("Reloaded from disk", "saved");
+      return;
+    }
+
+    const hasUnsavedChanges = editor.value !== editorState.lastSavedContent;
+    if (!hasUnsavedChanges) {
+      editor.value = detail.content;
+      editorState.lastSavedContent = detail.content;
+      setSaveStatus("Reloaded from disk", "saved");
+      return;
+    }
+
     const shouldReload = window.confirm(
-      "This file was changed externally. Reload content from disk?",
+      "This file was changed externally and you have unsaved changes. Reload and discard your changes?",
     );
     if (!shouldReload) {
       setSaveStatus("External change ignored");
@@ -171,7 +293,6 @@
 
     editor.value = detail.content;
     editorState.lastSavedContent = detail.content;
-    await window.renderMarkdown(detail.content);
     setSaveStatus("Reloaded from disk", "saved");
   }
 
@@ -184,8 +305,12 @@
     }
 
     editor.addEventListener("input", onEditorInput);
-    editTab.addEventListener("click", () => switchToTab("edit"));
-    previewTab.addEventListener("click", () => switchToTab("preview"));
+    editTab.addEventListener("click", () => {
+      switchToTab("edit");
+    });
+    previewTab.addEventListener("click", () => {
+      switchToTab("preview");
+    });
 
     window.addEventListener("markdown-os:file-changed", (event) => {
       handleExternalChange(event.detail);
@@ -200,6 +325,6 @@
   document.addEventListener("DOMContentLoaded", async () => {
     bindEvents();
     await loadContent();
-    switchToTab("edit");
+    await switchToTab("preview");
   });
 })();
