@@ -6,7 +6,7 @@ import asyncio
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, RedirectResponse
@@ -15,6 +15,7 @@ from pydantic import BaseModel
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 
+from markdown_os.directory_handler import DirectoryHandler
 from markdown_os.file_handler import FileHandler, FileReadError, FileWriteError
 
 
@@ -22,6 +23,7 @@ class SaveRequest(BaseModel):
     """Body payload for save operations."""
 
     content: str
+    file: str | None = None
 
 
 class WebSocketHub:
@@ -97,30 +99,35 @@ class WebSocketHub:
                     self._clients.discard(stale_client)
 
 
-class MarkdownFileEventHandler(FileSystemEventHandler):
-    """Watchdog handler that reacts only to the target markdown file."""
+class MarkdownPathEventHandler(FileSystemEventHandler):
+    """Watchdog handler for markdown file changes in file or folder mode."""
 
     def __init__(
         self,
-        target_file: Path,
-        notify_callback: Callable[[], None],
+        notify_callback: Callable[[Path], None],
         should_ignore: Callable[[], bool],
+        target_file: Path | None = None,
+        root_directory: Path | None = None,
     ) -> None:
         """
-        Configure file watcher callbacks for a single markdown file.
+        Configure file watcher callbacks for markdown updates.
 
         Args:
-        - target_file (Path): Markdown file path that should trigger notifications.
-        - notify_callback (Callable[[], None]): Callback invoked on external changes.
+        - notify_callback (Callable[[Path], None]): Callback invoked on external changes.
         - should_ignore (Callable[[], bool]): Callback returning True for ignored events.
+        - target_file (Path | None): Single-file mode target markdown path.
+        - root_directory (Path | None): Folder-mode workspace root path.
 
         Returns:
         - None: Event handler is initialized with path checks and throttling state.
         """
 
-        self._target_file = target_file.resolve()
         self._notify_callback = notify_callback
         self._should_ignore = should_ignore
+        self._target_file = target_file.resolve() if target_file is not None else None
+        self._root_directory = (
+            root_directory.resolve() if root_directory is not None else None
+        )
         self._last_notified_at = 0.0
         super().__init__()
 
@@ -171,64 +178,67 @@ class MarkdownFileEventHandler(FileSystemEventHandler):
         - event (FileSystemEvent): Raw watchdog event to inspect.
 
         Returns:
-        - None: Callback is invoked only for non-ignored target file events.
+        - None: Callback is invoked only for non-ignored markdown file events.
         """
 
         if event.is_directory:
             return
 
-        # Get the event path, preferring dest_path for move events, but only if non-empty
-        event_path = getattr(event, "dest_path", None) or event.src_path
-
-        # Debug logging
-        print(f"[Watchdog] Event type: {event.event_type}")
-        print(f"[Watchdog] Event path: '{event_path}'")
-        print(f"[Watchdog] Target file: '{self._target_file}'")
-
-        if not self._is_target(event_path):
-            print(f"[Watchdog] Event ignored: not target file")
+        event_path_value = getattr(event, "dest_path", None) or event.src_path
+        try:
+            resolved_event_path = Path(event_path_value).resolve()
+        except OSError:
             return
 
+        if not self._is_relevant_path(resolved_event_path):
+            return
         if self._should_ignore():
-            print(f"[Watchdog] Event ignored: within 0.5s of internal write")
             return
 
         now = time.monotonic()
         if now - self._last_notified_at < 0.2:
-            print(f"[Watchdog] Event throttled: too soon after last notification")
             return
 
-        print(f"[Watchdog] Event accepted: notifying clients")
         self._last_notified_at = now
-        self._notify_callback()
+        self._notify_callback(resolved_event_path)
 
-    def _is_target(self, event_path: str) -> bool:
+    def _is_relevant_path(self, event_path: Path) -> bool:
         """
-        Compare an event path against the configured markdown file.
+        Determine whether an event path should trigger notifications.
 
         Args:
-        - event_path (str): Raw path captured from a watchdog event.
+        - event_path (Path): Resolved event path captured from watchdog.
 
         Returns:
-        - bool: True when the event path resolves to the target file.
+        - bool: True when the path is a watched markdown file.
         """
 
-        try:
-            return Path(event_path).resolve() == self._target_file
-        except OSError:
+        if self._target_file is not None:
+            return event_path == self._target_file
+
+        if self._root_directory is None:
             return False
 
+        if not event_path.is_relative_to(self._root_directory):
+            return False
 
-def create_app(file_handler: FileHandler) -> FastAPI:
+        return event_path.suffix.lower() in {".md", ".markdown"}
+
+
+def create_app(handler: FileHandler | DirectoryHandler, mode: str = "file") -> FastAPI:
     """
     Create the FastAPI application for the markdown editor.
 
     Args:
-    - file_handler (FileHandler): File access service bound to one markdown file.
+    - handler (FileHandler | DirectoryHandler): File or folder access service.
+    - mode (str): Editor mode, either "file" or "folder".
 
     Returns:
     - FastAPI: Configured application with routes, static assets, and websocket support.
     """
+
+    if mode not in {"file", "folder"}:
+        raise ValueError("mode must be either 'file' or 'folder'.")
 
     static_dir = Path(__file__).parent / "static"
 
@@ -247,50 +257,61 @@ def create_app(file_handler: FileHandler) -> FastAPI:
         observer = Observer()
         loop = asyncio.get_running_loop()
 
-        def notify_external_change() -> None:
+        def notify_external_change(changed_path: Path) -> None:
             """
             Schedule async websocket broadcast from watchdog threads.
 
             Args:
-            - None (None): Thread callback uses application state only.
+            - changed_path (Path): Changed markdown file path captured by watchdog.
 
             Returns:
             - None: Broadcast coroutine is dispatched onto the running event loop.
             """
 
             loop.call_soon_threadsafe(
-                lambda: asyncio.create_task(_broadcast_external_change(app))
+                lambda: asyncio.create_task(
+                    _broadcast_external_change(app, changed_path)
+                )
             )
 
-        event_handler = MarkdownFileEventHandler(
-            target_file=app.state.file_handler.filepath,
-            notify_callback=notify_external_change,
-            should_ignore=lambda: _should_ignore_watcher_event(app),
-        )
-
-        watch_path = str(app.state.file_handler.filepath.parent)
-        target_file = app.state.file_handler.filepath
-        print(f"[Watchdog] Starting observer for: {target_file}")
-        print(f"[Watchdog] Watching directory: {watch_path}")
+        if app.state.mode == "file":
+            file_handler = _require_file_handler(app)
+            event_handler = MarkdownPathEventHandler(
+                target_file=file_handler.filepath,
+                notify_callback=notify_external_change,
+                should_ignore=lambda: _should_ignore_watcher_event(app),
+            )
+            watch_path = str(file_handler.filepath.parent)
+            recursive = False
+        else:
+            directory_handler = _require_directory_handler(app)
+            event_handler = MarkdownPathEventHandler(
+                root_directory=directory_handler.directory,
+                notify_callback=notify_external_change,
+                should_ignore=lambda: _should_ignore_watcher_event(app),
+            )
+            watch_path = str(directory_handler.directory)
+            recursive = True
 
         observer.schedule(
             event_handler,
             path=watch_path,
-            recursive=False,
+            recursive=recursive,
         )
         observer.start()
 
         try:
             yield
         finally:
-            print(f"[Watchdog] Stopping observer")
             observer.stop()
             observer.join(timeout=3)
 
     app = FastAPI(title="Markdown-OS", lifespan=lifespan)
     app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
-    app.state.file_handler = file_handler
+    app.state.handler = handler
+    app.state.mode = mode
+    app.state.current_file = None
     app.state.websocket_hub = WebSocketHub()
     app.state.last_internal_write_at = 0.0
 
@@ -313,27 +334,92 @@ def create_app(file_handler: FileHandler) -> FastAPI:
 
         return FileResponse(static_dir / "index.html")
 
-    @app.get("/api/content")
-    async def get_content() -> dict[str, object]:
+    @app.get("/api/mode")
+    async def get_mode() -> dict[str, str]:
         """
-        Return markdown content and metadata for the active file.
+        Return the current server mode.
 
         Args:
-        - None (None): Route handler reads from configured file handler.
+        - None (None): Route reads mode from app state.
+
+        Returns:
+        - dict[str, str]: Mode payload with value "file" or "folder".
+        """
+
+        return {"mode": app.state.mode}
+
+    @app.get("/api/file-tree")
+    async def get_file_tree() -> dict[str, Any]:
+        """
+        Return the markdown file tree for folder mode.
+
+        Args:
+        - None (None): Route reads tree from directory handler.
+
+        Returns:
+        - dict[str, Any]: Nested folder/file structure.
+        """
+
+        if app.state.mode != "folder":
+            raise HTTPException(
+                status_code=400,
+                detail="File tree is only available in folder mode.",
+            )
+
+        directory_handler = _require_directory_handler(app)
+        return directory_handler.get_file_tree()
+
+    @app.get("/api/content")
+    async def get_content(file: str | None = None) -> dict[str, object]:
+        """
+        Return markdown content and metadata.
+
+        Args:
+        - file (str | None): Relative file path in folder mode.
 
         Returns:
         - dict[str, object]: Markdown content plus current file metadata.
         """
 
+        if app.state.mode == "file":
+            file_handler = _require_file_handler(app)
+            try:
+                content = file_handler.read()
+                metadata = file_handler.get_metadata()
+            except FileReadError as exc:
+                raise HTTPException(
+                    status_code=_status_for_read_error(exc),
+                    detail=str(exc),
+                ) from exc
+
+            return {"content": content, "metadata": metadata}
+
+        if not file:
+            raise HTTPException(status_code=400, detail="Missing 'file' query parameter.")
+
+        directory_handler = _require_directory_handler(app)
+        if not directory_handler.validate_file_path(file):
+            raise HTTPException(status_code=400, detail=f"Invalid file path: {file}")
+
         try:
-            content = app.state.file_handler.read()
-            metadata = app.state.file_handler.get_metadata()
+            file_handler = directory_handler.get_file_handler(file)
+            content = file_handler.read()
+            metadata = file_handler.get_metadata()
+            relative_path = file_handler.filepath.relative_to(
+                directory_handler.directory
+            ).as_posix()
+            metadata["relative_path"] = relative_path
         except FileReadError as exc:
             raise HTTPException(
                 status_code=_status_for_read_error(exc),
                 detail=str(exc),
             ) from exc
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
+        app.state.current_file = relative_path
         return {"content": content, "metadata": metadata}
 
     @app.post("/api/save")
@@ -348,14 +434,45 @@ def create_app(file_handler: FileHandler) -> FastAPI:
         - dict[str, object]: Save confirmation and updated file metadata.
         """
 
+        if app.state.mode == "file":
+            file_handler = _require_file_handler(app)
+            try:
+                file_handler.write(payload.content)
+                app.state.last_internal_write_at = time.monotonic()
+                metadata = file_handler.get_metadata()
+            except FileWriteError as exc:
+                raise HTTPException(status_code=500, detail=str(exc)) from exc
+            except FileReadError as exc:
+                raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+            return {"status": "saved", "metadata": metadata}
+
+        file_path = payload.file
+        if not file_path:
+            raise HTTPException(status_code=400, detail="Missing 'file' in request body.")
+
+        directory_handler = _require_directory_handler(app)
+        if not directory_handler.validate_file_path(file_path):
+            raise HTTPException(status_code=400, detail=f"Invalid file path: {file_path}")
+
         try:
-            app.state.file_handler.write(payload.content)
+            file_handler = directory_handler.get_file_handler(file_path)
+            file_handler.write(payload.content)
             app.state.last_internal_write_at = time.monotonic()
-            metadata = app.state.file_handler.get_metadata()
+            metadata = file_handler.get_metadata()
+            relative_path = file_handler.filepath.relative_to(
+                directory_handler.directory
+            ).as_posix()
+            metadata["relative_path"] = relative_path
+            app.state.current_file = relative_path
         except FileWriteError as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
         except FileReadError as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
         return {"status": "saved", "metadata": metadata}
 
@@ -383,6 +500,40 @@ def create_app(file_handler: FileHandler) -> FastAPI:
     return app
 
 
+def _require_file_handler(app: FastAPI) -> FileHandler:
+    """
+    Ensure app state has a FileHandler in single-file mode.
+
+    Args:
+    - app (FastAPI): Application state container.
+
+    Returns:
+    - FileHandler: Valid file handler from app state.
+    """
+
+    handler = app.state.handler
+    if not isinstance(handler, FileHandler):
+        raise RuntimeError("Invalid handler type for file mode.")
+    return handler
+
+
+def _require_directory_handler(app: FastAPI) -> DirectoryHandler:
+    """
+    Ensure app state has a DirectoryHandler in folder mode.
+
+    Args:
+    - app (FastAPI): Application state container.
+
+    Returns:
+    - DirectoryHandler: Valid directory handler from app state.
+    """
+
+    handler = app.state.handler
+    if not isinstance(handler, DirectoryHandler):
+        raise RuntimeError("Invalid handler type for folder mode.")
+    return handler
+
+
 def _should_ignore_watcher_event(app: FastAPI) -> bool:
     """
     Decide whether a watcher event should be ignored.
@@ -397,28 +548,45 @@ def _should_ignore_watcher_event(app: FastAPI) -> bool:
     return (time.monotonic() - app.state.last_internal_write_at) < 0.5
 
 
-async def _broadcast_external_change(app: FastAPI) -> None:
+async def _broadcast_external_change(app: FastAPI, changed_path: Path) -> None:
     """
     Broadcast external file updates to all connected websocket clients.
 
     Args:
     - app (FastAPI): Application state holder containing file and websocket services.
+    - changed_path (Path): Markdown path reported by watchdog.
 
     Returns:
     - None: Sends a websocket message when fresh file content can be read.
     """
 
-    print(f"[Watchdog] Broadcasting external change to websocket clients")
-    try:
-        content = app.state.file_handler.read()
-    except FileReadError:
-        print(f"[Watchdog] Failed to read file for broadcast")
+    if app.state.mode == "file":
+        file_handler = _require_file_handler(app)
+        try:
+            content = file_handler.read()
+        except FileReadError:
+            return
+
+        await app.state.websocket_hub.broadcast_json(
+            {"type": "file_changed", "content": content}
+        )
         return
 
-    await app.state.websocket_hub.broadcast_json(
-        {"type": "file_changed", "content": content}
-    )
-    print(f"[Watchdog] Broadcast complete")
+    directory_handler = _require_directory_handler(app)
+    try:
+        relative_path = changed_path.relative_to(directory_handler.directory).as_posix()
+    except ValueError:
+        return
+
+    payload: dict[str, str] = {"type": "file_changed", "file": relative_path}
+    if directory_handler.validate_file_path(relative_path):
+        try:
+            file_handler = directory_handler.get_file_handler(relative_path)
+            payload["content"] = file_handler.read()
+        except (FileReadError, FileNotFoundError, ValueError):
+            pass
+
+    await app.state.websocket_hub.broadcast_json(payload)
 
 
 def _status_for_read_error(error: FileReadError) -> int:
