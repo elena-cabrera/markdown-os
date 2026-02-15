@@ -26,6 +26,8 @@
   --copy-text: #334155;
   --copy-text-hover: #0f172a;
   --copy-copied-border: #8ed4ce;
+  --code-line-number-bg: #eef2ff;
+  --code-line-number-text: #64748b;
   --mermaid-bg: #ffffff;
   --mermaid-error-border: #fecaca;
   --mermaid-error-bg: #fef2f2;
@@ -73,6 +75,8 @@
   --copy-text: #cbd5e1;
   --copy-text-hover: #f8fafc;
   --copy-copied-border: #14b8a6;
+  --code-line-number-bg: #172554;
+  --code-line-number-text: #93c5fd;
   --mermaid-bg: #1e293b;
   --mermaid-error-border: #7f1d1d;
   --mermaid-error-bg: #450a0a;
@@ -428,6 +432,50 @@ body {
   margin: 0 !important;
   border: 0 !important;
   border-radius: 0 !important;
+}
+
+.code-block-content {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.code-line-numbers {
+  border-right: 1px solid var(--border);
+  background: var(--code-line-number-bg);
+  color: var(--code-line-number-text);
+  padding: 12px 10px;
+  min-width: 46px;
+  text-align: right;
+  font-size: 13px;
+  line-height: 1.6;
+  font-family:
+    "JetBrains Mono",
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    "Liberation Mono",
+    "Courier New",
+    monospace;
+  user-select: none;
+}
+
+.code-line-number {
+  display: block;
+}
+
+.code-block-content pre {
+  overflow: auto;
+  padding: 12px 0 !important;
+}
+
+.code-block-content pre code {
+  display: block;
+  min-width: max-content;
+  padding: 0 14px !important;
+  font-size: 13px;
+  line-height: 1.6;
 }
 
 .mermaid-container {

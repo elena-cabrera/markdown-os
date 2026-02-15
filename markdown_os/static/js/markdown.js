@@ -33,6 +33,28 @@
     return languageClass.replace("language-", "");
   }
 
+  function countCodeLines(content) {
+    if (!content) {
+      return 1;
+    }
+    return Math.max(1, content.split("\n").length);
+  }
+
+  function createLineNumberGutter(lineCount) {
+    const gutter = document.createElement("div");
+    gutter.className = "code-line-numbers";
+    gutter.setAttribute("aria-hidden", "true");
+
+    for (let line = 1; line <= lineCount; line += 1) {
+      const lineNumber = document.createElement("span");
+      lineNumber.className = "code-line-number";
+      lineNumber.textContent = String(line);
+      gutter.appendChild(lineNumber);
+    }
+
+    return gutter;
+  }
+
   async function copyToClipboard(text) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
       await navigator.clipboard.writeText(text);
@@ -66,11 +88,20 @@
       preElement.dataset.decorated = "true";
 
       const languageLabel = inferLanguageLabel(codeElement);
+      if (languageLabel === "mermaid") {
+        return;
+      }
+
       const wrapper = document.createElement("div");
       wrapper.className = "code-block";
 
       const header = document.createElement("div");
       header.className = "code-block-header";
+      const content = document.createElement("div");
+      content.className = "code-block-content";
+
+      const lineCount = countCodeLines(codeElement.textContent || "");
+      const lineNumberGutter = createLineNumberGutter(lineCount);
 
       const label = document.createElement("span");
       label.className = "code-language-label";
@@ -102,7 +133,9 @@
       header.appendChild(copyButton);
       preElement.replaceWith(wrapper);
       wrapper.appendChild(header);
-      wrapper.appendChild(preElement);
+      wrapper.appendChild(content);
+      content.appendChild(lineNumberGutter);
+      content.appendChild(preElement);
 
       if (
         window.hljs &&
