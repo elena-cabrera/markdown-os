@@ -6,6 +6,8 @@
     lastSavedContent: "",
     isSaving: false,
     isEditMode: false,
+    currentFilePath: null,
+    mode: "file",
   };
 
   function setSaveStatus(message, variant = "neutral") {
@@ -43,15 +45,52 @@
     container.classList.remove("hidden");
   }
 
-  async function loadContent() {
+  async function detectMode() {
+    try {
+      const response = await fetch("/api/mode");
+      if (!response.ok) {
+        return "file";
+      }
+      const payload = await response.json();
+      return payload.mode || "file";
+    } catch (error) {
+      console.error("Failed to detect mode.", error);
+      return "file";
+    }
+  }
+
+  function buildContentUrl(filePath = null) {
+    if (editorState.mode === "file") {
+      return "/api/content";
+    }
+
+    const targetPath = filePath || editorState.currentFilePath;
+    if (!targetPath) {
+      return null;
+    }
+
+    return `/api/content?file=${encodeURIComponent(targetPath)}`;
+  }
+
+  async function loadContent(filePath = null) {
     const editor = document.getElementById("markdown-editor");
     if (!editor) {
-      return;
+      return false;
+    }
+
+    const requestUrl = buildContentUrl(filePath);
+    if (!requestUrl) {
+      editor.value = "";
+      editorState.lastSavedContent = "";
+      await window.renderMarkdown("");
+      setSaveStatus("Select a file");
+      setLoadingState(false);
+      return false;
     }
 
     setLoadingState(true);
     try {
-      const response = await fetch("/api/content");
+      const response = await fetch(requestUrl);
       if (!response.ok) {
         throw new Error(`Failed to load content (${response.status})`);
       }
@@ -60,18 +99,35 @@
       const initialContent = payload.content || "";
       editor.value = initialContent;
       editorState.lastSavedContent = initialContent;
+
+      if (editorState.mode === "folder") {
+        const relativePath = payload.metadata?.relative_path || filePath || null;
+        editorState.currentFilePath = relativePath;
+        if (relativePath && window.fileTree?.setCurrentFile) {
+          window.fileTree.setCurrentFile(relativePath);
+        }
+      }
+
+      await window.renderMarkdown(initialContent);
       setSaveStatus("Loaded", "saved");
+      return true;
     } catch (error) {
       console.error("Failed to load markdown content.", error);
       setSaveStatus("Load failed", "error");
+      return false;
     } finally {
       setLoadingState(false);
     }
   }
 
-  async function checkForExternalChanges() {
+  async function checkForExternalChanges(filePath = null) {
+    const requestUrl = buildContentUrl(filePath);
+    if (!requestUrl) {
+      return false;
+    }
+
     try {
-      const response = await fetch("/api/content");
+      const response = await fetch(requestUrl);
       if (!response.ok) {
         return false;
       }
@@ -93,13 +149,7 @@
       const discardButton = document.getElementById("conflict-discard");
       const cancelButton = document.getElementById("conflict-cancel");
 
-      if (
-        !modal ||
-        !overlay ||
-        !saveButton ||
-        !discardButton ||
-        !cancelButton
-      ) {
+      if (!modal || !overlay || !saveButton || !discardButton || !cancelButton) {
         console.error("Conflict modal elements not found.");
         resolve("cancel");
         return;
@@ -171,7 +221,7 @@
 
     const hasUnsavedChanges = editor.value !== editorState.lastSavedContent;
     if (hasUnsavedChanges) {
-      const hasConflict = await checkForExternalChanges();
+      const hasConflict = await checkForExternalChanges(editorState.currentFilePath);
       if (hasConflict) {
         const choice = await showConflictDialog();
         if (choice === "save") {
@@ -180,7 +230,7 @@
             return;
           }
         } else if (choice === "discard") {
-          await loadContent();
+          await loadContent(editorState.currentFilePath);
         } else {
           return;
         }
@@ -206,21 +256,40 @@
       return false;
     }
 
+    if (editorState.mode === "folder" && !editorState.currentFilePath) {
+      setSaveStatus("Select a file", "error");
+      return false;
+    }
+
     editorState.isSaving = true;
     const content = editor.value;
     setSaveStatus("Saving...", "saving");
 
     try {
+      const payload = { content };
+      if (editorState.mode === "folder") {
+        payload.file = editorState.currentFilePath;
+      }
+
       const response = await fetch("/api/save", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
         throw new Error(`Save failed (${response.status})`);
+      }
+
+      const responsePayload = await response.json();
+      if (editorState.mode === "folder") {
+        const relativePath = responsePayload.metadata?.relative_path || editorState.currentFilePath;
+        editorState.currentFilePath = relativePath;
+        if (relativePath && window.fileTree?.setCurrentFile) {
+          window.fileTree.setCurrentFile(relativePath);
+        }
       }
 
       editorState.lastSavedContent = content;
@@ -241,6 +310,9 @@
     }
 
     editorState.saveTimeout = window.setTimeout(() => {
+      if (editorState.mode === "folder" && !editorState.currentFilePath) {
+        return;
+      }
       saveContent();
     }, AUTOSAVE_DELAY_MS);
   }
@@ -248,6 +320,11 @@
   function onEditorInput() {
     const editor = document.getElementById("markdown-editor");
     if (!editor) {
+      return;
+    }
+
+    if (editorState.mode === "folder" && !editorState.currentFilePath) {
+      setSaveStatus("Select a file", "error");
       return;
     }
 
@@ -259,7 +336,17 @@
 
   async function handleExternalChange(detail) {
     const editor = document.getElementById("markdown-editor");
-    if (!editor || !detail || typeof detail.content !== "string") {
+    if (!editor || !detail) {
+      return;
+    }
+
+    if (editorState.mode === "folder") {
+      if (detail.file !== editorState.currentFilePath) {
+        return;
+      }
+    }
+
+    if (typeof detail.content !== "string") {
       return;
     }
 
@@ -296,6 +383,64 @@
     setSaveStatus("Reloaded from disk", "saved");
   }
 
+  async function switchFile(filePath) {
+    const editor = document.getElementById("markdown-editor");
+    if (!editor) {
+      return false;
+    }
+
+    if (!filePath) {
+      return false;
+    }
+
+    if (editorState.mode !== "folder") {
+      editorState.mode = await detectMode();
+      if (editorState.mode !== "folder") {
+        return false;
+      }
+    }
+
+    if (filePath === editorState.currentFilePath) {
+      return true;
+    }
+
+    const hasUnsavedChanges = editor.value !== editorState.lastSavedContent;
+    if (hasUnsavedChanges && editorState.currentFilePath) {
+      const hasConflict = await checkForExternalChanges(editorState.currentFilePath);
+      if (hasConflict) {
+        const choice = await showConflictDialog();
+        if (choice === "save") {
+          const saved = await saveContent();
+          if (!saved) {
+            return false;
+          }
+        } else if (choice === "discard") {
+          // User opted to keep disk state and switch files.
+        } else {
+          return false;
+        }
+      } else {
+        const saved = await saveContent();
+        if (!saved) {
+          return false;
+        }
+      }
+    }
+
+    const loaded = await loadContent(filePath);
+    if (!loaded) {
+      return false;
+    }
+
+    editorState.currentFilePath = filePath;
+    if (window.fileTree?.setCurrentFile) {
+      window.fileTree.setCurrentFile(filePath);
+    }
+
+    await switchToTab("preview");
+    return true;
+  }
+
   function bindEvents() {
     const editor = document.getElementById("markdown-editor");
     const editTab = document.getElementById("edit-tab");
@@ -322,9 +467,19 @@
     });
   }
 
+  window.switchFile = switchFile;
+
   document.addEventListener("DOMContentLoaded", async () => {
+    editorState.mode = await detectMode();
     bindEvents();
-    await loadContent();
+
+    if (editorState.mode === "file") {
+      await loadContent();
+    } else {
+      setLoadingState(false);
+      setSaveStatus("Select a file");
+    }
+
     await switchToTab("preview");
   });
 })();

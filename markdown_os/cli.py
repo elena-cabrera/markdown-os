@@ -12,6 +12,7 @@ from typing import Annotated
 import typer
 import uvicorn
 
+from markdown_os.directory_handler import DirectoryHandler
 from markdown_os.file_handler import FileHandler
 from markdown_os.server import create_app
 
@@ -55,6 +56,69 @@ def _validate_markdown_file(filepath: Path) -> Path:
     if resolved_path.suffix.lower() not in {".md", ".markdown"}:
         raise typer.BadParameter("Only markdown files are supported (.md, .markdown).")
     return resolved_path
+
+
+def _directory_contains_markdown_files(directory: Path) -> bool:
+    """
+    Check whether a directory contains at least one markdown file recursively.
+
+    Args:
+    - directory (Path): Directory path to scan for markdown files.
+
+    Returns:
+    - bool: True when at least one .md/.markdown file is found.
+    """
+
+    return any(
+        candidate.is_file() and candidate.suffix.lower() in {".md", ".markdown"}
+        for candidate in directory.rglob("*")
+    )
+
+
+def _validate_markdown_directory(directory: Path) -> Path:
+    """
+    Validate and normalize a directory path from CLI input.
+
+    Args:
+    - directory (Path): Directory path supplied by the user.
+
+    Returns:
+    - Path: Fully resolved directory path when validation passes.
+    """
+
+    resolved_path = directory.expanduser().resolve()
+    if not resolved_path.exists():
+        raise typer.BadParameter(f"Path does not exist: {resolved_path}")
+    if not resolved_path.is_dir():
+        raise typer.BadParameter(f"Path is not a directory: {resolved_path}")
+    if not _directory_contains_markdown_files(resolved_path):
+        raise typer.BadParameter(
+            f"Directory contains no markdown files (.md, .markdown): {resolved_path}"
+        )
+    return resolved_path
+
+
+def _validate_path(path: Path) -> tuple[Path, str]:
+    """
+    Validate path input as either a markdown file or markdown directory.
+
+    Args:
+    - path (Path): Path supplied by the user.
+
+    Returns:
+    - tuple[Path, str]: (resolved_path, mode) where mode is "file" or "folder".
+    """
+
+    resolved_path = path.expanduser().resolve()
+    if not resolved_path.exists():
+        raise typer.BadParameter(f"Path does not exist: {resolved_path}")
+
+    if resolved_path.is_file():
+        return _validate_markdown_file(resolved_path), "file"
+    if resolved_path.is_dir():
+        return _validate_markdown_directory(resolved_path), "folder"
+
+    raise typer.BadParameter(f"Path is neither a file nor directory: {resolved_path}")
 
 
 def _is_port_available(host: str, port: int) -> bool:
@@ -150,7 +214,7 @@ def _load_example_template() -> str:
 
 @app.command("open")
 def open_markdown_file(
-    filepath: Path = typer.Argument(..., help="Path to a .md file."),
+    filepath: Path = typer.Argument(..., help="Path to a markdown file or directory."),
     host: Annotated[
         str,
         typer.Option(
@@ -167,10 +231,10 @@ def open_markdown_file(
     ] = 8000,
 ) -> None:
     """
-    Start a local web editor for the provided markdown file.
+    Start a local web editor for a markdown file or markdown workspace directory.
 
     Args:
-    - filepath (Path): Markdown file path to open in the editor.
+    - filepath (Path): Markdown file or directory path to open in the editor.
     - host (str): Host interface used by the FastAPI/Uvicorn server.
     - port (int): Preferred start port for auto-increment probing.
 
@@ -178,15 +242,21 @@ def open_markdown_file(
     - None: Function starts a blocking uvicorn server until interrupted.
     """
 
-    resolved_path = _validate_markdown_file(filepath)
+    resolved_path, mode = _validate_path(filepath)
     selected_port = find_available_port(host=host, start_port=port)
     editor_url = f"http://{host}:{selected_port}"
 
-    typer.echo(f"Opening {resolved_path} at {editor_url}")
+    target_label = "file" if mode == "file" else "folder"
+    typer.echo(f"Opening {target_label} {resolved_path} at {editor_url}")
     _open_browser(editor_url)
 
-    file_handler = FileHandler(resolved_path)
-    application = create_app(file_handler)
+    if mode == "file":
+        handler = FileHandler(resolved_path)
+        application = create_app(handler, mode="file")
+    else:
+        handler = DirectoryHandler(resolved_path)
+        application = create_app(handler, mode="folder")
+
     uvicorn.run(application, host=host, port=selected_port)
 
 
