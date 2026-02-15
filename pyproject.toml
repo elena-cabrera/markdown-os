@@ -1,6 +1,6 @@
 [project]
 name = "markdown-os"
-version = "0.1.0"
+version = "0.1.2"
 description = "Developer-focused markdown editor served from a local CLI."
 readme = "README.md"
 license = "Apache-2.0"
