@@ -468,6 +468,10 @@
   }
 
   window.switchFile = switchFile;
+  window.loadContent = loadContent;
+  window.checkForExternalChanges = checkForExternalChanges;
+  window.showConflictDialog = showConflictDialog;
+  window.saveContent = saveContent;
 
   document.addEventListener("DOMContentLoaded", async () => {
     editorState.mode = await detectMode();

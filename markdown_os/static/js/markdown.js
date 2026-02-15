@@ -1,5 +1,9 @@
 (() => {
   const panZoomKey = "data-panzoom-initialized";
+  const taskListState = {
+    isBound: false,
+    queue: Promise.resolve(),
+  };
   const mermaidState = {
     initialized: false,
     theme: null,
@@ -31,6 +35,28 @@
       return "text";
     }
     return languageClass.replace("language-", "");
+  }
+
+  function countCodeLines(content) {
+    if (!content) {
+      return 1;
+    }
+    return Math.max(1, content.split("\n").length);
+  }
+
+  function createLineNumberGutter(lineCount) {
+    const gutter = document.createElement("div");
+    gutter.className = "code-line-numbers";
+    gutter.setAttribute("aria-hidden", "true");
+
+    for (let line = 1; line <= lineCount; line += 1) {
+      const lineNumber = document.createElement("span");
+      lineNumber.className = "code-line-number";
+      lineNumber.textContent = String(line);
+      gutter.appendChild(lineNumber);
+    }
+
+    return gutter;
   }
 
   async function copyToClipboard(text) {
@@ -66,11 +92,20 @@
       preElement.dataset.decorated = "true";
 
       const languageLabel = inferLanguageLabel(codeElement);
+      if (languageLabel === "mermaid") {
+        return;
+      }
+
       const wrapper = document.createElement("div");
       wrapper.className = "code-block";
 
       const header = document.createElement("div");
       header.className = "code-block-header";
+      const content = document.createElement("div");
+      content.className = "code-block-content";
+
+      const lineCount = countCodeLines(codeElement.textContent || "");
+      const lineNumberGutter = createLineNumberGutter(lineCount);
 
       const label = document.createElement("span");
       label.className = "code-language-label";
@@ -102,7 +137,9 @@
       header.appendChild(copyButton);
       preElement.replaceWith(wrapper);
       wrapper.appendChild(header);
-      wrapper.appendChild(preElement);
+      wrapper.appendChild(content);
+      content.appendChild(lineNumberGutter);
+      content.appendChild(preElement);
 
       if (
         window.hljs &&
@@ -248,6 +285,145 @@
     });
   }
 
+  function findTaskListMarker(content, taskIndex) {
+    const taskRegex = /^(\s*(?:>\s*)*(?:[-*+]|\d+\.)\s+\[)([ xX])(\])/gm;
+    let match = null;
+    let currentIndex = 0;
+
+    while ((match = taskRegex.exec(content)) !== null) {
+      if (currentIndex === taskIndex) {
+        return {
+          start: match.index,
+          end: match.index + match[0].length,
+          prefix: match[1],
+          state: match[2],
+          suffix: match[3],
+        };
+      }
+      currentIndex += 1;
+    }
+
+    return null;
+  }
+
+  async function handleCheckboxToggle(taskIndex) {
+    const editor = document.getElementById("markdown-editor");
+    if (!editor || Number.isNaN(taskIndex) || taskIndex < 0) {
+      return;
+    }
+
+    const originalContent = editor.value;
+    const marker = findTaskListMarker(originalContent, taskIndex);
+    if (!marker) {
+      console.error("Failed to match task list checkbox in source.", { taskIndex });
+      await renderMarkdown(originalContent);
+      return;
+    }
+
+    const nextState = marker.state.toLowerCase() === "x" ? " " : "x";
+    const nextContent =
+      originalContent.slice(0, marker.start) +
+      `${marker.prefix}${nextState}${marker.suffix}` +
+      originalContent.slice(marker.end);
+    editor.value = nextContent;
+
+    try {
+      let shouldSave = true;
+      if (typeof window.checkForExternalChanges === "function") {
+        const hasConflict = await window.checkForExternalChanges();
+        if (hasConflict && typeof window.showConflictDialog === "function") {
+          const choice = await window.showConflictDialog();
+          if (choice === "discard") {
+            shouldSave = false;
+            if (typeof window.loadContent === "function") {
+              await window.loadContent();
+            } else {
+              editor.value = originalContent;
+            }
+          } else if (choice !== "save") {
+            shouldSave = false;
+            editor.value = originalContent;
+          }
+        } else if (hasConflict) {
+          shouldSave = false;
+          editor.value = originalContent;
+        }
+      }
+
+      if (shouldSave && typeof window.saveContent === "function") {
+        const didSave = await window.saveContent();
+        if (!didSave) {
+          editor.value = originalContent;
+        }
+      }
+    } catch (error) {
+      console.error("Task list toggle failed.", error);
+      editor.value = originalContent;
+    }
+
+    await renderMarkdown(editor.value);
+  }
+
+  function queueCheckboxToggle(taskIndex) {
+    taskListState.queue = taskListState.queue
+      .then(() => handleCheckboxToggle(taskIndex))
+      .catch((error) => {
+        console.error("Task list toggle queue failed.", error);
+      });
+  }
+
+  function onTaskListClick(event) {
+    if (!(event.target instanceof Element)) {
+      return;
+    }
+
+    const checkbox = event.target.closest('input[type="checkbox"]');
+    if (!checkbox) {
+      return;
+    }
+
+    const preview = document.getElementById("markdown-preview");
+    if (!preview || !preview.contains(checkbox)) {
+      return;
+    }
+
+    const taskIndex = Number.parseInt(checkbox.dataset.taskIndex || "", 10);
+    if (Number.isNaN(taskIndex)) {
+      return;
+    }
+
+    queueCheckboxToggle(taskIndex);
+  }
+
+  function makeTaskListsInteractive() {
+    const preview = document.getElementById("markdown-preview");
+    if (!preview) {
+      return;
+    }
+
+    if (!taskListState.isBound) {
+      preview.addEventListener("click", onTaskListClick);
+      taskListState.isBound = true;
+    }
+
+    const checkboxes = preview.querySelectorAll('li > input[type="checkbox"]');
+    checkboxes.forEach((checkbox, index) => {
+      checkbox.removeAttribute("disabled");
+      checkbox.dataset.taskIndex = String(index);
+
+      const taskListItem = checkbox.closest("li");
+      if (!taskListItem) {
+        return;
+      }
+
+      taskListItem.classList.add("task-list-item");
+      const parentList = taskListItem.parentElement;
+      if (parentList && (parentList.tagName === "UL" || parentList.tagName === "OL")) {
+        parentList.classList.add("task-list");
+      }
+    });
+  }
+
   async function renderMarkdown(content) {
     const preview = document.getElementById("markdown-preview");
     if (!preview || !window.marked) {
@@ -262,6 +438,8 @@
     if (window.generateTOC) {
       window.generateTOC();
     }
+
+    makeTaskListsInteractive();
   }
 
   window.addEventListener("markdown-os:theme-changed", () => {

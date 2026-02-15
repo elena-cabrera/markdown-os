@@ -1,6 +1,26 @@
 # Markdown-OS
 
+[![PyPI version](https://img.shields.io/pypi/v/markdown-os)](https://pypi.org/project/markdown-os/)
+
 Markdown-OS is a local, developer-focused markdown editor served by FastAPI and launched from a Typer CLI.
+
+## Quick Install
+
+```bash
+pip install markdown-os
+```
+
+Or install as a global tool with uv:
+
+```bash
+uv tool install markdown-os
+```
+
+Then run:
+
+```bash
+markdown-os open ./notes.md
+```
 
 ## Read-first workflow
 
@@ -34,6 +54,12 @@ If port `8000` is occupied, Markdown-OS auto-selects the next available port.
 - The editor detects your system color preference on first load.
 - Use the sun/moon toggle in the top-right header to switch between light and dark themes.
 - Manual selection is persisted in `localStorage` and restored on reload.
+
+## Interactive task lists
+
+- In `Preview`, markdown task list items (`- [ ]` and `- [x]`) are clickable.
+- Clicking a checkbox updates markdown source immediately and auto-saves to disk.
+- External-change conflicts use the same `Save My Changes` / `Discard My Changes` / `Cancel` flow.
 
 ## Generate a showcase file
 
