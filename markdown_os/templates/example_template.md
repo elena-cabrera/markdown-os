@@ -7,6 +7,7 @@ Use this file to:
 - Verify preview rendering.
 - Inspect syntax highlighting for code blocks.
 - See Mermaid diagrams render inline.
+- See math equations (inline and display) when KaTeX is enabled.
 - Explore heading structure in the table of contents sidebar.
 - Edit content and observe auto-save behavior.
 
@@ -32,15 +33,15 @@ Use this file to:
 Regular text can be mixed with:
 
 - **Bold text**
-- *Italic text*
-- ***Bold italic text***
+- _Italic text_
+- **_Bold italic text_**
 - ~~Strikethrough text~~
 - `inline code`
 
 You can also combine styles:
 
 - **Bold with `inline code`**
-- *Italic with [a link](https://example.com)*
+- _Italic with [a link](https://example.com)_
 - ~~Crossed out with **bold** details~~
 
 ### Paragraph Wrapping
@@ -83,11 +84,11 @@ Heading depth influences:
 
 * Star item one
 * Star item two
-  * Nested star child
+  - Nested star child
 
-+ Plus item one
-+ Plus item two
-  + Nested plus child
+- Plus item one
+- Plus item two
+  - Nested plus child
 
 ### Ordered Lists
 
@@ -155,28 +156,28 @@ If images do not load, syntax still demonstrates expected markdown structure.
 
 ### Simple Table
 
-| Feature | Status | Notes |
-| --- | --- | --- |
-| Live preview | Enabled | Updates while typing |
-| Auto-save | Enabled | Debounced to reduce write volume |
-| Mermaid | Enabled | Rendered in preview |
+| Feature      | Status  | Notes                            |
+| ------------ | ------- | -------------------------------- |
+| Live preview | Enabled | Updates while typing             |
+| Auto-save    | Enabled | Debounced to reduce write volume |
+| Mermaid      | Enabled | Rendered in preview              |
 
 ### Alignment Table
 
-| Left | Center | Right |
-| :--- | :----: | ----: |
-| apple | banana | carrot |
-| delta | echo | foxtrot |
-| gamma | helix | ion |
+| Left  | Center |   Right |
+| :---- | :----: | ------: |
+| apple | banana |  carrot |
+| delta |  echo  | foxtrot |
+| gamma | helix  |     ion |
 
 ### Table with Inline Formatting
 
-| Pattern | Example | Meaning |
-| --- | --- | --- |
-| Bold | `**value**` | Strong emphasis |
-| Italic | `*value*` | Soft emphasis |
-| Inline code | `` `value` `` | Command or symbol |
-| Link | `[label](url)` | External or local reference |
+| Pattern     | Example        | Meaning                     |
+| ----------- | -------------- | --------------------------- |
+| Bold        | `**value**`    | Strong emphasis             |
+| Italic      | `*value*`      | Soft emphasis               |
+| Inline code | `` `value` ``  | Command or symbol           |
+| Link        | `[label](url)` | External or local reference |
 
 ---
 
@@ -200,7 +201,7 @@ If images do not load, syntax still demonstrates expected markdown structure.
 
 ### Python
 
-```python
+````python
 from pathlib import Path
 
 
@@ -220,7 +221,7 @@ def summarize_markdown(path: Path) -> dict[str, int]:
 if __name__ == "__main__":
     result = summarize_markdown(Path("example.md"))
     print(result)
-```
+````
 
 ### JavaScript
 
@@ -315,15 +316,65 @@ stateDiagram-v2
 
 ---
 
+## Math Equations
+
+LaTeX-style math can be written with single dollars for inline math and double dollars for display equations. If the editor has KaTeX enabled, these will render; otherwise you see the raw syntax.
+
+### Inline Math
+
+- Einstein’s mass–energy equivalence: $E = mc^2$
+- Greek letters: $\alpha$, $\beta$, $\gamma$, $\omega$
+- Pythagorean identity: $x^2 + y^2 = z^2$
+
+### Display Equations
+
+Quadratic formula:
+
+$$
+x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}
+$$
+
+Definite integral:
+
+$$
+\int_0^1 x^2 \, dx = \frac{1}{3}
+$$
+
+Matrix example:
+
+$$
+\begin{pmatrix}
+a & b \\
+c & d
+\end{pmatrix}
+\begin{pmatrix}
+x \\
+y
+\end{pmatrix}
+=
+\begin{pmatrix}
+ax + by \\
+cx + dy
+\end{pmatrix}
+$$
+
+Geometric series (for $|r| < 1$):
+
+$$
+\sum_{n=0}^{\infty} r^n = \frac{1}{1 - r}
+$$
+
+---
+
 ## Horizontal Rules
 
 Three equivalent syntaxes:
 
 ---
 
-***
+---
 
-___
+---
 
 ---
 
@@ -363,6 +414,7 @@ Use this section when validating the editor after changes:
 
 - Confirm syntax highlighting appears for Python, JavaScript, and Bash.
 - Confirm Mermaid diagrams render without console errors.
+- Confirm math equations render (if KaTeX is loaded) or show as raw LaTeX.
 - Confirm TOC includes major sections and nested headings.
 - Confirm auto-save status changes from saving to saved.
 - Confirm code block copy buttons appear.

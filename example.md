@@ -7,6 +7,7 @@ Use this file to:
 - Verify preview rendering.
 - Inspect syntax highlighting for code blocks.
 - See Mermaid diagrams render inline.
+- See math equations (inline and display) when KaTeX is enabled.
 - Explore heading structure in the table of contents sidebar.
 - Edit content and observe auto-save behavior.
 
@@ -111,9 +112,9 @@ Heading depth influences:
 ### Task Lists
 
 - [x] Create markdown file
-- [ ] Open file in editor
-- [x] Add project-specific notes
-- [x] Share with team
+- [x] Open file in editor
+- [ ] Add project-specific notes
+- [ ] Share with team
 
 ---
 
@@ -315,6 +316,56 @@ stateDiagram-v2
 
 ---
 
+## Math Equations
+
+LaTeX-style math can be written with single dollars for inline math and double dollars for display equations. If the editor has KaTeX enabled, these will render; otherwise you see the raw syntax.
+
+### Inline Math
+
+- Einstein’s mass–energy equivalence: $E = mc^2$
+- Greek letters: $\alpha$, $\beta$, $\gamma$, $\omega$
+- Pythagorean identity: $x^2 + y^2 = z^2$
+
+### Display Equations
+
+Quadratic formula:
+
+$$
+x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}
+$$
+
+Definite integral:
+
+$$
+\int_0^1 x^2 \, dx = \frac{1}{3}
+$$
+
+Matrix example:
+
+$$
+\begin{pmatrix}
+a & b \\
+c & d
+\end{pmatrix}
+\begin{pmatrix}
+x \\
+y
+\end{pmatrix}
+=
+\begin{pmatrix}
+ax + by \\
+cx + dy
+\end{pmatrix}
+$$
+
+Geometric series (for $|r| < 1$):
+
+$$
+\sum_{n=0}^{\infty} r^n = \frac{1}{1 - r}
+$$
+
+---
+
 ## Horizontal Rules
 
 Three equivalent syntaxes:
@@ -363,6 +414,7 @@ Use this section when validating the editor after changes:
 
 - Confirm syntax highlighting appears for Python, JavaScript, and Bash.
 - Confirm Mermaid diagrams render without console errors.
+- Confirm math equations render (if KaTeX is loaded) or show as raw LaTeX.
 - Confirm TOC includes major sections and nested headings.
 - Confirm auto-save status changes from saving to saved.
 - Confirm code block copy buttons appear.
