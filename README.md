@@ -2,74 +2,53 @@
 
 [![PyPI version](https://img.shields.io/pypi/v/markdown-os)](https://pypi.org/project/markdown-os/)
 
-Markdown-OS is a local, developer-focused markdown editor served by FastAPI and launched from a Typer CLI.
+Developer-focused markdown editor that runs as a local web server. Edit in the browser with live preview, Mermaid diagrams, syntax highlighting, and auto-save.
 
-## Quick Install
+## Install
 
 ```bash
 pip install markdown-os
 ```
 
-Or install as a global tool with uv:
+Or with [uv](https://docs.astral.sh/uv/):
 
 ```bash
 uv tool install markdown-os
 ```
 
-Then run:
+To upgrade after installing with uv: `uv tool upgrade markdown-os`
+
+## Usage
+
+Single file:
 
 ```bash
 markdown-os open ./notes.md
 ```
 
-## Read-first workflow
-
-- Files open in `Preview` mode by default for safer browsing.
-- Switch to `Edit` when you want to type.
-- Switching from `Edit` to `Preview` auto-saves changes when there is no external conflict.
-- If the file changed externally and you have unsaved edits, Markdown-OS shows a conflict dialog:
-  - `Save My Changes` overwrites disk with your editor content.
-  - `Discard My Changes` reloads content from disk.
-  - `Cancel` keeps you in edit mode with unsaved changes intact.
-- External file changes auto-reload without prompts when safe:
-  - always in preview mode
-  - in edit mode when there are no unsaved changes
-
-## Install dependencies
+Directory (markdown workspace):
 
 ```bash
-uv sync
+markdown-os open ./my-notes
 ```
 
-## Run
+The app opens in your browser. If port 8000 is in use, the next port is tried. Options: `--host`, `--port`.
+
+## Example file
+
+Generate a showcase markdown file:
 
 ```bash
-uv run markdown-os open ./notes.md
+markdown-os example                    # creates example.md in current directory
+markdown-os example ./docs/showcase.md # custom path
+markdown-os example --open             # generate and open in the editor
 ```
 
-If port `8000` is occupied, Markdown-OS auto-selects the next available port.
+Use `--force` / `-f` to overwrite an existing file without prompting.
 
-## Theme toggle
+## Roadmap
 
-- The editor detects your system color preference on first load.
-- Use the sun/moon toggle in the top-right header to switch between light and dark themes.
-- Manual selection is persisted in `localStorage` and restored on reload.
-
-## Interactive task lists
-
-- In `Preview`, markdown task list items (`- [ ]` and `- [x]`) are clickable.
-- Clicking a checkbox updates markdown source immediately and auto-saves to disk.
-- External-change conflicts use the same `Save My Changes` / `Discard My Changes` / `Cancel` flow.
-
-## Generate a showcase file
-
-```bash
-# Create example.md in current directory
-uv run markdown-os example
-
-# Create at a custom location
-uv run markdown-os example ./docs/showcase.md
-
-# Generate and open immediately
-uv run markdown-os example --open
-```
+- **Sidebar & tab redesign** — In folder mode: file tree and table of contents both visible; collapsible file tree; Edit/Read as a single pill toggle with icons.
+- **Lock file cleanup** — Remove `.md.lock` files automatically when the server shuts down.
+- **Image paste** — Paste or drag-and-drop images into the editor; images saved next to the markdown file and a markdown image reference inserted.
+- **Math equations (KaTeX)** — Inline (`$...$`) and display (`$$...$$`) LaTeX math rendering in preview.
