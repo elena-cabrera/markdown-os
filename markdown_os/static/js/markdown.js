@@ -25,6 +25,64 @@
       mangle: false,
       headerIds: false,
     });
+
+    window.marked.use(createMathExtension());
+  }
+
+  function escapeHtmlAttribute(value) {
+    return value
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function createMathExtension() {
+    const mathBlock = {
+      name: "mathBlock",
+      level: "block",
+      start(src) {
+        return src.match(/\$\$/)?.index;
+      },
+      tokenizer(src) {
+        const match = src.match(/^\$\$[ \t]*\n?([\s\S]+?)\n?\$\$(?:\n|$)/);
+        if (match) {
+          return {
+            type: "mathBlock",
+            raw: match[0],
+            text: match[1].trim(),
+          };
+        }
+      },
+      renderer(token) {
+        const escaped = escapeHtmlAttribute(token.text);
+        return `<div class="math-display" data-math-source="${escaped}">${escaped}</div>\n`;
+      },
+    };
+
+    const mathInline = {
+      name: "mathInline",
+      level: "inline",
+      start(src) {
+        return src.match(/\$/)?.index;
+      },
+      tokenizer(src) {
+        const match = src.match(/^\$([^\$\n]+?)\$(?!\$)/);
+        if (match) {
+          return {
+            type: "mathInline",
+            raw: match[0],
+            text: match[1].trim(),
+          };
+        }
+      },
+      renderer(token) {
+        const escaped = escapeHtmlAttribute(token.text);
+        return `<span class="math-inline" data-math-source="${escaped}">${escaped}</span>`;
+      },
+    };
+
+    return { extensions: [mathBlock, mathInline] };
   }
 
   function inferLanguageLabel(codeElement) {
@@ -147,6 +205,83 @@
         !codeElement.classList.contains("hljs")
       ) {
         window.hljs.highlightElement(codeElement);
+      }
+    });
+  }
+
+  function renderMathError(element, source, displayMode) {
+    if (displayMode) {
+      element.innerHTML = "";
+      const errorBlock = document.createElement("div");
+      errorBlock.className = "math-error-block";
+      errorBlock.textContent = `Invalid LaTeX:\n${source}`;
+      element.appendChild(errorBlock);
+      return;
+    }
+
+    element.classList.add("math-error");
+    element.title = `Invalid LaTeX: ${source}`;
+  }
+
+  function renderMathEquations() {
+    if (!window.katex) {
+      return;
+    }
+
+    const preview = document.getElementById("markdown-preview");
+    if (!preview) {
+      return;
+    }
+
+    preview.querySelectorAll(".math-inline").forEach((element) => {
+      const source = element.getAttribute("data-math-source") || element.textContent || "";
+      try {
+        window.katex.render(source, element, {
+          throwOnError: false,
+          displayMode: false,
+          output: "htmlAndMathml",
+        });
+      } catch (error) {
+        console.error("KaTeX inline render error.", error);
+        renderMathError(element, source, false);
+      }
+    });
+
+    preview.querySelectorAll(".math-display").forEach((element) => {
+      const source = element.getAttribute("data-math-source") || element.textContent || "";
+      try {
+        window.katex.render(source, element, {
+          throwOnError: false,
+          displayMode: true,
+          output: "htmlAndMathml",
+        });
+        element.setAttribute("data-math-rendered", "true");
+
+        const copyButton = document.createElement("button");
+        copyButton.className = "copy-button math-copy-button";
+        copyButton.type = "button";
+        copyButton.textContent = "Copy LaTeX";
+        copyButton.addEventListener("click", async () => {
+          try {
+            await copyToClipboard(source);
+            copyButton.textContent = "Copied";
+            copyButton.classList.add("copied");
+            window.setTimeout(() => {
+              copyButton.textContent = "Copy LaTeX";
+              copyButton.classList.remove("copied");
+            }, 1200);
+          } catch (error) {
+            console.error("Failed to copy LaTeX content.", error);
+            copyButton.textContent = "Copy failed";
+            window.setTimeout(() => {
+              copyButton.textContent = "Copy LaTeX";
+            }, 1200);
+          }
+        });
+        element.appendChild(copyButton);
+      } catch (error) {
+        console.error("KaTeX display render error.", error);
+        renderMathError(element, source, true);
       }
     });
   }
@@ -432,6 +567,7 @@
 
     preview.innerHTML = window.marked.parse(content ?? "");
     addCodeBlockDecorations();
+    renderMathEquations();
     await renderMermaidDiagrams();
     applyZoomToDiagrams();
 

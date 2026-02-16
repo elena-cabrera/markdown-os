@@ -32,6 +32,11 @@
   --mermaid-error-border: #fecaca;
   --mermaid-error-bg: #fef2f2;
   --mermaid-error-text: #991b1b;
+  --math-display-bg: #fafcff;
+  --math-display-border: #dbeafe;
+  --math-error-text: #991b1b;
+  --math-error-bg: #fef2f2;
+  --math-error-border: #fecaca;
   --modal-overlay: rgba(0, 0, 0, 0.5);
   --modal-bg: #ffffff;
   --modal-shadow: 0 10px 34px rgba(2, 6, 23, 0.28);
@@ -86,6 +91,11 @@
   --mermaid-error-border: #7f1d1d;
   --mermaid-error-bg: #450a0a;
   --mermaid-error-text: #fca5a5;
+  --math-display-bg: #162032;
+  --math-display-border: #1e3a5f;
+  --math-error-text: #fca5a5;
+  --math-error-bg: #450a0a;
+  --math-error-border: #7f1d1d;
   --modal-overlay: rgba(2, 6, 23, 0.7);
   --modal-bg: #1e293b;
   --modal-shadow: 0 10px 30px rgba(2, 6, 23, 0.55);
@@ -694,6 +704,59 @@ body {
   background: var(--mermaid-error-bg);
   color: var(--mermaid-error-text);
   white-space: pre-wrap;
+}
+
+.math-inline {
+  padding: 0 2px;
+}
+
+.math-inline .katex {
+  font-size: 1.05em;
+}
+
+.math-display {
+  position: relative;
+  border: 1px solid var(--math-display-border);
+  border-radius: 10px;
+  padding: 20px 24px;
+  margin: 16px 0;
+  overflow-x: auto;
+  text-align: center;
+  background: var(--math-display-bg);
+}
+
+.math-display .katex-display {
+  margin: 0;
+}
+
+.math-inline.math-error {
+  color: var(--math-error-text);
+  border-bottom: 1px dashed var(--math-error-text);
+  cursor: help;
+}
+
+.math-error-block {
+  border: 1px solid var(--math-error-border);
+  border-radius: 10px;
+  padding: 10px;
+  background: var(--math-error-bg);
+  color: var(--math-error-text);
+  white-space: pre-wrap;
+  font-family: monospace;
+  font-size: 0.85em;
+  text-align: left;
+}
+
+.math-copy-button {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.math-display:hover .math-copy-button {
+  opacity: 1;
 }
 
 #markdown-preview .task-list {
