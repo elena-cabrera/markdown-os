@@ -410,13 +410,19 @@
         return;
       }
 
-      window.svgPanZoom(svgElement, {
+      const instance = window.svgPanZoom(svgElement, {
         controlIconsEnabled: true,
         zoomScaleSensitivity: 0.4,
         minZoom: 0.5,
         maxZoom: 20,
       });
       svgElement.setAttribute(panZoomKey, "true");
+
+      const sizes = instance.getSizes?.();
+      if (sizes?.viewBox?.width != null && sizes?.viewBox?.height != null) {
+        svgElement.setAttribute("width", String(sizes.viewBox.width));
+        svgElement.setAttribute("height", String(sizes.viewBox.height));
+      }
     });
   }
 

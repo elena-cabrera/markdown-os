@@ -242,10 +242,9 @@ body {
 }
 
 #file-tree-container {
-  min-height: 0;
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
-  flex: 1;
   border-bottom: 1px solid var(--border);
   padding-bottom: 12px;
   margin-bottom: 12px;
@@ -289,8 +288,7 @@ body {
 .sidebar-collapsible {
   display: flex;
   flex-direction: column;
-  flex: 1;
-  min-height: 0;
+  flex: 0 0 auto;
   overflow: hidden;
 }
 
@@ -323,7 +321,7 @@ body {
 }
 
 #file-tree {
-  flex: 1;
+  max-height: 40vh;
   overflow: auto;
   overscroll-behavior: contain;
 }
@@ -794,6 +792,16 @@ body {
   margin: 16px 0;
   overflow: auto;
   background: var(--mermaid-bg);
+}
+
+.mermaid-container .mermaid {
+  display: block;
+}
+
+.mermaid-container svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
 }
 
 .mermaid-error {
