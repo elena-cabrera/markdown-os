@@ -194,17 +194,23 @@
           </div>
         </div>
 
-        <section id="editor-container" class="view">
-          <textarea
-            id="markdown-editor"
-            spellcheck="false"
-            aria-label="Markdown editor"
-          ></textarea>
-        </section>
+        <div class="view-area">
+          <section id="editor-container" class="view">
+            <textarea
+              id="markdown-editor"
+              spellcheck="false"
+              aria-label="Markdown editor"
+            ></textarea>
+          </section>
 
-        <section id="preview-container" class="view active">
-          <article id="markdown-preview"></article>
-        </section>
+          <section id="preview-container" class="view active">
+            <article id="markdown-preview"></article>
+          </section>
+
+          <div id="content-loading" class="content-loading-overlay hidden" aria-hidden="true">
+            <div class="content-loading-spinner"></div>
+          </div>
+        </div>
       </main>
     </div>
 

@@ -70,6 +70,22 @@
     container.classList.remove("hidden");
   }
 
+  function setContentLoadingState(isLoading) {
+    const overlay = document.getElementById("content-loading");
+    if (!overlay) {
+      return;
+    }
+
+    if (isLoading) {
+      overlay.classList.remove("hidden");
+      overlay.setAttribute("aria-hidden", "false");
+      return;
+    }
+
+    overlay.classList.add("hidden");
+    overlay.setAttribute("aria-hidden", "true");
+  }
+
   async function detectMode() {
     try {
       const response = await fetch("/api/mode");
@@ -114,7 +130,13 @@
       return false;
     }
 
-    setLoadingState(true);
+    const container = document.getElementById("app-container");
+    const isInitialLoad = container?.classList.contains("hidden") ?? true;
+    if (isInitialLoad) {
+      setLoadingState(true);
+    } else {
+      setContentLoadingState(true);
+    }
     try {
       const response = await fetch(requestUrl);
       if (!response.ok) {
@@ -144,7 +166,11 @@
       setSaveStatus("Load failed", "error");
       return false;
     } finally {
-      setLoadingState(false);
+      if (isInitialLoad) {
+        setLoadingState(false);
+      } else {
+        setContentLoadingState(false);
+      }
     }
   }
 

@@ -558,6 +558,45 @@ body {
   flex-direction: column;
 }
 
+.view-area {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.content-loading-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--panel-bg);
+  opacity: 0.85;
+  z-index: 10;
+}
+
+.content-loading-overlay.hidden {
+  display: none !important;
+}
+
+.content-loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: content-loading-spin 0.7s linear infinite;
+}
+
+@keyframes content-loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 #markdown-editor {
   width: 100%;
   flex: 1;
