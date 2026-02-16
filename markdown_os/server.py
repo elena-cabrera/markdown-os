@@ -305,6 +305,7 @@ def create_app(handler: FileHandler | DirectoryHandler, mode: str = "file") -> F
         finally:
             observer.stop()
             observer.join(timeout=3)
+            handler.cleanup()
 
     app = FastAPI(title="Markdown-OS", lifespan=lifespan)
     app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")

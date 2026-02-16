@@ -151,6 +151,20 @@ class DirectoryHandler:
             return False
         return True
 
+    def cleanup(self) -> None:
+        """
+        Clean up lock files for all cached file handlers.
+
+        Args:
+        - None (None): Iterates over all file handlers created during this session.
+
+        Returns:
+        - None: Cleanup has best-effort semantics and never raises.
+        """
+
+        for file_handler in self._file_handlers.values():
+            file_handler.cleanup()
+
     def _resolve_relative_markdown_path(self, relative_path: str) -> tuple[str, Path]:
         """
         Resolve and validate a directory-relative markdown file path.
