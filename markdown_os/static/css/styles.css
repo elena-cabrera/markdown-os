@@ -50,6 +50,7 @@
   --table-header-text: #17233b;
   --table-row-alt-bg: #f7f8fa;
   --table-row-hover-bg: #eef2f9;
+  --drag-over-bg: #f0f7ff;
 }
 
 [data-theme="dark"] {
@@ -104,6 +105,7 @@
   --table-header-text: #e2e8f0;
   --table-row-alt-bg: #162032;
   --table-row-hover-bg: #1e3350;
+  --drag-over-bg: #162032;
 }
 
 *,
@@ -490,6 +492,12 @@ body {
   background: var(--editor-bg);
 }
 
+#markdown-editor.drag-over {
+  outline: 2px dashed var(--accent);
+  outline-offset: -4px;
+  background: var(--drag-over-bg);
+}
+
 #preview-container {
   overflow: auto;
   padding: 24px;
@@ -514,6 +522,12 @@ body {
 
 #markdown-preview pre {
   margin: 14px 0 20px;
+}
+
+#markdown-preview img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
 }
 
 /* ── Table Styling ── */

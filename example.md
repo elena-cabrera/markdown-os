@@ -12,7 +12,7 @@ Use this file to:
 - Edit content and observe auto-save behavior.
 
 ---
-
+![image](images/CleanShot-2026-02-16-at-20-46-50-20260216-194655-892845.png)
 ## Quick Start
 
 1. Switch between **Edit** and **Preview** tabs.
@@ -459,3 +459,4 @@ uv run markdown-os example --force
 ```
 
 Happy writing.
+![image](images/CleanShot-2026-02-16-at-20-47-18-20260216-194724-167926.png)
