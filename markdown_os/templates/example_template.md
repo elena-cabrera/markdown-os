@@ -318,7 +318,7 @@ stateDiagram-v2
 
 ## Math Equations
 
-LaTeX-style math can be written with single dollars for inline math and double dollars for display equations. If the editor has KaTeX enabled, these will render; otherwise you see the raw syntax.
+LaTeX-style math uses single dollars for inline math and double dollars for display equations. Equations render in Preview via KaTeX, and display blocks expose a hover "Copy LaTeX" action.
 
 ### Inline Math
 
@@ -363,6 +363,8 @@ Geometric series (for $|r| < 1$):
 $$
 \sum_{n=0}^{\infty} r^n = \frac{1}{1 - r}
 $$
+
+Literal currency values should be escaped when needed: `\$10-\$20`.
 
 ---
 
