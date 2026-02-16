@@ -34,6 +34,7 @@ class FileHandler:
 
         self._filepath = filepath.expanduser().resolve()
         self._lock_path = self._filepath.with_suffix(f"{self._filepath.suffix}.lock")
+        self._lock_created = False
 
     @property
     def filepath(self) -> Path:
@@ -119,6 +120,26 @@ class FileHandler:
             "created_at": stat_result.st_ctime,
         }
 
+    def cleanup(self) -> None:
+        """
+        Remove the lock file created by this handler instance.
+
+        Args:
+        - None (None): This method operates on the handler's tracked lock path.
+
+        Returns:
+        - None: Cleanup has best-effort semantics and never raises.
+        """
+
+        if not self._lock_created:
+            return
+
+        try:
+            if self._lock_path.exists():
+                self._lock_path.unlink()
+        except OSError:
+            return
+
     @contextmanager
     def _acquire_lock(self, exclusive: bool) -> Iterator[None]:
         """
@@ -133,6 +154,7 @@ class FileHandler:
 
         self._lock_path.parent.mkdir(parents=True, exist_ok=True)
         with self._lock_path.open("a+", encoding="utf-8") as lock_file:
+            self._lock_created = True
             lock_mode = fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH
             try:
                 fcntl.flock(lock_file.fileno(), lock_mode)
