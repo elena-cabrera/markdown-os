@@ -136,6 +136,7 @@ html,
 body {
   margin: 0;
   height: 100%;
+  overflow: hidden;
   font-family:
     Inter,
     -apple-system,
@@ -157,9 +158,11 @@ body {
 
 .container {
   height: 100vh;
+  min-height: 0;
   display: flex;
   gap: 14px;
   padding: 12px;
+  overflow: hidden;
 }
 
 .hidden {
@@ -170,6 +173,7 @@ body {
   width: 24%;
   min-width: 220px;
   max-width: 340px;
+  min-height: 0;
   background: var(--panel-bg);
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -196,6 +200,7 @@ body {
 
 #toc {
   overflow: auto;
+  overscroll-behavior: contain;
 }
 
 #toc ul {
@@ -266,6 +271,7 @@ body {
 #file-tree {
   flex: 1;
   overflow: auto;
+  overscroll-behavior: contain;
 }
 
 .tree-root,
@@ -345,6 +351,7 @@ body {
 #main-content {
   flex: 1;
   min-width: 0;
+  min-height: 0;
   background: var(--panel-bg);
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -470,16 +477,20 @@ body {
 
 .view {
   display: none;
-  height: calc(100vh - 78px);
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .view.active {
-  display: block;
+  display: flex;
+  flex-direction: column;
 }
 
 #markdown-editor {
   width: 100%;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   border: 0;
   resize: none;
   outline: none;
@@ -501,7 +512,10 @@ body {
 }
 
 #preview-container {
+  flex: 1;
+  min-height: 0;
   overflow: auto;
+  overscroll-behavior: contain;
   padding: 24px;
 }
 
