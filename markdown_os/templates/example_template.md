@@ -140,6 +140,14 @@ Relative link example: [Local notes](./notes.md)
 
 ## Images
 
+Paste images directly from your clipboard (**Ctrl+V** / **Cmd+V**) or drag and
+drop image files onto the editor. Images are saved to an `images/` folder next
+to your markdown file (or workspace root in folder mode).
+
+Standard markdown image syntax:
+
+`![Alt text](images/photo.png)`
+
 Basic image syntax:
 
 ![Placeholder alt text](https://via.placeholder.com/640x180.png?text=Markdown-OS+Preview)

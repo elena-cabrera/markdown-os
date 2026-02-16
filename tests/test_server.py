@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 
 from markdown_os.directory_handler import DirectoryHandler
 from markdown_os.file_handler import FileHandler
-from markdown_os.server import create_app
+from markdown_os.server import MAX_IMAGE_SIZE_BYTES, create_app
 
 
 def _build_client(markdown_path: Path) -> TestClient:
@@ -244,3 +244,199 @@ def test_websocket_route_accepts_client(tmp_path: Path) -> None:
     with _build_client(markdown_path) as client:
         with client.websocket_connect("/ws") as websocket:
             websocket.send_text("ping")
+
+
+def test_upload_image_saves_file_and_returns_relative_path(tmp_path: Path) -> None:
+    """
+    Verify POST /api/images stores an uploaded image and returns its relative path.
+
+    Args:
+    - tmp_path (Path): Pytest-managed temporary directory fixture.
+
+    Returns:
+    - None: Assertions validate response payload and saved file content.
+    """
+
+    markdown_path = tmp_path / "notes.md"
+    markdown_path.write_text("hello", encoding="utf-8")
+
+    with _build_client(markdown_path) as client:
+        response = client.post(
+            "/api/images",
+            files={"file": ("paste.png", b"png-bytes", "image/png")},
+        )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["path"].startswith("images/")
+    saved_name = payload["filename"]
+    saved_path = tmp_path / "images" / saved_name
+    assert saved_path.exists()
+    assert saved_path.read_bytes() == b"png-bytes"
+
+
+def test_upload_image_rejects_unsupported_extension(tmp_path: Path) -> None:
+    """
+    Verify POST /api/images rejects files that are not in the image extension allowlist.
+
+    Args:
+    - tmp_path (Path): Pytest-managed temporary directory fixture.
+
+    Returns:
+    - None: Assertion validates unsupported extension handling.
+    """
+
+    markdown_path = tmp_path / "notes.md"
+    markdown_path.write_text("hello", encoding="utf-8")
+
+    with _build_client(markdown_path) as client:
+        response = client.post(
+            "/api/images",
+            files={"file": ("archive.tiff", b"image-data", "image/tiff")},
+        )
+
+    assert response.status_code == 400
+    assert "Unsupported image format" in response.json()["detail"]
+
+
+def test_upload_image_rejects_empty_file(tmp_path: Path) -> None:
+    """
+    Verify POST /api/images rejects empty uploads.
+
+    Args:
+    - tmp_path (Path): Pytest-managed temporary directory fixture.
+
+    Returns:
+    - None: Assertion validates empty upload handling.
+    """
+
+    markdown_path = tmp_path / "notes.md"
+    markdown_path.write_text("hello", encoding="utf-8")
+
+    with _build_client(markdown_path) as client:
+        response = client.post(
+            "/api/images",
+            files={"file": ("paste.png", b"", "image/png")},
+        )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Empty file uploaded."
+
+
+def test_upload_image_rejects_oversized_file(tmp_path: Path) -> None:
+    """
+    Verify POST /api/images enforces maximum upload size.
+
+    Args:
+    - tmp_path (Path): Pytest-managed temporary directory fixture.
+
+    Returns:
+    - None: Assertion validates upload size validation.
+    """
+
+    markdown_path = tmp_path / "notes.md"
+    markdown_path.write_text("hello", encoding="utf-8")
+    oversized_payload = b"a" * (MAX_IMAGE_SIZE_BYTES + 1)
+
+    with _build_client(markdown_path) as client:
+        response = client.post(
+            "/api/images",
+            files={"file": ("big.png", oversized_payload, "image/png")},
+        )
+
+    assert response.status_code == 400
+    assert "Image too large" in response.json()["detail"]
+
+
+def test_serve_image_returns_file_content(tmp_path: Path) -> None:
+    """
+    Verify GET /images/{filename} serves files from the images directory.
+
+    Args:
+    - tmp_path (Path): Pytest-managed temporary directory fixture.
+
+    Returns:
+    - None: Assertions validate successful image retrieval.
+    """
+
+    markdown_path = tmp_path / "notes.md"
+    markdown_path.write_text("hello", encoding="utf-8")
+    images_dir = tmp_path / "images"
+    images_dir.mkdir(parents=True, exist_ok=True)
+    image_path = images_dir / "shot.png"
+    image_path.write_bytes(b"img-data")
+
+    with _build_client(markdown_path) as client:
+        response = client.get("/images/shot.png")
+
+    assert response.status_code == 200
+    assert response.content == b"img-data"
+
+
+def test_serve_image_returns_not_found_for_missing_file(tmp_path: Path) -> None:
+    """
+    Verify GET /images/{filename} returns 404 when the file does not exist.
+
+    Args:
+    - tmp_path (Path): Pytest-managed temporary directory fixture.
+
+    Returns:
+    - None: Assertion validates missing file behavior.
+    """
+
+    markdown_path = tmp_path / "notes.md"
+    markdown_path.write_text("hello", encoding="utf-8")
+
+    with _build_client(markdown_path) as client:
+        response = client.get("/images/missing.png")
+
+    assert response.status_code == 404
+
+
+def test_serve_image_rejects_directory_traversal(tmp_path: Path) -> None:
+    """
+    Verify GET /images/{filename} blocks path traversal attempts.
+
+    Args:
+    - tmp_path (Path): Pytest-managed temporary directory fixture.
+
+    Returns:
+    - None: Assertion validates security checks for invalid paths.
+    """
+
+    markdown_path = tmp_path / "notes.md"
+    markdown_path.write_text("hello", encoding="utf-8")
+
+    with _build_client(markdown_path) as client:
+        response = client.get("/images/%2E%2E/%2E%2E/server.py")
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Invalid image path."
+
+
+def test_upload_image_uses_workspace_images_directory_in_folder_mode(tmp_path: Path) -> None:
+    """
+    Verify folder mode writes uploads to the workspace-level images directory.
+
+    Args:
+    - tmp_path (Path): Pytest-managed temporary directory fixture.
+
+    Returns:
+    - None: Assertions validate folder-mode upload storage location.
+    """
+
+    workspace = tmp_path / "workspace"
+    workspace.mkdir(parents=True, exist_ok=True)
+    (workspace / "notes.md").write_text("hello", encoding="utf-8")
+
+    with _build_folder_client(workspace) as client:
+        response = client.post(
+            "/api/images",
+            files={"file": ("drop.png", b"folder-image", "image/png")},
+        )
+
+    assert response.status_code == 200
+    payload = response.json()
+    saved_path = workspace / payload["path"]
+    assert saved_path.exists()
+    assert saved_path.read_bytes() == b"folder-image"

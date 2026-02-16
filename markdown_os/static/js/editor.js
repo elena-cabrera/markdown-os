@@ -8,6 +8,7 @@
     isEditMode: false,
     currentFilePath: null,
     mode: "file",
+    nextUploadId: 0,
   };
 
   function setSaveStatus(message, variant = "neutral") {
@@ -451,6 +452,89 @@
     return true;
   }
 
+  function extensionFromMimeType(mimeType) {
+    const mimeToExtension = {
+      "image/png": "png",
+      "image/jpeg": "jpg",
+      "image/gif": "gif",
+      "image/webp": "webp",
+      "image/svg+xml": "svg",
+      "image/bmp": "bmp",
+      "image/x-icon": "ico",
+      "image/vnd.microsoft.icon": "ico",
+    };
+    return mimeToExtension[mimeType] || "png";
+  }
+
+  function replaceFirst(text, searchValue, replacement) {
+    const index = text.indexOf(searchValue);
+    if (index === -1) {
+      return text;
+    }
+    return `${text.slice(0, index)}${replacement}${text.slice(index + searchValue.length)}`;
+  }
+
+  function insertTextAtCursor(text) {
+    const editor = document.getElementById("markdown-editor");
+    if (!editor) {
+      return;
+    }
+
+    const start = editor.selectionStart;
+    const end = editor.selectionEnd;
+    const before = editor.value.slice(0, start);
+    const after = editor.value.slice(end);
+
+    editor.value = `${before}${text}${after}`;
+    const cursorPosition = start + text.length;
+    editor.selectionStart = cursorPosition;
+    editor.selectionEnd = cursorPosition;
+    editor.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+
+  async function handleImageUpload(file) {
+    const editor = document.getElementById("markdown-editor");
+    if (!editor || !file) {
+      return;
+    }
+
+    const uploadId = `upload-${Date.now()}-${editorState.nextUploadId}`;
+    editorState.nextUploadId += 1;
+    const placeholder = `![Uploading image...](${uploadId})`;
+    insertTextAtCursor(placeholder);
+    setSaveStatus("Uploading image...", "saving");
+
+    const formData = new FormData();
+    const extension = file.name?.includes(".")
+      ? file.name.split(".").pop().toLowerCase()
+      : extensionFromMimeType(file.type);
+    const filename = file.name || `paste.${extension}`;
+    formData.append("file", file, filename);
+
+    try {
+      const response = await fetch("/api/images", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorPayload = await response.json().catch(() => ({}));
+        throw new Error(errorPayload.detail || `Upload failed (${response.status})`);
+      }
+
+      const payload = await response.json();
+      const markdownImage = `![image](${payload.path})`;
+      editor.value = replaceFirst(editor.value, placeholder, markdownImage);
+      editor.dispatchEvent(new Event("input", { bubbles: true }));
+      setSaveStatus("Image uploaded", "saved");
+    } catch (error) {
+      console.error("Image upload failed.", error);
+      editor.value = replaceFirst(editor.value, placeholder, "");
+      editor.dispatchEvent(new Event("input", { bubbles: true }));
+      setSaveStatus("Image upload failed", "error");
+    }
+  }
+
   function bindEvents() {
     const editor = document.getElementById("markdown-editor");
     const editTab = document.getElementById("edit-tab");
@@ -460,6 +544,55 @@
     }
 
     editor.addEventListener("input", onEditorInput);
+    editor.addEventListener("paste", (event) => {
+      const items = event.clipboardData?.items;
+      if (!items) {
+        return;
+      }
+
+      for (const item of items) {
+        if (!item.type.startsWith("image/")) {
+          continue;
+        }
+
+        const file = item.getAsFile();
+        if (!file) {
+          return;
+        }
+
+        event.preventDefault();
+        handleImageUpload(file);
+        return;
+      }
+    });
+    editor.addEventListener("dragover", (event) => {
+      const hasFiles = Array.from(event.dataTransfer?.types || []).includes("Files");
+      if (!hasFiles) {
+        return;
+      }
+      event.preventDefault();
+      editor.classList.add("drag-over");
+    });
+    editor.addEventListener("dragleave", () => {
+      editor.classList.remove("drag-over");
+    });
+    editor.addEventListener("drop", (event) => {
+      editor.classList.remove("drag-over");
+      const files = event.dataTransfer?.files;
+      if (!files || files.length === 0) {
+        return;
+      }
+
+      const imageFiles = Array.from(files).filter((file) => file.type.startsWith("image/"));
+      if (imageFiles.length === 0) {
+        return;
+      }
+
+      event.preventDefault();
+      for (const file of imageFiles) {
+        handleImageUpload(file);
+      }
+    });
     editTab.addEventListener("click", () => {
       switchToTab("edit");
     });

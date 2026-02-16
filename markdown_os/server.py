@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import asyncio
+import re
 import time
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -17,6 +19,9 @@ from watchdog.observers import Observer
 
 from markdown_os.directory_handler import DirectoryHandler
 from markdown_os.file_handler import FileHandler, FileReadError, FileWriteError
+
+ALLOWED_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp", ".ico"}
+MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024
 
 
 class SaveRequest(BaseModel):
@@ -476,6 +481,77 @@ def create_app(handler: FileHandler | DirectoryHandler, mode: str = "file") -> F
 
         return {"status": "saved", "metadata": metadata}
 
+    @app.post("/api/images")
+    async def upload_image(file: UploadFile) -> dict[str, str]:
+        """
+        Save an uploaded image in the workspace images directory.
+
+        Args:
+        - file (UploadFile): Uploaded image data from multipart form payload.
+
+        Returns:
+        - dict[str, str]: Relative image path and saved filename.
+        """
+
+        original_name = file.filename or "image.png"
+        suffix = Path(original_name).suffix.lower()
+        if suffix not in ALLOWED_IMAGE_EXTENSIONS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported image format: {suffix or '(missing extension)'}",
+            )
+
+        image_data = await file.read()
+        if not image_data:
+            raise HTTPException(status_code=400, detail="Empty file uploaded.")
+        if len(image_data) > MAX_IMAGE_SIZE_BYTES:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Image too large. Maximum size is "
+                    f"{MAX_IMAGE_SIZE_BYTES // (1024 * 1024)} MB."
+                ),
+            )
+
+        safe_stem = re.sub(r"[^a-zA-Z0-9_-]", "-", Path(original_name).stem).strip("-")
+        if not safe_stem:
+            safe_stem = "image"
+
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S-%f")
+        filename = f"{safe_stem}-{timestamp}{suffix}"
+
+        images_dir = _get_images_dir(app)
+        images_dir.mkdir(parents=True, exist_ok=True)
+        destination = images_dir / filename
+        destination.write_bytes(image_data)
+
+        return {"path": f"images/{filename}", "filename": filename}
+
+    @app.get("/images/{filename:path}")
+    async def serve_image(filename: str) -> FileResponse:
+        """
+        Serve uploaded images from the workspace images directory.
+
+        Args:
+        - filename (str): Relative filename under the images directory.
+
+        Returns:
+        - FileResponse: Streamed image file response when present.
+        """
+
+        if ".." in filename or filename.startswith("/"):
+            raise HTTPException(status_code=400, detail="Invalid image path.")
+
+        images_dir = _get_images_dir(app)
+        image_path = (images_dir / filename).resolve()
+        images_root = images_dir.resolve()
+        if not image_path.is_relative_to(images_root):
+            raise HTTPException(status_code=400, detail="Invalid image path.")
+        if not image_path.is_file():
+            raise HTTPException(status_code=404, detail="Image not found.")
+
+        return FileResponse(image_path)
+
     @app.websocket("/ws")
     async def websocket_endpoint(websocket: WebSocket) -> None:
         """
@@ -546,6 +622,25 @@ def _should_ignore_watcher_event(app: FastAPI) -> bool:
     """
 
     return (time.monotonic() - app.state.last_internal_write_at) < 0.5
+
+
+def _get_images_dir(app: FastAPI) -> Path:
+    """
+    Resolve the images directory for the current application mode.
+
+    Args:
+    - app (FastAPI): Application state holder with mode and handlers.
+
+    Returns:
+    - Path: Absolute path to the workspace-level images directory.
+    """
+
+    if app.state.mode == "file":
+        file_handler = _require_file_handler(app)
+        return file_handler.filepath.parent / "images"
+
+    directory_handler = _require_directory_handler(app)
+    return directory_handler.directory / "images"
 
 
 async def _broadcast_external_change(app: FastAPI, changed_path: Path) -> None:

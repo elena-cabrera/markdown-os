@@ -12,3 +12,7 @@ wheels/
 # lock files except uv.lock
 *.lock
 !uv.lock
+
+# images directory
+/images
+
