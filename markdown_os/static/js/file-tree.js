@@ -1,4 +1,6 @@
 (() => {
+  const COLLAPSE_KEY = "markdown-os-file-tree-collapsed";
+
   const fileTreeState = {
     mode: "file",
     currentFile: null,
@@ -9,8 +11,70 @@
 
   function setFolderModeUI() {
     document.getElementById("file-tree-container")?.classList.remove("hidden");
-    document.getElementById("toc-container")?.classList.add("hidden");
     document.getElementById("current-file-path")?.classList.remove("hidden");
+    restoreFileTreeCollapseState();
+  }
+
+  function collapseFileTree() {
+    const toggle = document.getElementById("file-tree-toggle");
+    const collapsible = document.getElementById("file-tree-collapsible");
+    const container = document.getElementById("file-tree-container");
+    if (!toggle || !collapsible || !container) {
+      return;
+    }
+
+    toggle.setAttribute("aria-expanded", "false");
+    collapsible.classList.add("collapsed");
+    container.classList.add("collapsed");
+  }
+
+  function expandFileTree() {
+    const toggle = document.getElementById("file-tree-toggle");
+    const collapsible = document.getElementById("file-tree-collapsible");
+    const container = document.getElementById("file-tree-container");
+    if (!toggle || !collapsible || !container) {
+      return;
+    }
+
+    toggle.setAttribute("aria-expanded", "true");
+    collapsible.classList.remove("collapsed");
+    container.classList.remove("collapsed");
+  }
+
+  function restoreFileTreeCollapseState() {
+    let collapsed = false;
+
+    try {
+      collapsed = window.localStorage.getItem(COLLAPSE_KEY) === "true";
+    } catch (_error) {
+      collapsed = false;
+    }
+
+    if (collapsed) {
+      collapseFileTree();
+    } else {
+      expandFileTree();
+    }
+  }
+
+  function toggleFileTreeCollapse() {
+    const toggle = document.getElementById("file-tree-toggle");
+    if (!toggle) {
+      return;
+    }
+
+    const isExpanded = toggle.getAttribute("aria-expanded") === "true";
+    if (isExpanded) {
+      collapseFileTree();
+    } else {
+      expandFileTree();
+    }
+
+    try {
+      window.localStorage.setItem(COLLAPSE_KEY, String(isExpanded));
+    } catch (_error) {
+      // Ignore storage errors.
+    }
   }
 
   function updateCurrentFileLabel() {
@@ -223,6 +287,9 @@
 
   function initFileTree() {
     bindSearch();
+    document
+      .getElementById("file-tree-toggle")
+      ?.addEventListener("click", toggleFileTreeCollapse);
   }
 
   window.fileTree = {

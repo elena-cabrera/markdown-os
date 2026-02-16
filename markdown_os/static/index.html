@@ -49,17 +49,39 @@
     <div class="container hidden" id="app-container">
       <aside id="sidebar">
         <div id="file-tree-container" class="hidden">
-          <div class="sidebar-header">
-            <h3>Files</h3>
-            <input
-              type="text"
-              id="file-tree-search"
-              placeholder="Search files..."
-              class="file-tree-search"
-              aria-label="Search files"
-            />
+          <button
+            id="file-tree-toggle"
+            class="sidebar-section-toggle"
+            type="button"
+            aria-expanded="true"
+          >
+            <svg
+              class="toggle-chevron"
+              width="12"
+              height="12"
+              viewBox="0 0 12 12"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polyline points="4 2 8 6 4 10"></polyline>
+            </svg>
+            <span>Files</span>
+          </button>
+          <div id="file-tree-collapsible" class="sidebar-collapsible">
+            <div class="sidebar-header">
+              <input
+                type="text"
+                id="file-tree-search"
+                placeholder="Search files..."
+                class="file-tree-search"
+                aria-label="Search files"
+              />
+            </div>
+            <nav id="file-tree" role="tree"></nav>
           </div>
-          <nav id="file-tree" role="tree"></nav>
         </div>
 
         <div id="toc-container">
@@ -71,8 +93,39 @@
       <main id="main-content">
         <div class="tab-nav">
           <div class="tab-group">
-            <button id="edit-tab" class="tab-button" type="button">Edit</button>
-            <button id="preview-tab" class="tab-button active" type="button">Preview</button>
+            <div class="tab-toggle">
+              <button id="edit-tab" class="tab-toggle-button" type="button">
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+                </svg>
+                <span>Edit</span>
+              </button>
+              <button id="preview-tab" class="tab-toggle-button active" type="button">
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                  <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                </svg>
+                <span>Read</span>
+              </button>
+            </div>
           </div>
           <div id="current-file-path" class="current-file-path hidden">
             <span id="current-file-text"></span>
