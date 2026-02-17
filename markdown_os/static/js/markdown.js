@@ -416,18 +416,20 @@
         return;
       }
 
+      const container = svgElement.closest(".mermaid-container");
+
       const instance = window.svgPanZoom(svgElement, {
-        controlIconsEnabled: true,
+        controlIconsEnabled: false,
         zoomScaleSensitivity: 0.4,
         minZoom: 0.5,
         maxZoom: 20,
+        fit: true,
+        center: true,
       });
       svgElement.setAttribute(panZoomKey, "true");
 
-      const sizes = instance.getSizes?.();
-      if (sizes?.viewBox?.width != null && sizes?.viewBox?.height != null) {
-        svgElement.setAttribute("width", String(sizes.viewBox.width));
-        svgElement.setAttribute("height", String(sizes.viewBox.height));
+      if (container) {
+        container._panZoomInstance = instance;
       }
     });
   }
@@ -455,18 +457,61 @@
       button.setAttribute("aria-label", "View diagram fullscreen");
       button.textContent = "⛶";
       button.addEventListener("click", () => {
-        openMermaidFullscreen(svg);
+        const mermaidEl = container.querySelector(".mermaid[data-original-content]");
+        const source = mermaidEl
+          ? mermaidEl.getAttribute("data-original-content")
+          : null;
+        openMermaidFullscreen(source || "", svg);
       });
 
       container.appendChild(button);
+
+      if (!container.querySelector(".mermaid-zoom-controls")) {
+        const controls = document.createElement("div");
+        controls.className = "mermaid-zoom-controls";
+
+        const zoomIn = document.createElement("button");
+        zoomIn.className = "mermaid-zoom-btn";
+        zoomIn.type = "button";
+        zoomIn.title = "Zoom in";
+        zoomIn.textContent = "+";
+        zoomIn.addEventListener("click", () => {
+          container._panZoomInstance?.zoomIn();
+        });
+
+        const reset = document.createElement("button");
+        reset.className = "mermaid-zoom-btn";
+        reset.type = "button";
+        reset.title = "Reset view";
+        reset.textContent = "⊡";
+        reset.addEventListener("click", () => {
+          const pz = container._panZoomInstance;
+          if (pz) {
+            pz.resetZoom();
+            pz.resetPan();
+            pz.fit();
+            pz.center();
+          }
+        });
+
+        const zoomOut = document.createElement("button");
+        zoomOut.className = "mermaid-zoom-btn";
+        zoomOut.type = "button";
+        zoomOut.title = "Zoom out";
+        zoomOut.textContent = "−";
+        zoomOut.addEventListener("click", () => {
+          container._panZoomInstance?.zoomOut();
+        });
+
+        controls.appendChild(zoomIn);
+        controls.appendChild(reset);
+        controls.appendChild(zoomOut);
+        container.appendChild(controls);
+      }
     });
   }
 
-  function openMermaidFullscreen(sourceSvg) {
-    if (!(sourceSvg instanceof SVGElement)) {
-      return;
-    }
-
+  async function openMermaidFullscreen(mermaidSource, fallbackSvg) {
     const overlay = document.getElementById("mermaid-fullscreen-overlay");
     const modal = document.getElementById("mermaid-fullscreen-modal");
     const content = document.getElementById("mermaid-fullscreen-content");
@@ -481,24 +526,44 @@
     fullscreenState.previousFocus =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
 
-    const svgClone = sourceSvg.cloneNode(true);
-    if (!(svgClone instanceof SVGElement)) {
+    content.innerHTML = "";
+
+    let svgElement = null;
+
+    if (mermaidSource && window.mermaid) {
+      try {
+        ensureMermaidInitialized();
+        const fullscreenId = "mermaid-fullscreen-render-" + Date.now();
+        const { svg } = await window.mermaid.render(fullscreenId, mermaidSource);
+        content.innerHTML = svg;
+        svgElement = content.querySelector("svg");
+      } catch (error) {
+        console.error("Mermaid fullscreen render error.", error);
+      }
+    }
+
+    if (!svgElement && fallbackSvg instanceof SVGElement) {
+      const svgClone = fallbackSvg.cloneNode(true);
+      if (svgClone instanceof SVGElement) {
+        svgClone.removeAttribute(panZoomKey);
+        svgClone.removeAttribute("style");
+        content.appendChild(svgClone);
+        svgElement = svgClone;
+      }
+    }
+
+    if (!svgElement) {
       return;
     }
 
-    svgClone.removeAttribute(panZoomKey);
-    svgClone.removeAttribute("style");
-    svgClone.setAttribute("width", "100%");
-    svgClone.setAttribute("height", "100%");
-
-    content.innerHTML = "";
-    content.appendChild(svgClone);
+    svgElement.setAttribute("width", "100%");
+    svgElement.setAttribute("height", "100%");
 
     overlay.classList.remove("hidden");
     modal.classList.remove("hidden");
 
     if (window.svgPanZoom) {
-      fullscreenState.panZoomInstance = window.svgPanZoom(svgClone, {
+      fullscreenState.panZoomInstance = window.svgPanZoom(svgElement, {
         controlIconsEnabled: false,
         zoomScaleSensitivity: 0.4,
         minZoom: 0.2,

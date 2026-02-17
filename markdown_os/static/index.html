@@ -241,25 +241,6 @@
       aria-label="Fullscreen diagram viewer"
     >
       <div class="mermaid-fullscreen-toolbar">
-        <button id="mermaid-zoom-in" class="mermaid-fullscreen-btn" type="button" title="Zoom in">
-          +
-        </button>
-        <button
-          id="mermaid-zoom-out"
-          class="mermaid-fullscreen-btn"
-          type="button"
-          title="Zoom out"
-        >
-          −
-        </button>
-        <button
-          id="mermaid-zoom-reset"
-          class="mermaid-fullscreen-btn"
-          type="button"
-          title="Reset zoom"
-        >
-          ⊡
-        </button>
         <button
           id="mermaid-fullscreen-close"
           class="mermaid-fullscreen-btn mermaid-fullscreen-close-btn"
@@ -269,7 +250,30 @@
           ✕
         </button>
       </div>
-      <div id="mermaid-fullscreen-content" class="mermaid-fullscreen-content"></div>
+      <div class="mermaid-fullscreen-canvas">
+        <div id="mermaid-fullscreen-content" class="mermaid-fullscreen-content"></div>
+        <div class="mermaid-zoom-controls">
+          <button id="mermaid-zoom-in" class="mermaid-fullscreen-btn" type="button" title="Zoom in">
+            +
+          </button>
+          <button
+            id="mermaid-zoom-reset"
+            class="mermaid-fullscreen-btn"
+            type="button"
+            title="Reset view"
+          >
+            ⊡
+          </button>
+          <button
+            id="mermaid-zoom-out"
+            class="mermaid-fullscreen-btn"
+            type="button"
+            title="Zoom out"
+          >
+            −
+          </button>
+        </div>
+      </div>
     </div>
 
     <script src="/static/js/theme.js"></script>
