@@ -232,6 +232,45 @@
         <p class="modal-hint">Press ESC or click outside to cancel</p>
       </div>
     </div>
+    <div id="mermaid-fullscreen-overlay" class="modal-overlay hidden"></div>
+    <div
+      id="mermaid-fullscreen-modal"
+      class="mermaid-fullscreen-modal hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Fullscreen diagram viewer"
+    >
+      <div class="mermaid-fullscreen-toolbar">
+        <button id="mermaid-zoom-in" class="mermaid-fullscreen-btn" type="button" title="Zoom in">
+          +
+        </button>
+        <button
+          id="mermaid-zoom-out"
+          class="mermaid-fullscreen-btn"
+          type="button"
+          title="Zoom out"
+        >
+          −
+        </button>
+        <button
+          id="mermaid-zoom-reset"
+          class="mermaid-fullscreen-btn"
+          type="button"
+          title="Reset zoom"
+        >
+          ⊡
+        </button>
+        <button
+          id="mermaid-fullscreen-close"
+          class="mermaid-fullscreen-btn mermaid-fullscreen-close-btn"
+          type="button"
+          title="Close (ESC)"
+        >
+          ✕
+        </button>
+      </div>
+      <div id="mermaid-fullscreen-content" class="mermaid-fullscreen-content"></div>
+    </div>
 
     <script src="/static/js/theme.js"></script>
     <script src="/static/js/websocket.js"></script>
