@@ -10,6 +10,9 @@
     mode: "file",
     nextUploadId: 0,
   };
+  const tocUpdateState = {
+    timeout: null,
+  };
 
   function getDisplayName(metadata) {
     return metadata?.relative_path || (metadata?.path ? metadata.path.replace(/^.*[/\\]/, "") : "");
@@ -159,6 +162,9 @@
       }
 
       await window.renderMarkdown(initialContent);
+      if (typeof window.generateTOC === "function") {
+        window.generateTOC();
+      }
       setSaveStatus("Loaded", "saved");
       return true;
     } catch (error) {
@@ -270,6 +276,12 @@
       editorContainer.classList.add("active");
       previewContainer.classList.remove("active");
       editorState.isEditMode = true;
+      if (typeof window.syncEditorScroll === "function") {
+        window.syncEditorScroll();
+      }
+      if (typeof window.generateTOC === "function") {
+        window.generateTOC();
+      }
       return;
     }
 
@@ -302,6 +314,9 @@
     previewContainer.classList.add("active");
     editorState.isEditMode = false;
     await window.renderMarkdown(editor.value);
+    if (typeof window.syncPreviewScroll === "function") {
+      window.syncPreviewScroll();
+    }
   }
 
   async function saveContent() {
@@ -371,6 +386,18 @@
     }, AUTOSAVE_DELAY_MS);
   }
 
+  function queueTOCUpdate() {
+    if (tocUpdateState.timeout) {
+      window.clearTimeout(tocUpdateState.timeout);
+    }
+
+    tocUpdateState.timeout = window.setTimeout(() => {
+      if (typeof window.generateTOC === "function") {
+        window.generateTOC();
+      }
+    }, 300);
+  }
+
   function onEditorInput() {
     const editor = document.getElementById("markdown-editor");
     if (!editor) {
@@ -386,6 +413,8 @@
       setSaveStatus("Unsaved changes");
       queueAutosave();
     }
+
+    queueTOCUpdate();
   }
 
   async function handleExternalChange(detail) {
@@ -420,6 +449,9 @@
     if (!hasUnsavedChanges) {
       editor.value = detail.content;
       editorState.lastSavedContent = detail.content;
+      if (typeof window.generateTOC === "function") {
+        window.generateTOC();
+      }
       setSaveStatus("Reloaded from disk", "saved");
       return;
     }
@@ -434,6 +466,9 @@
 
     editor.value = detail.content;
     editorState.lastSavedContent = detail.content;
+    if (typeof window.generateTOC === "function") {
+      window.generateTOC();
+    }
     setSaveStatus("Reloaded from disk", "saved");
   }
 
