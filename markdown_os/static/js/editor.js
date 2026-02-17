@@ -114,6 +114,10 @@
   }
 
   async function loadContent(filePath = null) {
+    if (editorState.mode === "folder" && window.fileTabs?.isEnabled()) {
+      return window.fileTabs.reloadTab(filePath || window.fileTabs.getActiveTabPath());
+    }
+
     const editor = document.getElementById("markdown-editor");
     if (!editor) {
       return false;
@@ -175,6 +179,10 @@
   }
 
   async function checkForExternalChanges(filePath = null) {
+    if (editorState.mode === "folder" && window.fileTabs?.isEnabled()) {
+      return window.fileTabs.checkForExternalChanges(filePath || window.fileTabs.getActiveTabPath());
+    }
+
     const requestUrl = buildContentUrl(filePath);
     if (!requestUrl) {
       return false;
@@ -254,6 +262,10 @@
   }
 
   async function switchToTab(tabName) {
+    if (editorState.mode === "folder" && window.fileTabs?.isEnabled()) {
+      return window.fileTabs.setActiveMode(tabName);
+    }
+
     const editTab = document.getElementById("edit-tab");
     const previewTab = document.getElementById("preview-tab");
     const editorContainer = document.getElementById("editor-container");
@@ -305,6 +317,10 @@
   }
 
   async function saveContent() {
+    if (editorState.mode === "folder" && window.fileTabs?.isEnabled()) {
+      return window.fileTabs.saveTabContent(window.fileTabs.getActiveTabPath());
+    }
+
     const editor = document.getElementById("markdown-editor");
     if (!editor || editorState.isSaving) {
       return false;
@@ -377,6 +393,27 @@
       return;
     }
 
+    if (editorState.mode === "folder" && window.fileTabs?.isEnabled()) {
+      const activePath = window.fileTabs.getActiveTabPath();
+      if (!activePath) {
+        setSaveStatus("Select a file", "error");
+        return;
+      }
+
+      const tabData = window.fileTabs.getTabData(activePath);
+      if (!tabData) {
+        return;
+      }
+
+      tabData.content = editor.value;
+      const isDirty = window.fileTabs.updateTabDirtyState(activePath);
+      if (isDirty) {
+        setSaveStatus("Unsaved changes");
+        window.fileTabs.queueTabAutosave(activePath);
+      }
+      return;
+    }
+
     if (editorState.mode === "folder" && !editorState.currentFilePath) {
       setSaveStatus("Select a file", "error");
       return;
@@ -389,6 +426,11 @@
   }
 
   async function handleExternalChange(detail) {
+    if (editorState.mode === "folder" && window.fileTabs?.isEnabled()) {
+      await window.fileTabs.handleExternalChange(detail);
+      return;
+    }
+
     const editor = document.getElementById("markdown-editor");
     if (!editor || !detail) {
       return;
@@ -452,6 +494,13 @@
       if (editorState.mode !== "folder") {
         return false;
       }
+    }
+
+    if (editorState.mode === "folder" && window.fileTabs) {
+      if (!window.fileTabs.isEnabled()) {
+        window.fileTabs.init("folder");
+      }
+      return window.fileTabs.openTab(filePath);
     }
 
     if (filePath === editorState.currentFilePath) {
@@ -666,10 +715,13 @@
     if (editorState.mode === "file") {
       await loadContent();
     } else {
+      window.fileTabs?.init(editorState.mode);
       setLoadingState(false);
       setSaveStatus("Select a file");
     }
 
-    await switchToTab("preview");
+    if (editorState.mode === "file") {
+      await switchToTab("preview");
+    }
   });
 })();
