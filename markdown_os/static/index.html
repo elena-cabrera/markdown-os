@@ -194,6 +194,8 @@
           </div>
         </div>
 
+        <div id="file-tabs-bar" class="file-tabs-bar hidden" role="tablist" aria-label="Open files"></div>
+
         <div class="view-area">
           <section id="editor-container" class="view">
             <textarea
@@ -233,11 +235,28 @@
       </div>
     </div>
 
+    <div id="close-tab-overlay" class="modal-overlay hidden"></div>
+    <div id="close-tab-modal" class="modal hidden" role="dialog" aria-modal="true">
+      <div class="modal-content">
+        <h3 class="modal-title">Unsaved Changes</h3>
+        <p id="close-tab-message" class="modal-message"></p>
+        <div class="modal-actions">
+          <button id="close-tab-save" class="btn btn-primary" type="button">Save &amp; Close</button>
+          <button id="close-tab-discard" class="btn btn-secondary" type="button">
+            Discard &amp; Close
+          </button>
+          <button id="close-tab-cancel" class="btn btn-tertiary" type="button">Cancel</button>
+        </div>
+        <p class="modal-hint">Press ESC or click outside to cancel</p>
+      </div>
+    </div>
+
     <script src="/static/js/theme.js"></script>
     <script src="/static/js/websocket.js"></script>
     <script src="/static/js/markdown.js"></script>
     <script src="/static/js/toc.js"></script>
     <script src="/static/js/file-tree.js"></script>
+    <script src="/static/js/tabs.js"></script>
     <script src="/static/js/editor.js"></script>
   </body>
 </html>
