@@ -975,6 +975,7 @@ body {
   margin: 0 !important;
   border: 0 !important;
   border-radius: 0 !important;
+  background: var(--code-block-bg) !important;
 }
 
 .code-block-content {
@@ -1011,6 +1012,7 @@ body {
 .code-block-content pre {
   overflow: auto;
   padding: 12px 0 !important;
+  background: var(--code-block-bg) !important;
 }
 
 .code-block-content pre code {
@@ -1019,6 +1021,12 @@ body {
   padding: 0 14px !important;
   font-size: 13px;
   line-height: 1.6;
+  color: var(--preview-text);
+  background: var(--code-block-bg) !important;
+}
+
+.code-block-content pre code.hljs {
+  background: var(--code-block-bg) !important;
 }
 
 .mermaid-container {

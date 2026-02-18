@@ -33,7 +33,7 @@
       name: "Nord Light",
       type: "light",
       dots: ["#eceff4", "#2e3440", "#5e81ac"],
-      highlightTheme: "nord",
+      highlightTheme: "github",
       mermaidTheme: "neutral",
     },
     {
