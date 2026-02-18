@@ -8,6 +8,14 @@
     <script>
       (() => {
         const THEME_KEY = "markdown-os-theme";
+        const VALID_THEME_IDS = new Set([
+          "light",
+          "dark",
+          "dracula",
+          "nord-light",
+          "nord-dark",
+          "lofi",
+        ]);
         const root = document.documentElement;
         root.classList.add("loading");
 
@@ -18,31 +26,25 @@
           savedTheme = null;
         }
 
-        const nextTheme =
-          savedTheme === "light" || savedTheme === "dark"
-            ? savedTheme
-            : window.matchMedia("(prefers-color-scheme: dark)").matches
-              ? "dark"
-              : "light";
+        const nextTheme = VALID_THEME_IDS.has(savedTheme)
+          ? savedTheme
+          : window.matchMedia("(prefers-color-scheme: dark)").matches
+            ? "dark"
+            : "light";
         root.setAttribute("data-theme", nextTheme);
       })();
     </script>
     <link rel="stylesheet" href="/static/css/styles.css" />
+    <link rel="stylesheet" href="/static/css/themes.css" />
     <link
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.css"
       crossorigin="anonymous"
     />
     <link
-      id="highlight-light"
+      id="highlight-theme"
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css"
-    />
-    <link
-      id="highlight-dark"
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css"
-      disabled
     />
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
@@ -144,52 +146,40 @@
             <span id="current-file-text"></span>
           </div>
           <div class="tab-controls">
-            <button
-              id="theme-toggle"
-              class="theme-toggle"
-              type="button"
-              aria-label="Toggle theme"
-              title="Toggle theme"
-            >
-              <svg
-                id="theme-icon-sun"
-                class="theme-icon"
-                xmlns="http://www.w3.org/2000/svg"
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
+            <div class="theme-dropdown" id="theme-dropdown">
+              <button
+                class="theme-dropdown-toggle"
+                id="theme-dropdown-toggle"
+                type="button"
+                aria-label="Select theme"
+                aria-haspopup="listbox"
+                aria-expanded="false"
               >
-                <circle cx="12" cy="12" r="5"></circle>
-                <line x1="12" y1="1" x2="12" y2="3"></line>
-                <line x1="12" y1="21" x2="12" y2="23"></line>
-                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-                <line x1="1" y1="12" x2="3" y2="12"></line>
-                <line x1="21" y1="12" x2="23" y2="12"></line>
-                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-              </svg>
-              <svg
-                id="theme-icon-moon"
-                class="theme-icon hidden"
-                xmlns="http://www.w3.org/2000/svg"
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-              </svg>
-            </button>
+                <span class="theme-dots" id="theme-dots"></span>
+                <svg
+                  class="dropdown-chevron"
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.4"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </button>
+              <ul
+                class="theme-dropdown-menu"
+                id="theme-dropdown-menu"
+                role="listbox"
+                aria-label="Theme selection"
+                hidden
+              ></ul>
+            </div>
             <span id="save-status" aria-live="polite">Idle</span>
           </div>
         </div>
