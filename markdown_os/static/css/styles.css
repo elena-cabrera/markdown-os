@@ -441,6 +441,15 @@ body {
   opacity: 1;
 }
 
+.tab-toggle-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.tab-toggle-button:disabled:hover {
+  color: var(--text-muted);
+}
+
 .theme-dropdown {
   position: relative;
 }
