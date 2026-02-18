@@ -644,6 +644,7 @@
     const emptyState = document.getElementById("empty-state");
     const editorContainer = document.getElementById("editor-container");
     const previewContainer = document.getElementById("preview-container");
+    const { editTab } = getEditorElements();
     if (!emptyState) {
       return;
     }
@@ -652,8 +653,16 @@
       emptyState.classList.remove("hidden");
       editorContainer?.classList.remove("active");
       previewContainer?.classList.remove("active");
+      if (editTab) {
+        editTab.disabled = true;
+        editTab.setAttribute("aria-disabled", "true");
+      }
     } else {
       emptyState.classList.add("hidden");
+      if (editTab) {
+        editTab.disabled = false;
+        editTab.removeAttribute("aria-disabled");
+      }
     }
   }
 
