@@ -10,6 +10,9 @@
     mode: "file",
     nextUploadId: 0,
   };
+  const tocUpdateState = {
+    timeout: null,
+  };
 
   function getDisplayName(metadata) {
     return metadata?.relative_path || (metadata?.path ? metadata.path.replace(/^.*[/\\]/, "") : "");
@@ -163,6 +166,9 @@
       }
 
       await window.renderMarkdown(initialContent);
+      if (typeof window.generateTOC === "function") {
+        window.generateTOC();
+      }
       setSaveStatus("Loaded", "saved");
       return true;
     } catch (error) {
@@ -277,11 +283,23 @@
     }
 
     if (tabName === "edit") {
+      const activeIndex = typeof window.findActivePreviewHeadingIndex === "function"
+        ? window.findActivePreviewHeadingIndex()
+        : 0;
       editTab.classList.add("active");
       previewTab.classList.remove("active");
       editorContainer.classList.add("active");
       previewContainer.classList.remove("active");
       editorState.isEditMode = true;
+      if (typeof window.syncEditorScroll === "function") {
+        window.syncEditorScroll(activeIndex);
+      }
+      if (typeof window.generateTOC === "function") {
+        window.generateTOC();
+      }
+      if (typeof window.updateActiveTOCItemForEdit === "function") {
+        window.updateActiveTOCItemForEdit();
+      }
       return;
     }
 
@@ -308,12 +326,21 @@
       }
     }
 
+    const activeIndex = typeof window.findActiveEditHeadingIndex === "function"
+      ? window.findActiveEditHeadingIndex()
+      : 0;
     editTab.classList.remove("active");
     previewTab.classList.add("active");
     editorContainer.classList.remove("active");
     previewContainer.classList.add("active");
     editorState.isEditMode = false;
     await window.renderMarkdown(editor.value);
+    if (typeof window.syncPreviewScroll === "function") {
+      window.syncPreviewScroll(activeIndex);
+    }
+    if (typeof window.updateActiveTOCItem === "function") {
+      window.updateActiveTOCItem();
+    }
   }
 
   async function saveContent() {
@@ -387,6 +414,18 @@
     }, AUTOSAVE_DELAY_MS);
   }
 
+  function queueTOCUpdate() {
+    if (tocUpdateState.timeout) {
+      window.clearTimeout(tocUpdateState.timeout);
+    }
+
+    tocUpdateState.timeout = window.setTimeout(() => {
+      if (typeof window.generateTOC === "function") {
+        window.generateTOC();
+      }
+    }, 300);
+  }
+
   function onEditorInput() {
     const editor = document.getElementById("markdown-editor");
     if (!editor) {
@@ -423,6 +462,8 @@
       setSaveStatus("Unsaved changes");
       queueAutosave();
     }
+
+    queueTOCUpdate();
   }
 
   async function handleExternalChange(detail) {
@@ -462,6 +503,9 @@
     if (!hasUnsavedChanges) {
       editor.value = detail.content;
       editorState.lastSavedContent = detail.content;
+      if (typeof window.generateTOC === "function") {
+        window.generateTOC();
+      }
       setSaveStatus("Reloaded from disk", "saved");
       return;
     }
@@ -476,6 +520,9 @@
 
     editor.value = detail.content;
     editorState.lastSavedContent = detail.content;
+    if (typeof window.generateTOC === "function") {
+      window.generateTOC();
+    }
     setSaveStatus("Reloaded from disk", "saved");
   }
 
