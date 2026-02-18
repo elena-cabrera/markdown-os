@@ -271,16 +271,22 @@
     }
 
     if (tabName === "edit") {
+      const activeIndex = typeof window.findActivePreviewHeadingIndex === "function"
+        ? window.findActivePreviewHeadingIndex()
+        : 0;
       editTab.classList.add("active");
       previewTab.classList.remove("active");
       editorContainer.classList.add("active");
       previewContainer.classList.remove("active");
       editorState.isEditMode = true;
       if (typeof window.syncEditorScroll === "function") {
-        window.syncEditorScroll();
+        window.syncEditorScroll(activeIndex);
       }
       if (typeof window.generateTOC === "function") {
         window.generateTOC();
+      }
+      if (typeof window.updateActiveTOCItemForEdit === "function") {
+        window.updateActiveTOCItemForEdit();
       }
       return;
     }
@@ -308,6 +314,9 @@
       }
     }
 
+    const activeIndex = typeof window.findActiveEditHeadingIndex === "function"
+      ? window.findActiveEditHeadingIndex()
+      : 0;
     editTab.classList.remove("active");
     previewTab.classList.add("active");
     editorContainer.classList.remove("active");
@@ -315,7 +324,10 @@
     editorState.isEditMode = false;
     await window.renderMarkdown(editor.value);
     if (typeof window.syncPreviewScroll === "function") {
-      window.syncPreviewScroll();
+      window.syncPreviewScroll(activeIndex);
+    }
+    if (typeof window.updateActiveTOCItem === "function") {
+      window.updateActiveTOCItem();
     }
   }
 

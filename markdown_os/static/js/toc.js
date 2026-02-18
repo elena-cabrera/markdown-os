@@ -311,62 +311,86 @@
     }
   }
 
-  function syncPreviewScroll() {
+  function findActiveEditHeadingIndex() {
     const editor = document.getElementById("markdown-editor");
-    const previewContainer = document.getElementById("preview-container");
-    if (!editor || !previewContainer) {
-      return;
+    if (!editor) {
+      return 0;
     }
 
-    const headings = extractHeadingsFromMarkdown(editor.value || "");
-    if (headings.length === 0) {
-      previewContainer.scrollTop = 0;
-      return;
+    const markdownHeadings = extractHeadingsFromMarkdown(editor.value || "");
+    if (markdownHeadings.length === 0) {
+      return 0;
     }
 
     const lineHeight = getLineHeight(editor);
     const visibleTopLine = Math.max(0, Math.floor(editor.scrollTop / lineHeight));
-    let targetHeadingId = headings[0].id;
+    let targetIndex = 0;
 
-    headings.forEach((heading) => {
+    markdownHeadings.forEach((heading, index) => {
       if (heading.lineNumber <= visibleTopLine + EDIT_SCROLL_ACTIVE_LINE_OFFSET) {
-        targetHeadingId = heading.id;
+        targetIndex = index;
       }
     });
 
-    const headingElement = document.getElementById(targetHeadingId);
-    if (!headingElement) {
-      return;
-    }
-
-    headingElement.scrollIntoView({
-      behavior: "auto",
-      block: "start",
-    });
+    return targetIndex;
   }
 
-  function syncEditorScroll() {
-    const editor = document.getElementById("markdown-editor");
+  function findActivePreviewHeadingIndex() {
     const preview = document.getElementById("markdown-preview");
     const previewContainer = document.getElementById("preview-container");
-    if (!editor || !preview || !previewContainer) {
+    if (!preview || !previewContainer) {
+      return 0;
+    }
+
+    const previewHeadings = Array.from(preview.querySelectorAll("h1, h2, h3, h4, h5, h6"));
+    if (previewHeadings.length === 0) {
+      return 0;
+    }
+
+    const previewScrollPosition = previewContainer.scrollTop + 100;
+    let activeIndex = 0;
+    previewHeadings.forEach((heading, index) => {
+      if (heading.offsetTop <= previewScrollPosition) {
+        activeIndex = index;
+      }
+    });
+
+    return activeIndex;
+  }
+
+  function syncPreviewScroll(activeHeadingIndex) {
+    const preview = document.getElementById("markdown-preview");
+    const previewContainer = document.getElementById("preview-container");
+    if (!preview || !previewContainer) {
       return;
     }
 
     const previewHeadings = Array.from(preview.querySelectorAll("h1, h2, h3, h4, h5, h6"));
     if (previewHeadings.length === 0) {
-      editor.scrollTop = 0;
+      previewContainer.scrollTop = 0;
       return;
     }
-    addHeadingIds(previewHeadings);
 
-    const previewScrollPosition = previewContainer.scrollTop + 100;
-    let activePreviewIndex = 0;
-    previewHeadings.forEach((heading, index) => {
-      if (heading.offsetTop <= previewScrollPosition) {
-        activePreviewIndex = index;
-      }
+    if (typeof activeHeadingIndex !== "number") {
+      activeHeadingIndex = findActiveEditHeadingIndex();
+    }
+
+    const targetElement = previewHeadings[Math.min(activeHeadingIndex, previewHeadings.length - 1)];
+    if (!targetElement) {
+      return;
+    }
+
+    targetElement.scrollIntoView({
+      behavior: "auto",
+      block: "start",
     });
+  }
+
+  function syncEditorScroll(activeHeadingIndex) {
+    const editor = document.getElementById("markdown-editor");
+    if (!editor) {
+      return;
+    }
 
     const markdownHeadings = extractHeadingsFromMarkdown(editor.value || "");
     if (markdownHeadings.length === 0) {
@@ -374,11 +398,12 @@
       return;
     }
 
-    const activePreviewId = previewHeadings[activePreviewIndex].id;
-    let targetHeading = markdownHeadings.find((heading) => heading.id === activePreviewId);
-    if (!targetHeading) {
-      targetHeading = markdownHeadings[Math.min(activePreviewIndex, markdownHeadings.length - 1)];
+    if (typeof activeHeadingIndex !== "number") {
+      activeHeadingIndex = findActivePreviewHeadingIndex();
     }
+
+    const targetIndex = Math.min(activeHeadingIndex, markdownHeadings.length - 1);
+    const targetHeading = markdownHeadings[targetIndex];
     if (!targetHeading) {
       return;
     }
@@ -433,4 +458,8 @@
   window.generateTOC = generateTOC;
   window.syncPreviewScroll = syncPreviewScroll;
   window.syncEditorScroll = syncEditorScroll;
+  window.updateActiveTOCItem = updateActiveTOCItem;
+  window.updateActiveTOCItemForEdit = updateActiveTOCItemForEdit;
+  window.findActiveEditHeadingIndex = findActiveEditHeadingIndex;
+  window.findActivePreviewHeadingIndex = findActivePreviewHeadingIndex;
 })();
