@@ -836,12 +836,17 @@ body {
 
 .mermaid-container .mermaid {
   display: block;
+  width: 100%;
+  min-height: 0;
 }
 
+/* Override Mermaid's inline max-width so the SVG fills the container (useMaxWidth sets px max-width). */
 .mermaid-container svg {
   display: block;
-  width: 100%;
+  width: 100% !important;
+  max-width: none !important;
   height: auto;
+  min-height: 0;
 }
 
 .mermaid-container .mermaid-zoom-controls {
@@ -1213,8 +1218,10 @@ body {
 }
 
 .mermaid-fullscreen-content svg {
-  max-width: 100%;
-  max-height: 100%;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
 }
 
 .mermaid-zoom-controls {

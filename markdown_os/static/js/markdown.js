@@ -305,6 +305,7 @@
       startOnLoad: false,
       securityLevel: "loose",
       theme,
+      useMaxWidth: false,
     });
     mermaidState.initialized = true;
     mermaidState.theme = theme;
@@ -360,10 +361,38 @@
       await window.mermaid.run({
         querySelector: ".mermaid-container .mermaid",
       });
+      fixMermaidSvgDimensions();
     } catch (error) {
       console.error("Mermaid rendering error.", error);
       renderMermaidErrorBlocks(preview);
     }
+  }
+
+  /**
+   * Ensures Mermaid SVGs fill container width and height fits diagram content.
+   * Strips Mermaid's inline max-width and sets SVG height from getBBox() so the
+   * full diagram is visible without clipping.
+   */
+  function fixMermaidSvgDimensions() {
+    document.querySelectorAll(".mermaid-container svg").forEach((svg) => {
+      const container = svg.closest(".mermaid-container");
+      if (!container) return;
+
+      svg.style.maxWidth = "";
+      svg.style.width = "100%";
+
+      try {
+        const bbox = svg.getBBox();
+        if (bbox.width <= 0) return;
+        const containerWidth = container.clientWidth || container.offsetWidth;
+        if (!containerWidth) return;
+        const naturalHeight =
+          containerWidth * (bbox.height / bbox.width);
+        svg.style.height = `${Math.ceil(naturalHeight)}px`;
+      } catch (_) {
+        /* getBBox can fail on detached or invalid SVG */
+      }
+    });
   }
 
   async function rerenderMermaidDiagramsForTheme() {
@@ -398,6 +427,7 @@
       await window.mermaid.run({
         querySelector: ".mermaid-container .mermaid",
       });
+      fixMermaidSvgDimensions();
       applyZoomToDiagrams();
       addFullscreenButtons();
     } catch (error) {
@@ -483,7 +513,7 @@
         reset.className = "mermaid-zoom-btn";
         reset.type = "button";
         reset.title = "Reset view";
-        reset.textContent = "⊡";
+        reset.textContent = "↻";
         reset.addEventListener("click", () => {
           const pz = container._panZoomInstance;
           if (pz) {
@@ -558,6 +588,9 @@
 
     svgElement.setAttribute("width", "100%");
     svgElement.setAttribute("height", "100%");
+    svgElement.style.maxWidth = "";
+    svgElement.style.width = "100%";
+    svgElement.style.height = "100%";
 
     overlay.classList.remove("hidden");
     modal.classList.remove("hidden");
@@ -568,10 +601,9 @@
         zoomScaleSensitivity: 0.4,
         minZoom: 0.2,
         maxZoom: 40,
-        fit: true,
+        fit: false,
         center: true,
       });
-      fullscreenState.panZoomInstance.fit();
       fullscreenState.panZoomInstance.center();
     }
 
