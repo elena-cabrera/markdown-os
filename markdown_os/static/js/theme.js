@@ -25,7 +25,7 @@
       name: "Dracula",
       type: "dark",
       dots: ["#282a36", "#f8f8f2", "#bd93f9"],
-      highlightTheme: "dracula",
+      highlightTheme: "base16/dracula",
       mermaidTheme: "dark",
     },
     {
