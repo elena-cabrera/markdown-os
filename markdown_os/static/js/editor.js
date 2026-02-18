@@ -450,6 +450,7 @@
         setSaveStatus("Unsaved changes");
         window.fileTabs.queueTabAutosave(activePath);
       }
+      queueTOCUpdate();
       return;
     }
 
@@ -765,6 +766,7 @@
       window.fileTabs?.init(editorState.mode);
       setLoadingState(false);
       setSaveStatus("Select a file");
+      window.fileTabs?.setEmptyState?.(true);
     }
 
     if (editorState.mode === "file") {

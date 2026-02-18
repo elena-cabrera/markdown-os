@@ -435,7 +435,7 @@
     }
 
     if (headings.length === 0) {
-      toc.innerHTML = "<p>No headings</p>";
+      toc.innerHTML = '<p class="tree-empty-state">No headings</p>';
       tocState.headings = [];
       return;
     }

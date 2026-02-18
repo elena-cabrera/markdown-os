@@ -713,6 +713,39 @@ body {
   }
 }
 
+.empty-state {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--panel-bg);
+  z-index: 5;
+}
+
+.empty-state.hidden {
+  display: none !important;
+}
+
+.empty-state-content {
+  text-align: center;
+  padding: 24px;
+}
+
+.empty-state-title {
+  margin: 0 0 6px;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.empty-state-subtitle {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
 #markdown-editor {
   width: 100%;
   flex: 1;

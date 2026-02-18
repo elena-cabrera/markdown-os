@@ -424,6 +424,7 @@
       }
       if (tabData.isEditMode) {
         editor?.scrollTo({ top: tabData.editorScrollTop, behavior: "auto" });
+        window.generateTOC?.();
       } else {
         await window.renderMarkdown(tabData.content);
         previewContainer?.scrollTo({ top: tabData.previewScrollTop, behavior: "auto" });
@@ -549,6 +550,7 @@
     setModeClasses(tabData.isEditMode ? "edit" : "preview");
     if (tabData.isEditMode) {
       editor.scrollTo({ top: tabData.editorScrollTop, behavior: "auto" });
+      window.generateTOC?.();
       return true;
     }
 
@@ -577,6 +579,8 @@
     if (!tabsState.enabled || !filePath || !tabsState.tabs.has(filePath)) {
       return false;
     }
+
+    setEmptyState(false);
 
     if (tabsState.activeTabPath === filePath) {
       return true;
@@ -636,6 +640,23 @@
     return true;
   }
 
+  function setEmptyState(visible) {
+    const emptyState = document.getElementById("empty-state");
+    const editorContainer = document.getElementById("editor-container");
+    const previewContainer = document.getElementById("preview-container");
+    if (!emptyState) {
+      return;
+    }
+
+    if (visible) {
+      emptyState.classList.remove("hidden");
+      editorContainer?.classList.remove("active");
+      previewContainer?.classList.remove("active");
+    } else {
+      emptyState.classList.add("hidden");
+    }
+  }
+
   function clearEditor() {
     const { editor } = getEditorElements();
     if (editor) {
@@ -647,6 +668,7 @@
     setPageTitle(null);
     setSaveStatus("Select a file");
     window.fileTree?.setCurrentFile?.(null);
+    setEmptyState(true);
     renderTabBar();
   }
 
@@ -836,6 +858,7 @@
       tabData.lastSavedContent = detail.content;
       tabData.isDirty = false;
       tabData.hasExternalConflict = false;
+      window.generateTOC?.();
       setSaveStatus("Reloaded from disk", "saved");
       renderTabBar();
       return;
@@ -856,6 +879,7 @@
     tabData.lastSavedContent = detail.content;
     tabData.isDirty = false;
     tabData.hasExternalConflict = false;
+    window.generateTOC?.();
     setSaveStatus("Reloaded from disk", "saved");
     renderTabBar();
   }
@@ -914,6 +938,7 @@
     setActiveMode,
     checkForExternalChanges,
     reloadTab,
+    setEmptyState,
     init,
   };
 })();
