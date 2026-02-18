@@ -8,6 +8,11 @@
     initialized: false,
     theme: null,
   };
+  const fullscreenState = {
+    panZoomInstance: null,
+    previousFocus: null,
+    isBound: false,
+  };
   const mermaidThemeByAppTheme = {
     light: "default",
     dark: "dark",
@@ -308,6 +313,7 @@
       startOnLoad: false,
       securityLevel: "loose",
       theme,
+      useMaxWidth: false,
     });
     mermaidState.initialized = true;
     mermaidState.theme = theme;
@@ -363,10 +369,38 @@
       await window.mermaid.run({
         querySelector: ".mermaid-container .mermaid",
       });
+      fixMermaidSvgDimensions();
     } catch (error) {
       console.error("Mermaid rendering error.", error);
       renderMermaidErrorBlocks(preview);
     }
+  }
+
+  /**
+   * Ensures Mermaid SVGs fill container width and height fits diagram content.
+   * Strips Mermaid's inline max-width and sets SVG height from getBBox() so the
+   * full diagram is visible without clipping.
+   */
+  function fixMermaidSvgDimensions() {
+    document.querySelectorAll(".mermaid-container svg").forEach((svg) => {
+      const container = svg.closest(".mermaid-container");
+      if (!container) return;
+
+      svg.style.maxWidth = "";
+      svg.style.width = "100%";
+
+      try {
+        const bbox = svg.getBBox();
+        if (bbox.width <= 0) return;
+        const containerWidth = container.clientWidth || container.offsetWidth;
+        if (!containerWidth) return;
+        const naturalHeight =
+          containerWidth * (bbox.height / bbox.width);
+        svg.style.height = `${Math.ceil(naturalHeight)}px`;
+      } catch (_) {
+        /* getBBox can fail on detached or invalid SVG */
+      }
+    });
   }
 
   async function rerenderMermaidDiagramsForTheme() {
@@ -401,7 +435,9 @@
       await window.mermaid.run({
         querySelector: ".mermaid-container .mermaid",
       });
+      fixMermaidSvgDimensions();
       applyZoomToDiagrams();
+      addFullscreenButtons();
     } catch (error) {
       console.error("Mermaid re-rendering error.", error);
       renderMermaidErrorBlocks(preview);
@@ -418,20 +454,232 @@
         return;
       }
 
+      const container = svgElement.closest(".mermaid-container");
+
       const instance = window.svgPanZoom(svgElement, {
-        controlIconsEnabled: true,
+        controlIconsEnabled: false,
         zoomScaleSensitivity: 0.4,
         minZoom: 0.5,
         maxZoom: 20,
+        fit: true,
+        center: true,
       });
       svgElement.setAttribute(panZoomKey, "true");
 
-      const sizes = instance.getSizes?.();
-      if (sizes?.viewBox?.width != null && sizes?.viewBox?.height != null) {
-        svgElement.setAttribute("width", String(sizes.viewBox.width));
-        svgElement.setAttribute("height", String(sizes.viewBox.height));
+      if (container) {
+        container._panZoomInstance = instance;
       }
     });
+  }
+
+  function addFullscreenButtons() {
+    document.querySelectorAll(".mermaid-container").forEach((container) => {
+      const svg = container.querySelector("svg");
+      const existingButton = container.querySelector(".mermaid-fullscreen-trigger");
+
+      if (!svg) {
+        if (existingButton) {
+          existingButton.remove();
+        }
+        return;
+      }
+
+      if (existingButton) {
+        return;
+      }
+
+      const button = document.createElement("button");
+      button.className = "mermaid-fullscreen-trigger";
+      button.type = "button";
+      button.title = "View fullscreen";
+      button.setAttribute("aria-label", "View diagram fullscreen");
+      button.textContent = "⛶";
+      button.addEventListener("click", () => {
+        const mermaidEl = container.querySelector(".mermaid[data-original-content]");
+        const source = mermaidEl
+          ? mermaidEl.getAttribute("data-original-content")
+          : null;
+        openMermaidFullscreen(source || "", svg);
+      });
+
+      container.appendChild(button);
+
+      if (!container.querySelector(".mermaid-zoom-controls")) {
+        const controls = document.createElement("div");
+        controls.className = "mermaid-zoom-controls";
+
+        const zoomIn = document.createElement("button");
+        zoomIn.className = "mermaid-zoom-btn";
+        zoomIn.type = "button";
+        zoomIn.title = "Zoom in";
+        zoomIn.textContent = "+";
+        zoomIn.addEventListener("click", () => {
+          container._panZoomInstance?.zoomIn();
+        });
+
+        const reset = document.createElement("button");
+        reset.className = "mermaid-zoom-btn";
+        reset.type = "button";
+        reset.title = "Reset view";
+        reset.textContent = "↻";
+        reset.addEventListener("click", () => {
+          const pz = container._panZoomInstance;
+          if (pz) {
+            pz.resetZoom();
+            pz.resetPan();
+            pz.fit();
+            pz.center();
+          }
+        });
+
+        const zoomOut = document.createElement("button");
+        zoomOut.className = "mermaid-zoom-btn";
+        zoomOut.type = "button";
+        zoomOut.title = "Zoom out";
+        zoomOut.textContent = "−";
+        zoomOut.addEventListener("click", () => {
+          container._panZoomInstance?.zoomOut();
+        });
+
+        controls.appendChild(zoomIn);
+        controls.appendChild(reset);
+        controls.appendChild(zoomOut);
+        container.appendChild(controls);
+      }
+    });
+  }
+
+  async function openMermaidFullscreen(mermaidSource, fallbackSvg) {
+    const overlay = document.getElementById("mermaid-fullscreen-overlay");
+    const modal = document.getElementById("mermaid-fullscreen-modal");
+    const content = document.getElementById("mermaid-fullscreen-content");
+    if (!overlay || !modal || !content) {
+      return;
+    }
+
+    if (!modal.classList.contains("hidden")) {
+      closeMermaidFullscreen();
+    }
+
+    fullscreenState.previousFocus =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+    content.innerHTML = "";
+
+    let svgElement = null;
+
+    if (mermaidSource && window.mermaid) {
+      try {
+        ensureMermaidInitialized();
+        const fullscreenId = "mermaid-fullscreen-render-" + Date.now();
+        const { svg } = await window.mermaid.render(fullscreenId, mermaidSource);
+        content.innerHTML = svg;
+        svgElement = content.querySelector("svg");
+      } catch (error) {
+        console.error("Mermaid fullscreen render error.", error);
+      }
+    }
+
+    if (!svgElement && fallbackSvg instanceof SVGElement) {
+      const svgClone = fallbackSvg.cloneNode(true);
+      if (svgClone instanceof SVGElement) {
+        svgClone.removeAttribute(panZoomKey);
+        svgClone.removeAttribute("style");
+        content.appendChild(svgClone);
+        svgElement = svgClone;
+      }
+    }
+
+    if (!svgElement) {
+      return;
+    }
+
+    svgElement.setAttribute("width", "100%");
+    svgElement.setAttribute("height", "100%");
+    svgElement.style.maxWidth = "";
+    svgElement.style.width = "100%";
+    svgElement.style.height = "100%";
+
+    overlay.classList.remove("hidden");
+    modal.classList.remove("hidden");
+
+    if (window.svgPanZoom) {
+      fullscreenState.panZoomInstance = window.svgPanZoom(svgElement, {
+        controlIconsEnabled: false,
+        zoomScaleSensitivity: 0.4,
+        minZoom: 0.2,
+        maxZoom: 40,
+        fit: false,
+        center: true,
+      });
+      fullscreenState.panZoomInstance.center();
+    }
+
+    document.getElementById("mermaid-fullscreen-close")?.focus();
+  }
+
+  function closeMermaidFullscreen() {
+    const overlay = document.getElementById("mermaid-fullscreen-overlay");
+    const modal = document.getElementById("mermaid-fullscreen-modal");
+    const content = document.getElementById("mermaid-fullscreen-content");
+    if (!overlay || !modal) {
+      return;
+    }
+
+    if (fullscreenState.panZoomInstance) {
+      fullscreenState.panZoomInstance.destroy();
+      fullscreenState.panZoomInstance = null;
+    }
+
+    overlay.classList.add("hidden");
+    modal.classList.add("hidden");
+    if (content) {
+      content.innerHTML = "";
+    }
+
+    if (fullscreenState.previousFocus) {
+      fullscreenState.previousFocus.focus();
+    }
+    fullscreenState.previousFocus = null;
+  }
+
+  function initMermaidFullscreenListeners() {
+    if (fullscreenState.isBound) {
+      return;
+    }
+
+    const zoomInButton = document.getElementById("mermaid-zoom-in");
+    const zoomOutButton = document.getElementById("mermaid-zoom-out");
+    const resetButton = document.getElementById("mermaid-zoom-reset");
+    const closeButton = document.getElementById("mermaid-fullscreen-close");
+    const overlay = document.getElementById("mermaid-fullscreen-overlay");
+
+    zoomInButton?.addEventListener("click", () => {
+      fullscreenState.panZoomInstance?.zoomIn();
+    });
+    zoomOutButton?.addEventListener("click", () => {
+      fullscreenState.panZoomInstance?.zoomOut();
+    });
+    resetButton?.addEventListener("click", () => {
+      fullscreenState.panZoomInstance?.resetZoom();
+      fullscreenState.panZoomInstance?.resetPan();
+      fullscreenState.panZoomInstance?.fit();
+      fullscreenState.panZoomInstance?.center();
+    });
+    closeButton?.addEventListener("click", closeMermaidFullscreen);
+    overlay?.addEventListener("click", closeMermaidFullscreen);
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") {
+        return;
+      }
+
+      const modal = document.getElementById("mermaid-fullscreen-modal");
+      if (modal && !modal.classList.contains("hidden")) {
+        closeMermaidFullscreen();
+      }
+    });
+
+    fullscreenState.isBound = true;
   }
 
   function findTaskListMarker(content, taskIndex) {
@@ -584,6 +832,7 @@
     renderMathEquations();
     await renderMermaidDiagrams();
     applyZoomToDiagrams();
+    addFullscreenButtons();
 
     if (window.generateTOC) {
       window.generateTOC();
@@ -593,9 +842,11 @@
   }
 
   window.addEventListener("markdown-os:theme-changed", () => {
+    closeMermaidFullscreen();
     rerenderMermaidDiagramsForTheme();
   });
 
+  initMermaidFullscreenListeners();
   configureMarked();
   window.renderMarkdown = renderMarkdown;
 })();
