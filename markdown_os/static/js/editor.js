@@ -10,6 +10,9 @@
     mode: "file",
     nextUploadId: 0,
   };
+  const tocUpdateState = {
+    timeout: null,
+  };
 
   function getDisplayName(metadata) {
     return metadata?.relative_path || (metadata?.path ? metadata.path.replace(/^.*[/\\]/, "") : "");
@@ -114,6 +117,10 @@
   }
 
   async function loadContent(filePath = null) {
+    if (editorState.mode === "folder" && window.fileTabs?.isEnabled()) {
+      return window.fileTabs.reloadTab(filePath || window.fileTabs.getActiveTabPath());
+    }
+
     const editor = document.getElementById("markdown-editor");
     if (!editor) {
       return false;
@@ -159,6 +166,9 @@
       }
 
       await window.renderMarkdown(initialContent);
+      if (typeof window.generateTOC === "function") {
+        window.generateTOC();
+      }
       setSaveStatus("Loaded", "saved");
       return true;
     } catch (error) {
@@ -175,6 +185,10 @@
   }
 
   async function checkForExternalChanges(filePath = null) {
+    if (editorState.mode === "folder" && window.fileTabs?.isEnabled()) {
+      return window.fileTabs.checkForExternalChanges(filePath || window.fileTabs.getActiveTabPath());
+    }
+
     const requestUrl = buildContentUrl(filePath);
     if (!requestUrl) {
       return false;
@@ -254,6 +268,10 @@
   }
 
   async function switchToTab(tabName) {
+    if (editorState.mode === "folder" && window.fileTabs?.isEnabled()) {
+      return window.fileTabs.setActiveMode(tabName);
+    }
+
     const editTab = document.getElementById("edit-tab");
     const previewTab = document.getElementById("preview-tab");
     const editorContainer = document.getElementById("editor-container");
@@ -265,11 +283,23 @@
     }
 
     if (tabName === "edit") {
+      const activeIndex = typeof window.findActivePreviewHeadingIndex === "function"
+        ? window.findActivePreviewHeadingIndex()
+        : 0;
       editTab.classList.add("active");
       previewTab.classList.remove("active");
       editorContainer.classList.add("active");
       previewContainer.classList.remove("active");
       editorState.isEditMode = true;
+      if (typeof window.syncEditorScroll === "function") {
+        window.syncEditorScroll(activeIndex);
+      }
+      if (typeof window.generateTOC === "function") {
+        window.generateTOC();
+      }
+      if (typeof window.updateActiveTOCItemForEdit === "function") {
+        window.updateActiveTOCItemForEdit();
+      }
       return;
     }
 
@@ -296,15 +326,28 @@
       }
     }
 
+    const activeIndex = typeof window.findActiveEditHeadingIndex === "function"
+      ? window.findActiveEditHeadingIndex()
+      : 0;
     editTab.classList.remove("active");
     previewTab.classList.add("active");
     editorContainer.classList.remove("active");
     previewContainer.classList.add("active");
     editorState.isEditMode = false;
     await window.renderMarkdown(editor.value);
+    if (typeof window.syncPreviewScroll === "function") {
+      window.syncPreviewScroll(activeIndex);
+    }
+    if (typeof window.updateActiveTOCItem === "function") {
+      window.updateActiveTOCItem();
+    }
   }
 
   async function saveContent() {
+    if (editorState.mode === "folder" && window.fileTabs?.isEnabled()) {
+      return window.fileTabs.saveTabContent(window.fileTabs.getActiveTabPath());
+    }
+
     const editor = document.getElementById("markdown-editor");
     if (!editor || editorState.isSaving) {
       return false;
@@ -371,9 +414,43 @@
     }, AUTOSAVE_DELAY_MS);
   }
 
+  function queueTOCUpdate() {
+    if (tocUpdateState.timeout) {
+      window.clearTimeout(tocUpdateState.timeout);
+    }
+
+    tocUpdateState.timeout = window.setTimeout(() => {
+      if (typeof window.generateTOC === "function") {
+        window.generateTOC();
+      }
+    }, 300);
+  }
+
   function onEditorInput() {
     const editor = document.getElementById("markdown-editor");
     if (!editor) {
+      return;
+    }
+
+    if (editorState.mode === "folder" && window.fileTabs?.isEnabled()) {
+      const activePath = window.fileTabs.getActiveTabPath();
+      if (!activePath) {
+        setSaveStatus("Select a file", "error");
+        return;
+      }
+
+      const tabData = window.fileTabs.getTabData(activePath);
+      if (!tabData) {
+        return;
+      }
+
+      tabData.content = editor.value;
+      const isDirty = window.fileTabs.updateTabDirtyState(activePath);
+      if (isDirty) {
+        setSaveStatus("Unsaved changes");
+        window.fileTabs.queueTabAutosave(activePath);
+      }
+      queueTOCUpdate();
       return;
     }
 
@@ -386,9 +463,16 @@
       setSaveStatus("Unsaved changes");
       queueAutosave();
     }
+
+    queueTOCUpdate();
   }
 
   async function handleExternalChange(detail) {
+    if (editorState.mode === "folder" && window.fileTabs?.isEnabled()) {
+      await window.fileTabs.handleExternalChange(detail);
+      return;
+    }
+
     const editor = document.getElementById("markdown-editor");
     if (!editor || !detail) {
       return;
@@ -420,6 +504,9 @@
     if (!hasUnsavedChanges) {
       editor.value = detail.content;
       editorState.lastSavedContent = detail.content;
+      if (typeof window.generateTOC === "function") {
+        window.generateTOC();
+      }
       setSaveStatus("Reloaded from disk", "saved");
       return;
     }
@@ -434,6 +521,9 @@
 
     editor.value = detail.content;
     editorState.lastSavedContent = detail.content;
+    if (typeof window.generateTOC === "function") {
+      window.generateTOC();
+    }
     setSaveStatus("Reloaded from disk", "saved");
   }
 
@@ -452,6 +542,13 @@
       if (editorState.mode !== "folder") {
         return false;
       }
+    }
+
+    if (editorState.mode === "folder" && window.fileTabs) {
+      if (!window.fileTabs.isEnabled()) {
+        window.fileTabs.init("folder");
+      }
+      return window.fileTabs.openTab(filePath);
     }
 
     if (filePath === editorState.currentFilePath) {
@@ -666,10 +763,14 @@
     if (editorState.mode === "file") {
       await loadContent();
     } else {
+      window.fileTabs?.init(editorState.mode);
       setLoadingState(false);
       setSaveStatus("Select a file");
+      window.fileTabs?.setEmptyState?.(true);
     }
 
-    await switchToTab("preview");
+    if (editorState.mode === "file") {
+      await switchToTab("preview");
+    }
   });
 })();

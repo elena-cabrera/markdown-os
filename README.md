@@ -46,6 +46,14 @@ markdown-os example --open             # generate and open in the editor
 
 Use `--force` / `-f` to overwrite an existing file without prompting.
 
+## Publishing (maintainers)
+
+1. Bump `version` in `pyproject.toml`.
+2. Commit and push to `master`: `git add pyproject.toml && git commit -m "chore: release X.Y.Z" && git push origin master`
+3. Tag that commit and push: `git tag -a vX.Y.Z -m "Release X.Y.Z" && git push origin vX.Y.Z`
+
+The GitHub workflow runs on tag push and publishes to PyPI only when the tag matches the package version.
+
 ## Roadmap
 
 - **Sidebar & tab redesign** — In folder mode: file tree and table of contents both visible; collapsible file tree; Edit/Read as a single pill toggle with icons.

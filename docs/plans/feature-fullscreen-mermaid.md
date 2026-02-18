@@ -618,3 +618,4 @@ initMermaidFullscreenListeners();
 - Reuses CSS variables for theme compatibility
 - Guard against duplicate buttons on re-render
 - Clean separation: HTML structure, CSS styles, JS logic
+

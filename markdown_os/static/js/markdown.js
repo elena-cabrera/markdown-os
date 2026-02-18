@@ -13,10 +13,18 @@
     previousFocus: null,
     isBound: false,
   };
+  const mermaidThemeByAppTheme = {
+    light: "default",
+    dark: "dark",
+    dracula: "dark",
+    "nord-light": "neutral",
+    "nord-dark": "dark",
+    lofi: "neutral",
+  };
+
   function currentMermaidTheme() {
-    return document.documentElement.getAttribute("data-theme") === "dark"
-      ? "dark"
-      : "default";
+    const currentAppTheme = document.documentElement.getAttribute("data-theme");
+    return mermaidThemeByAppTheme[currentAppTheme] || "default";
   }
 
   function configureMarked() {
