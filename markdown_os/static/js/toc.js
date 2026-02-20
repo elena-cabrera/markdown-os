@@ -8,6 +8,11 @@
     previewScrollBound: false,
   };
 
+  function getCurrentMode() {
+    const editorContainer = document.getElementById("editor-container");
+    return editorContainer?.classList.contains("active") ? "edit" : "preview";
+  }
+
   function slugifyHeading(text) {
     return text
       .trim()
@@ -221,7 +226,7 @@
           return;
         }
 
-        if (tocState.mode === "edit") {
+        if (getCurrentMode() === "edit") {
           const editor = document.getElementById("markdown-editor");
           const lineNumber = Number.parseInt(link.dataset.lineNumber || "", 10);
           if (!editor || Number.isNaN(lineNumber) || lineNumber < 0) {
@@ -250,7 +255,7 @@
   }
 
   function updateActiveTOCItem() {
-    if (tocState.mode !== "preview") {
+    if (getCurrentMode() !== "preview") {
       return;
     }
 
@@ -271,7 +276,7 @@
   }
 
   function updateActiveTOCItemForEdit() {
-    if (tocState.mode !== "edit") {
+    if (getCurrentMode() !== "edit") {
       return;
     }
 

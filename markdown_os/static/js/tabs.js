@@ -425,9 +425,11 @@
       if (tabData.isEditMode) {
         editor?.scrollTo({ top: tabData.editorScrollTop, behavior: "auto" });
         window.generateTOC?.();
+        window.updateActiveTOCItemForEdit?.();
       } else {
         await window.renderMarkdown(tabData.content);
         previewContainer?.scrollTo({ top: tabData.previewScrollTop, behavior: "auto" });
+        window.updateActiveTOCItem?.();
       }
       setSaveStatus("Reloaded from disk", "saved");
     }
@@ -551,11 +553,13 @@
     if (tabData.isEditMode) {
       editor.scrollTo({ top: tabData.editorScrollTop, behavior: "auto" });
       window.generateTOC?.();
+      window.updateActiveTOCItemForEdit?.();
       return true;
     }
 
     await window.renderMarkdown(tabData.content);
     previewContainer?.scrollTo({ top: tabData.previewScrollTop, behavior: "auto" });
+    window.updateActiveTOCItem?.();
     return true;
   }
 
@@ -765,9 +769,19 @@
     saveCurrentTabState(tabData.filePath);
 
     if (tabName === "edit") {
+      const activeIndex = typeof window.findActivePreviewHeadingIndex === "function"
+        ? window.findActivePreviewHeadingIndex()
+        : 0;
       tabData.isEditMode = true;
       setModeClasses("edit");
-      editor.scrollTo({ top: tabData.editorScrollTop, behavior: "auto" });
+      if (typeof window.syncEditorScroll === "function") {
+        window.syncEditorScroll(activeIndex);
+      } else {
+        editor.scrollTo({ top: tabData.editorScrollTop, behavior: "auto" });
+      }
+      window.generateTOC?.();
+      window.updateActiveTOCItemForEdit?.();
+      renderTabBar();
       return true;
     }
 
@@ -802,11 +816,19 @@
       }
     }
 
+    const activeIndex = typeof window.findActiveEditHeadingIndex === "function"
+      ? window.findActiveEditHeadingIndex()
+      : 0;
     tabData.isEditMode = false;
     setModeClasses("preview");
     tabData.content = editor.value;
     await window.renderMarkdown(tabData.content);
-    previewContainer?.scrollTo({ top: tabData.previewScrollTop, behavior: "auto" });
+    if (typeof window.syncPreviewScroll === "function") {
+      window.syncPreviewScroll(activeIndex);
+    } else {
+      previewContainer?.scrollTo({ top: tabData.previewScrollTop, behavior: "auto" });
+    }
+    window.updateActiveTOCItem?.();
     renderTabBar();
     return true;
   }
