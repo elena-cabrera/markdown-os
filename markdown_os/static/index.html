@@ -46,14 +46,9 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css"
     />
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
     <script
       src="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.js"
-      crossorigin="anonymous"
-    ></script>
-    <script
-      src="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/contrib/auto-render.min.js"
       crossorigin="anonymous"
     ></script>
     <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
@@ -107,41 +102,7 @@
 
       <main id="main-content">
         <div class="tab-nav">
-          <div class="tab-group">
-            <div class="tab-toggle">
-              <button id="edit-tab" class="tab-toggle-button" type="button">
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
-                </svg>
-                <span>Edit</span>
-              </button>
-              <button id="preview-tab" class="tab-toggle-button active" type="button">
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                  <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-                </svg>
-                <span>Read</span>
-              </button>
-            </div>
-          </div>
+          <div id="wysiwyg-toolbar" class="wysiwyg-toolbar" role="toolbar" aria-label="Formatting"></div>
           <div id="current-file-path" class="current-file-path hidden">
             <span id="current-file-text"></span>
           </div>
@@ -187,16 +148,10 @@
         <div id="file-tabs-bar" class="file-tabs-bar hidden" role="tablist" aria-label="Open files"></div>
 
         <div class="view-area">
-          <section id="editor-container" class="view">
-            <textarea
-              id="markdown-editor"
-              spellcheck="false"
-              aria-label="Markdown editor"
-            ></textarea>
-          </section>
-
-          <section id="preview-container" class="view active">
-            <article id="markdown-preview"></article>
+          <section id="wysiwyg-shell" class="wysiwyg-shell">
+            <div id="wysiwyg-container" class="wysiwyg-container">
+              <div id="wysiwyg-editor" aria-label="Markdown editor"></div>
+            </div>
           </section>
 
           <div id="empty-state" class="empty-state hidden">
@@ -291,11 +246,13 @@
       </div>
     </div>
 
+    <script src="/static/js/vendor/tiptap-bundle.min.js"></script>
     <script src="/static/js/theme.js"></script>
     <script src="/static/js/websocket.js"></script>
-    <script src="/static/js/markdown.js"></script>
     <script src="/static/js/toc.js"></script>
     <script src="/static/js/file-tree.js"></script>
+    <script src="/static/js/wysiwyg.js"></script>
+    <script src="/static/js/wysiwyg-toolbar.js"></script>
     <script src="/static/js/tabs.js"></script>
     <script src="/static/js/editor.js"></script>
   </body>

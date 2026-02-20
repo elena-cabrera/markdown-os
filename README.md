@@ -2,7 +2,7 @@
 
 [![PyPI version](https://img.shields.io/pypi/v/markdown-os)](https://pypi.org/project/markdown-os/)
 
-Developer-focused markdown editor that runs as a local web server. Edit in the browser with live preview, Mermaid diagrams, syntax highlighting, and auto-save.
+Developer-focused markdown editor that runs as a local web server. Edit in a single-pane WYSIWYG markdown surface with Mermaid diagrams, syntax highlighting, and auto-save.
 
 ## Install
 
@@ -45,6 +45,16 @@ markdown-os example --open             # generate and open in the editor
 ```
 
 Use `--force` / `-f` to overwrite an existing file without prompting.
+
+## Frontend bundle (contributors)
+
+TipTap is bundled into a committed vendor script so end users do not need Node.js.
+
+```bash
+cd frontend
+npm install
+npm run build
+```
 
 ## Publishing (maintainers)
 

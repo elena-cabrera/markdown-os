@@ -7,18 +7,7 @@
     tabOrder: [],
     activeTabPath: null,
     enabled: false,
-    scrollBound: false,
   };
-
-  function getEditorElements() {
-    return {
-      editor: document.getElementById("markdown-editor"),
-      previewContainer: document.getElementById("preview-container"),
-      editTab: document.getElementById("edit-tab"),
-      previewTab: document.getElementById("preview-tab"),
-      editorContainer: document.getElementById("editor-container"),
-    };
-  }
 
   function setSaveStatus(message, variant = "neutral") {
     const saveStatus = document.getElementById("save-status");
@@ -62,7 +51,6 @@
       overlay.setAttribute("aria-hidden", "false");
       return;
     }
-
     overlay.classList.add("hidden");
     overlay.setAttribute("aria-hidden", "true");
   }
@@ -128,23 +116,16 @@
     return namesByPath;
   }
 
-  function isEditMode() {
-    const { editTab } = getEditorElements();
-    return editTab?.classList.contains("active") || false;
-  }
-
   function createTabData(filePath) {
     return {
       filePath,
       content: "",
       lastSavedContent: "",
       isDirty: false,
-      isEditMode: false,
-      editorScrollTop: 0,
-      previewScrollTop: 0,
       isLoaded: false,
-      saveTimeout: null,
       isSaving: false,
+      saveTimeout: null,
+      scrollTop: 0,
       hasExternalConflict: false,
     };
   }
@@ -164,6 +145,7 @@
     if (!oldPath || !newPath || oldPath === newPath) {
       return oldPath;
     }
+
     const tabData = tabsState.tabs.get(oldPath);
     if (!tabData) {
       return oldPath;
@@ -255,24 +237,31 @@
     }
   }
 
-  function setModeClasses(tabName) {
-    const { editTab, previewTab, editorContainer, previewContainer } = getEditorElements();
-    if (!editTab || !previewTab || !editorContainer || !previewContainer) {
+  function setEmptyState(visible) {
+    const emptyState = document.getElementById("empty-state");
+    const editorShell = document.getElementById("wysiwyg-shell");
+    if (!emptyState) {
       return;
     }
 
-    if (tabName === "edit") {
-      editTab.classList.add("active");
-      previewTab.classList.remove("active");
-      editorContainer.classList.add("active");
-      previewContainer.classList.remove("active");
+    if (visible) {
+      emptyState.classList.remove("hidden");
+      editorShell?.classList.add("hidden");
       return;
     }
 
-    editTab.classList.remove("active");
-    previewTab.classList.add("active");
-    editorContainer.classList.remove("active");
-    previewContainer.classList.add("active");
+    emptyState.classList.add("hidden");
+    editorShell?.classList.remove("hidden");
+  }
+
+  function clearEditor() {
+    window.wysiwyg?.setMarkdown?.("", { emitUpdate: false });
+    window.wysiwyg?.setScrollTop?.(0);
+    setPageTitle(null);
+    setSaveStatus("Select a file");
+    window.fileTree?.setCurrentFile?.(null);
+    setEmptyState(true);
+    renderTabBar();
   }
 
   function saveCurrentTabState(filePath = tabsState.activeTabPath) {
@@ -281,15 +270,8 @@
       return;
     }
 
-    const { editor, previewContainer } = getEditorElements();
-    if (editor) {
-      tabData.content = editor.value;
-      tabData.editorScrollTop = editor.scrollTop;
-    }
-    if (previewContainer) {
-      tabData.previewScrollTop = previewContainer.scrollTop;
-    }
-    tabData.isEditMode = isEditMode();
+    tabData.content = window.getCurrentMarkdown?.() || "";
+    tabData.scrollTop = window.wysiwyg?.getScrollTop?.() || 0;
     tabData.isDirty = tabData.content !== tabData.lastSavedContent;
     renderTabBar();
   }
@@ -324,10 +306,11 @@
         if (choiceMade) {
           return;
         }
+
         choiceMade = true;
+        cleanup();
         modal.classList.add("hidden");
         overlay.classList.add("hidden");
-        cleanup();
         if (previousFocus && typeof previousFocus.focus === "function") {
           previousFocus.focus();
         }
@@ -366,8 +349,7 @@
       }
       const payload = await response.json();
       return (payload.content || "") !== tabData.lastSavedContent;
-    } catch (error) {
-      console.error("Failed to check for external changes.", error);
+    } catch (_error) {
       return false;
     }
   }
@@ -405,6 +387,18 @@
     }
   }
 
+  async function restoreTabToEditor(filePath) {
+    const tabData = getTabData(filePath);
+    if (!tabData) {
+      return false;
+    }
+
+    window.wysiwyg?.setMarkdown?.(tabData.content, { emitUpdate: false });
+    window.wysiwyg?.setScrollTop?.(tabData.scrollTop);
+    window.generateTOC?.();
+    return true;
+  }
+
   async function reloadTab(filePath = null) {
     const targetPath = filePath || tabsState.activeTabPath;
     const tabData = getTabData(targetPath);
@@ -418,20 +412,9 @@
     }
 
     if (targetPath === tabsState.activeTabPath) {
-      const { editor, previewContainer } = getEditorElements();
-      if (editor) {
-        editor.value = tabData.content;
-      }
-      if (tabData.isEditMode) {
-        editor?.scrollTo({ top: tabData.editorScrollTop, behavior: "auto" });
-        window.generateTOC?.();
-      } else {
-        await window.renderMarkdown(tabData.content);
-        previewContainer?.scrollTo({ top: tabData.previewScrollTop, behavior: "auto" });
-      }
+      await restoreTabToEditor(targetPath);
       setSaveStatus("Reloaded from disk", "saved");
     }
-
     renderTabBar();
     return true;
   }
@@ -443,10 +426,10 @@
       return false;
     }
 
-    const { editor } = getEditorElements();
-    if (targetPath === tabsState.activeTabPath && editor) {
-      tabData.content = editor.value;
+    if (targetPath === tabsState.activeTabPath) {
+      tabData.content = window.getCurrentMarkdown?.() || "";
     }
+
     tabData.isDirty = tabData.content !== tabData.lastSavedContent;
     renderTabBar();
     return tabData.isDirty;
@@ -459,9 +442,8 @@
       return false;
     }
 
-    const { editor } = getEditorElements();
-    if (targetPath === tabsState.activeTabPath && editor) {
-      tabData.content = editor.value;
+    if (targetPath === tabsState.activeTabPath) {
+      tabData.content = window.getCurrentMarkdown?.() || "";
     }
     tabData.isDirty = tabData.content !== tabData.lastSavedContent;
     if (!tabData.isDirty) {
@@ -487,7 +469,6 @@
           file: targetPath,
         }),
       });
-
       if (!response.ok) {
         throw new Error(`Save failed (${response.status})`);
       }
@@ -495,11 +476,11 @@
       const payload = await response.json();
       const relativePath = payload.metadata?.relative_path || targetPath;
       targetPath = replaceTabPath(targetPath, relativePath);
-
       const nextTabData = getTabData(targetPath);
       if (!nextTabData) {
         return false;
       }
+
       nextTabData.lastSavedContent = nextTabData.content;
       nextTabData.isDirty = false;
       nextTabData.hasExternalConflict = false;
@@ -539,26 +520,6 @@
     }, AUTOSAVE_DELAY_MS);
   }
 
-  async function restoreTabToEditor(filePath) {
-    const tabData = getTabData(filePath);
-    const { editor, previewContainer } = getEditorElements();
-    if (!tabData || !editor) {
-      return false;
-    }
-
-    editor.value = tabData.content;
-    setModeClasses(tabData.isEditMode ? "edit" : "preview");
-    if (tabData.isEditMode) {
-      editor.scrollTo({ top: tabData.editorScrollTop, behavior: "auto" });
-      window.generateTOC?.();
-      return true;
-    }
-
-    await window.renderMarkdown(tabData.content);
-    previewContainer?.scrollTo({ top: tabData.previewScrollTop, behavior: "auto" });
-    return true;
-  }
-
   async function resolveBackgroundConflict(tabData) {
     if (!tabData.hasExternalConflict || !tabData.isDirty) {
       return true;
@@ -581,7 +542,6 @@
     }
 
     setEmptyState(false);
-
     if (tabsState.activeTabPath === filePath) {
       return true;
     }
@@ -640,47 +600,6 @@
     return true;
   }
 
-  function setEmptyState(visible) {
-    const emptyState = document.getElementById("empty-state");
-    const editorContainer = document.getElementById("editor-container");
-    const previewContainer = document.getElementById("preview-container");
-    const { editTab } = getEditorElements();
-    if (!emptyState) {
-      return;
-    }
-
-    if (visible) {
-      emptyState.classList.remove("hidden");
-      editorContainer?.classList.remove("active");
-      previewContainer?.classList.remove("active");
-      if (editTab) {
-        editTab.disabled = true;
-        editTab.setAttribute("aria-disabled", "true");
-      }
-    } else {
-      emptyState.classList.add("hidden");
-      if (editTab) {
-        editTab.disabled = false;
-        editTab.removeAttribute("aria-disabled");
-      }
-    }
-  }
-
-  function clearEditor() {
-    const { editor } = getEditorElements();
-    if (editor) {
-      editor.value = "";
-      editor.scrollTo({ top: 0, behavior: "auto" });
-    }
-    setModeClasses("preview");
-    window.renderMarkdown?.("");
-    setPageTitle(null);
-    setSaveStatus("Select a file");
-    window.fileTree?.setCurrentFile?.(null);
-    setEmptyState(true);
-    renderTabBar();
-  }
-
   async function openTab(filePath) {
     if (!tabsState.enabled || !filePath) {
       return false;
@@ -698,6 +617,7 @@
     tabsState.tabs.set(filePath, createTabData(filePath));
     tabsState.tabOrder.push(filePath);
     renderTabBar();
+
     const switched = await switchTab(filePath);
     if (!switched) {
       tabsState.tabs.delete(filePath);
@@ -743,72 +663,11 @@
 
     const replacementPath = tabsState.tabOrder[index] || tabsState.tabOrder[index - 1] || null;
     tabsState.activeTabPath = null;
-
     if (!replacementPath) {
       clearEditor();
       return true;
     }
     return switchTab(replacementPath, { skipCurrentSave: true });
-  }
-
-  async function setActiveMode(tabName) {
-    if (!tabsState.enabled) {
-      return false;
-    }
-
-    const tabData = getActiveTab();
-    const { editor, previewContainer } = getEditorElements();
-    if (!tabData || !editor) {
-      return false;
-    }
-
-    saveCurrentTabState(tabData.filePath);
-
-    if (tabName === "edit") {
-      tabData.isEditMode = true;
-      setModeClasses("edit");
-      editor.scrollTo({ top: tabData.editorScrollTop, behavior: "auto" });
-      return true;
-    }
-
-    if (tabName !== "preview") {
-      return false;
-    }
-
-    tabData.content = editor.value;
-    tabData.isDirty = tabData.content !== tabData.lastSavedContent;
-    if (tabData.isDirty) {
-      const hasConflict = await checkForExternalChanges(tabData.filePath);
-      if (hasConflict) {
-        const choice = await window.showConflictDialog?.();
-        if (choice === "save") {
-          const saved = await saveTabContent(tabData.filePath);
-          if (!saved) {
-            return false;
-          }
-        } else if (choice === "discard") {
-          const reloaded = await reloadTab(tabData.filePath);
-          if (!reloaded) {
-            return false;
-          }
-        } else {
-          return false;
-        }
-      } else {
-        const saved = await saveTabContent(tabData.filePath);
-        if (!saved) {
-          return false;
-        }
-      }
-    }
-
-    tabData.isEditMode = false;
-    setModeClasses("preview");
-    tabData.content = editor.value;
-    await window.renderMarkdown(tabData.content);
-    previewContainer?.scrollTo({ top: tabData.previewScrollTop, behavior: "auto" });
-    renderTabBar();
-    return true;
   }
 
   async function handleExternalChange(detail) {
@@ -838,31 +697,14 @@
       return;
     }
 
-    const { editor } = getEditorElements();
-    if (!editor) {
+    const currentMarkdown = window.getCurrentMarkdown?.() || "";
+    if (detail.content === currentMarkdown) {
       return;
     }
 
-    tabData.isEditMode = isEditMode();
-    if (detail.content === editor.value) {
-      return;
-    }
-
-    if (!tabData.isEditMode) {
-      editor.value = detail.content;
-      tabData.content = detail.content;
-      tabData.lastSavedContent = detail.content;
-      tabData.isDirty = false;
-      tabData.hasExternalConflict = false;
-      await window.renderMarkdown(detail.content);
-      setSaveStatus("Reloaded from disk", "saved");
-      renderTabBar();
-      return;
-    }
-
-    const hasUnsavedChanges = editor.value !== tabData.lastSavedContent;
+    const hasUnsavedChanges = currentMarkdown !== tabData.lastSavedContent;
     if (!hasUnsavedChanges) {
-      editor.value = detail.content;
+      window.wysiwyg?.setMarkdown?.(detail.content, { emitUpdate: false });
       tabData.content = detail.content;
       tabData.lastSavedContent = detail.content;
       tabData.isDirty = false;
@@ -883,7 +725,7 @@
       return;
     }
 
-    editor.value = detail.content;
+    window.wysiwyg?.setMarkdown?.(detail.content, { emitUpdate: false });
     tabData.content = detail.content;
     tabData.lastSavedContent = detail.content;
     tabData.isDirty = false;
@@ -893,42 +735,11 @@
     renderTabBar();
   }
 
-  function bindScrollState() {
-    if (tabsState.scrollBound) {
-      return;
-    }
-
-    const { editor, previewContainer } = getEditorElements();
-    if (editor) {
-      editor.addEventListener("scroll", () => {
-        const active = getActiveTab();
-        if (active) {
-          active.editorScrollTop = editor.scrollTop;
-        }
-      });
-    }
-    if (previewContainer) {
-      previewContainer.addEventListener("scroll", () => {
-        const active = getActiveTab();
-        if (active) {
-          active.previewScrollTop = previewContainer.scrollTop;
-        }
-      });
-    }
-    tabsState.scrollBound = true;
-  }
-
   function init(mode) {
     tabsState.enabled = mode === "folder";
-    if (!tabsState.enabled) {
-      tabsState.tabs.clear();
-      tabsState.tabOrder = [];
-      tabsState.activeTabPath = null;
-      renderTabBar();
-      return;
-    }
-
-    bindScrollState();
+    tabsState.tabs.clear();
+    tabsState.tabOrder = [];
+    tabsState.activeTabPath = null;
     renderTabBar();
   }
 
@@ -944,7 +755,6 @@
     queueTabAutosave,
     updateTabDirtyState,
     saveTabContent,
-    setActiveMode,
     checkForExternalChanges,
     reloadTab,
     setEmptyState,

@@ -1,16 +1,16 @@
 (() => {
   const AUTOSAVE_DELAY_MS = 1000;
+  const TOC_UPDATE_DELAY_MS = 250;
 
   const editorState = {
-    saveTimeout: null,
+    mode: "file",
+    currentFilePath: null,
     lastSavedContent: "",
     isSaving: false,
-    isEditMode: false,
-    currentFilePath: null,
-    mode: "file",
-    nextUploadId: 0,
+    saveTimeout: null,
   };
-  const tocUpdateState = {
+
+  const tocState = {
     timeout: null,
   };
 
@@ -26,7 +26,6 @@
 
     saveStatus.textContent = message;
     saveStatus.classList.remove("is-saving", "is-saved", "is-error");
-
     if (variant === "saving") {
       saveStatus.classList.add("is-saving");
     } else if (variant === "saved") {
@@ -53,7 +52,7 @@
       }
     }
 
-    document.title = displayName ? `${displayName}` : "Markdown-OS";
+    document.title = displayName || "Markdown-OS";
   }
 
   function setLoadingState(isLoading) {
@@ -97,8 +96,7 @@
       }
       const payload = await response.json();
       return payload.mode || "file";
-    } catch (error) {
-      console.error("Failed to detect mode.", error);
+    } catch (_error) {
       return "file";
     }
   }
@@ -112,8 +110,68 @@
     if (!targetPath) {
       return null;
     }
-
     return `/api/content?file=${encodeURIComponent(targetPath)}`;
+  }
+
+  function queueTOCUpdate() {
+    if (tocState.timeout) {
+      window.clearTimeout(tocState.timeout);
+    }
+    tocState.timeout = window.setTimeout(() => {
+      window.generateTOC?.();
+    }, TOC_UPDATE_DELAY_MS);
+  }
+
+  async function uploadImage(file) {
+    if (!file) {
+      return "";
+    }
+
+    const formData = new FormData();
+    formData.append("file", file, file.name || "image.png");
+
+    try {
+      const response = await fetch("/api/images", {
+        method: "POST",
+        body: formData,
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.detail || `Upload failed (${response.status})`);
+      }
+
+      const payload = await response.json();
+      setSaveStatus("Image uploaded", "saved");
+      return payload.path || "";
+    } catch (error) {
+      console.error("Image upload failed.", error);
+      setSaveStatus("Image upload failed", "error");
+      return "";
+    }
+  }
+
+  function initializeWysiwyg() {
+    window.wysiwyg?.init({
+      content: "",
+      onMarkdownUpdate: (markdown) => {
+        onEditorUpdate(markdown);
+      },
+      onSelectionUpdate: () => {
+        queueTOCUpdate();
+      },
+      onUploadImage: uploadImage,
+      onUploadStart: () => {
+        setSaveStatus("Uploading image...", "saving");
+      },
+      onUploadEnd: () => {
+        if (!editorState.isSaving) {
+          setSaveStatus("Unsaved changes");
+        }
+      },
+    });
+
+    window.wysiwygToolbar?.init?.();
+    window.wysiwygToolbar?.syncButtonStates?.();
   }
 
   async function loadContent(filePath = null) {
@@ -121,16 +179,10 @@
       return window.fileTabs.reloadTab(filePath || window.fileTabs.getActiveTabPath());
     }
 
-    const editor = document.getElementById("markdown-editor");
-    if (!editor) {
-      return false;
-    }
-
     const requestUrl = buildContentUrl(filePath);
     if (!requestUrl) {
-      editor.value = "";
+      window.wysiwyg?.setMarkdown("", { emitUpdate: false });
       editorState.lastSavedContent = "";
-      await window.renderMarkdown("");
       setSaveStatus("Select a file");
       setPageTitle(null);
       setLoadingState(false);
@@ -144,6 +196,7 @@
     } else {
       setContentLoadingState(true);
     }
+
     try {
       const response = await fetch(requestUrl);
       if (!response.ok) {
@@ -151,24 +204,20 @@
       }
 
       const payload = await response.json();
-      const initialContent = payload.content || "";
-      editor.value = initialContent;
-      editorState.lastSavedContent = initialContent;
+      const markdown = payload.content || "";
+      window.wysiwyg?.setMarkdown(markdown, { emitUpdate: false });
+      editorState.lastSavedContent = markdown;
 
       setPageTitle(payload.metadata);
-
       if (editorState.mode === "folder") {
         const relativePath = payload.metadata?.relative_path || filePath || null;
         editorState.currentFilePath = relativePath;
-        if (relativePath && window.fileTree?.setCurrentFile) {
-          window.fileTree.setCurrentFile(relativePath);
+        if (relativePath) {
+          window.fileTree?.setCurrentFile?.(relativePath);
         }
       }
 
-      await window.renderMarkdown(initialContent);
-      if (typeof window.generateTOC === "function") {
-        window.generateTOC();
-      }
+      queueTOCUpdate();
       setSaveStatus("Loaded", "saved");
       return true;
     } catch (error) {
@@ -199,12 +248,10 @@
       if (!response.ok) {
         return false;
       }
-
       const payload = await response.json();
       const diskContent = payload.content || "";
       return diskContent !== editorState.lastSavedContent;
-    } catch (error) {
-      console.error("Failed to check for external changes.", error);
+    } catch (_error) {
       return false;
     }
   }
@@ -218,7 +265,6 @@
       const cancelButton = document.getElementById("conflict-cancel");
 
       if (!modal || !overlay || !saveButton || !discardButton || !cancelButton) {
-        console.error("Conflict modal elements not found.");
         resolve("cancel");
         return;
       }
@@ -227,7 +273,7 @@
       let choiceMade = false;
 
       const cleanup = () => {
-        document.removeEventListener("keydown", handleEscape);
+        document.removeEventListener("keydown", onEscape);
         overlay.onclick = null;
         saveButton.onclick = null;
         discardButton.onclick = null;
@@ -240,16 +286,16 @@
         }
 
         choiceMade = true;
+        cleanup();
         modal.classList.add("hidden");
         overlay.classList.add("hidden");
-        cleanup();
         if (previousFocus && typeof previousFocus.focus === "function") {
           previousFocus.focus();
         }
         resolve(choice);
       };
 
-      const handleEscape = (event) => {
+      const onEscape = (event) => {
         if (event.key === "Escape") {
           choose("cancel");
         }
@@ -259,7 +305,7 @@
       discardButton.onclick = () => choose("discard");
       cancelButton.onclick = () => choose("cancel");
       overlay.onclick = () => choose("cancel");
-      document.addEventListener("keydown", handleEscape);
+      document.addEventListener("keydown", onEscape);
 
       modal.classList.remove("hidden");
       overlay.classList.remove("hidden");
@@ -267,89 +313,12 @@
     });
   }
 
-  async function switchToTab(tabName) {
-    if (editorState.mode === "folder" && window.fileTabs?.isEnabled()) {
-      return window.fileTabs.setActiveMode(tabName);
-    }
-
-    const editTab = document.getElementById("edit-tab");
-    const previewTab = document.getElementById("preview-tab");
-    const editorContainer = document.getElementById("editor-container");
-    const previewContainer = document.getElementById("preview-container");
-    const editor = document.getElementById("markdown-editor");
-
-    if (!editTab || !previewTab || !editorContainer || !previewContainer || !editor) {
-      return;
-    }
-
-    if (tabName === "edit") {
-      const activeIndex = typeof window.findActivePreviewHeadingIndex === "function"
-        ? window.findActivePreviewHeadingIndex()
-        : 0;
-      editTab.classList.add("active");
-      previewTab.classList.remove("active");
-      editorContainer.classList.add("active");
-      previewContainer.classList.remove("active");
-      editorState.isEditMode = true;
-      if (typeof window.syncEditorScroll === "function") {
-        window.syncEditorScroll(activeIndex);
-      }
-      if (typeof window.generateTOC === "function") {
-        window.generateTOC();
-      }
-      if (typeof window.updateActiveTOCItemForEdit === "function") {
-        window.updateActiveTOCItemForEdit();
-      }
-      return;
-    }
-
-    const hasUnsavedChanges = editor.value !== editorState.lastSavedContent;
-    if (hasUnsavedChanges) {
-      const hasConflict = await checkForExternalChanges(editorState.currentFilePath);
-      if (hasConflict) {
-        const choice = await showConflictDialog();
-        if (choice === "save") {
-          const saved = await saveContent();
-          if (!saved) {
-            return;
-          }
-        } else if (choice === "discard") {
-          await loadContent(editorState.currentFilePath);
-        } else {
-          return;
-        }
-      } else {
-        const saved = await saveContent();
-        if (!saved) {
-          return;
-        }
-      }
-    }
-
-    const activeIndex = typeof window.findActiveEditHeadingIndex === "function"
-      ? window.findActiveEditHeadingIndex()
-      : 0;
-    editTab.classList.remove("active");
-    previewTab.classList.add("active");
-    editorContainer.classList.remove("active");
-    previewContainer.classList.add("active");
-    editorState.isEditMode = false;
-    await window.renderMarkdown(editor.value);
-    if (typeof window.syncPreviewScroll === "function") {
-      window.syncPreviewScroll(activeIndex);
-    }
-    if (typeof window.updateActiveTOCItem === "function") {
-      window.updateActiveTOCItem();
-    }
-  }
-
   async function saveContent() {
     if (editorState.mode === "folder" && window.fileTabs?.isEnabled()) {
       return window.fileTabs.saveTabContent(window.fileTabs.getActiveTabPath());
     }
 
-    const editor = document.getElementById("markdown-editor");
-    if (!editor || editorState.isSaving) {
+    if (editorState.isSaving) {
       return false;
     }
 
@@ -358,8 +327,13 @@
       return false;
     }
 
+    const content = window.wysiwyg?.getMarkdown?.() || "";
+    if (content === editorState.lastSavedContent) {
+      setSaveStatus("Saved", "saved");
+      return true;
+    }
+
     editorState.isSaving = true;
-    const content = editor.value;
     setSaveStatus("Saving...", "saving");
 
     try {
@@ -384,8 +358,8 @@
       if (editorState.mode === "folder") {
         const relativePath = responsePayload.metadata?.relative_path || editorState.currentFilePath;
         editorState.currentFilePath = relativePath;
-        if (relativePath && window.fileTree?.setCurrentFile) {
-          window.fileTree.setCurrentFile(relativePath);
+        if (relativePath) {
+          window.fileTree?.setCurrentFile?.(relativePath);
         }
       }
 
@@ -414,24 +388,7 @@
     }, AUTOSAVE_DELAY_MS);
   }
 
-  function queueTOCUpdate() {
-    if (tocUpdateState.timeout) {
-      window.clearTimeout(tocUpdateState.timeout);
-    }
-
-    tocUpdateState.timeout = window.setTimeout(() => {
-      if (typeof window.generateTOC === "function") {
-        window.generateTOC();
-      }
-    }, 300);
-  }
-
-  function onEditorInput() {
-    const editor = document.getElementById("markdown-editor");
-    if (!editor) {
-      return;
-    }
-
+  function onEditorUpdate(markdown) {
     if (editorState.mode === "folder" && window.fileTabs?.isEnabled()) {
       const activePath = window.fileTabs.getActiveTabPath();
       if (!activePath) {
@@ -443,12 +400,14 @@
       if (!tabData) {
         return;
       }
+      tabData.content = markdown;
 
-      tabData.content = editor.value;
       const isDirty = window.fileTabs.updateTabDirtyState(activePath);
       if (isDirty) {
         setSaveStatus("Unsaved changes");
         window.fileTabs.queueTabAutosave(activePath);
+      } else {
+        setSaveStatus("Saved", "saved");
       }
       queueTOCUpdate();
       return;
@@ -459,11 +418,12 @@
       return;
     }
 
-    if (editor.value !== editorState.lastSavedContent) {
+    if (markdown !== editorState.lastSavedContent) {
       setSaveStatus("Unsaved changes");
       queueAutosave();
+    } else {
+      setSaveStatus("Saved", "saved");
     }
-
     queueTOCUpdate();
   }
 
@@ -473,40 +433,23 @@
       return;
     }
 
-    const editor = document.getElementById("markdown-editor");
-    if (!editor || !detail) {
+    if (!detail || typeof detail.content !== "string") {
+      return;
+    }
+    if (editorState.mode === "folder" && detail.file !== editorState.currentFilePath) {
       return;
     }
 
-    if (editorState.mode === "folder") {
-      if (detail.file !== editorState.currentFilePath) {
-        return;
-      }
-    }
-
-    if (typeof detail.content !== "string") {
+    const currentMarkdown = window.wysiwyg?.getMarkdown?.() || "";
+    if (detail.content === currentMarkdown) {
       return;
     }
 
-    if (detail.content === editor.value) {
-      return;
-    }
-
-    if (!editorState.isEditMode) {
-      editor.value = detail.content;
-      editorState.lastSavedContent = detail.content;
-      await window.renderMarkdown(detail.content);
-      setSaveStatus("Reloaded from disk", "saved");
-      return;
-    }
-
-    const hasUnsavedChanges = editor.value !== editorState.lastSavedContent;
+    const hasUnsavedChanges = currentMarkdown !== editorState.lastSavedContent;
     if (!hasUnsavedChanges) {
-      editor.value = detail.content;
+      window.wysiwyg?.setMarkdown(detail.content, { emitUpdate: false });
       editorState.lastSavedContent = detail.content;
-      if (typeof window.generateTOC === "function") {
-        window.generateTOC();
-      }
+      queueTOCUpdate();
       setSaveStatus("Reloaded from disk", "saved");
       return;
     }
@@ -519,20 +462,13 @@
       return;
     }
 
-    editor.value = detail.content;
+    window.wysiwyg?.setMarkdown(detail.content, { emitUpdate: false });
     editorState.lastSavedContent = detail.content;
-    if (typeof window.generateTOC === "function") {
-      window.generateTOC();
-    }
+    queueTOCUpdate();
     setSaveStatus("Reloaded from disk", "saved");
   }
 
   async function switchFile(filePath) {
-    const editor = document.getElementById("markdown-editor");
-    if (!editor) {
-      return false;
-    }
-
     if (!filePath) {
       return false;
     }
@@ -544,10 +480,7 @@
       }
     }
 
-    if (editorState.mode === "folder" && window.fileTabs) {
-      if (!window.fileTabs.isEnabled()) {
-        window.fileTabs.init("folder");
-      }
+    if (window.fileTabs?.isEnabled()) {
       return window.fileTabs.openTab(filePath);
     }
 
@@ -555,7 +488,8 @@
       return true;
     }
 
-    const hasUnsavedChanges = editor.value !== editorState.lastSavedContent;
+    const currentMarkdown = window.wysiwyg?.getMarkdown?.() || "";
+    const hasUnsavedChanges = currentMarkdown !== editorState.lastSavedContent;
     if (hasUnsavedChanges && editorState.currentFilePath) {
       const hasConflict = await checkForExternalChanges(editorState.currentFilePath);
       if (hasConflict) {
@@ -566,7 +500,7 @@
             return false;
           }
         } else if (choice === "discard") {
-          // User opted to keep disk state and switch files.
+          // User chose to discard local edits.
         } else {
           return false;
         }
@@ -584,165 +518,15 @@
     }
 
     editorState.currentFilePath = filePath;
-    if (window.fileTree?.setCurrentFile) {
-      window.fileTree.setCurrentFile(filePath);
-    }
-
-    await switchToTab("preview");
+    window.fileTree?.setCurrentFile?.(filePath);
     return true;
   }
 
-  function extensionFromMimeType(mimeType) {
-    const mimeToExtension = {
-      "image/png": "png",
-      "image/jpeg": "jpg",
-      "image/gif": "gif",
-      "image/webp": "webp",
-      "image/svg+xml": "svg",
-      "image/bmp": "bmp",
-      "image/x-icon": "ico",
-      "image/vnd.microsoft.icon": "ico",
-    };
-    return mimeToExtension[mimeType] || "png";
-  }
-
-  function replaceFirst(text, searchValue, replacement) {
-    const index = text.indexOf(searchValue);
-    if (index === -1) {
-      return text;
-    }
-    return `${text.slice(0, index)}${replacement}${text.slice(index + searchValue.length)}`;
-  }
-
-  function insertTextAtCursor(text) {
-    const editor = document.getElementById("markdown-editor");
-    if (!editor) {
-      return;
-    }
-
-    const start = editor.selectionStart;
-    const end = editor.selectionEnd;
-    const before = editor.value.slice(0, start);
-    const after = editor.value.slice(end);
-
-    editor.value = `${before}${text}${after}`;
-    const cursorPosition = start + text.length;
-    editor.selectionStart = cursorPosition;
-    editor.selectionEnd = cursorPosition;
-    editor.dispatchEvent(new Event("input", { bubbles: true }));
-  }
-
-  async function handleImageUpload(file) {
-    const editor = document.getElementById("markdown-editor");
-    if (!editor || !file) {
-      return;
-    }
-
-    const uploadId = `upload-${Date.now()}-${editorState.nextUploadId}`;
-    editorState.nextUploadId += 1;
-    const placeholder = `![Uploading image...](${uploadId})`;
-    insertTextAtCursor(placeholder);
-    setSaveStatus("Uploading image...", "saving");
-
-    const formData = new FormData();
-    const extension = file.name?.includes(".")
-      ? file.name.split(".").pop().toLowerCase()
-      : extensionFromMimeType(file.type);
-    const filename = file.name || `paste.${extension}`;
-    formData.append("file", file, filename);
-
-    try {
-      const response = await fetch("/api/images", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorPayload = await response.json().catch(() => ({}));
-        throw new Error(errorPayload.detail || `Upload failed (${response.status})`);
-      }
-
-      const payload = await response.json();
-      const markdownImage = `![image](${payload.path})`;
-      editor.value = replaceFirst(editor.value, placeholder, markdownImage);
-      editor.dispatchEvent(new Event("input", { bubbles: true }));
-      setSaveStatus("Image uploaded", "saved");
-    } catch (error) {
-      console.error("Image upload failed.", error);
-      editor.value = replaceFirst(editor.value, placeholder, "");
-      editor.dispatchEvent(new Event("input", { bubbles: true }));
-      setSaveStatus("Image upload failed", "error");
-    }
-  }
-
   function bindEvents() {
-    const editor = document.getElementById("markdown-editor");
-    const editTab = document.getElementById("edit-tab");
-    const previewTab = document.getElementById("preview-tab");
-    if (!editor || !editTab || !previewTab) {
-      return;
-    }
-
-    editor.addEventListener("input", onEditorInput);
-    editor.addEventListener("paste", (event) => {
-      const items = event.clipboardData?.items;
-      if (!items) {
-        return;
-      }
-
-      for (const item of items) {
-        if (!item.type.startsWith("image/")) {
-          continue;
-        }
-
-        const file = item.getAsFile();
-        if (!file) {
-          return;
-        }
-
-        event.preventDefault();
-        handleImageUpload(file);
-        return;
-      }
-    });
-    editor.addEventListener("dragover", (event) => {
-      const hasFiles = Array.from(event.dataTransfer?.types || []).includes("Files");
-      if (!hasFiles) {
-        return;
-      }
-      event.preventDefault();
-      editor.classList.add("drag-over");
-    });
-    editor.addEventListener("dragleave", () => {
-      editor.classList.remove("drag-over");
-    });
-    editor.addEventListener("drop", (event) => {
-      editor.classList.remove("drag-over");
-      const files = event.dataTransfer?.files;
-      if (!files || files.length === 0) {
-        return;
-      }
-
-      const imageFiles = Array.from(files).filter((file) => file.type.startsWith("image/"));
-      if (imageFiles.length === 0) {
-        return;
-      }
-
-      event.preventDefault();
-      for (const file of imageFiles) {
-        handleImageUpload(file);
-      }
-    });
-    editTab.addEventListener("click", () => {
-      switchToTab("edit");
-    });
-    previewTab.addEventListener("click", () => {
-      switchToTab("preview");
-    });
-
     window.addEventListener("markdown-os:file-changed", (event) => {
       handleExternalChange(event.detail);
     });
+
     window.addEventListener("markdown-os:websocket-status", (event) => {
       if (event.detail.status === "error") {
         setSaveStatus("Realtime sync unavailable", "error");
@@ -755,22 +539,21 @@
   window.checkForExternalChanges = checkForExternalChanges;
   window.showConflictDialog = showConflictDialog;
   window.saveContent = saveContent;
+  window.getCurrentMarkdown = () => window.wysiwyg?.getMarkdown?.() || "";
 
   document.addEventListener("DOMContentLoaded", async () => {
     editorState.mode = await detectMode();
+    initializeWysiwyg();
     bindEvents();
 
     if (editorState.mode === "file") {
       await loadContent();
-    } else {
-      window.fileTabs?.init(editorState.mode);
-      setLoadingState(false);
-      setSaveStatus("Select a file");
-      window.fileTabs?.setEmptyState?.(true);
+      return;
     }
 
-    if (editorState.mode === "file") {
-      await switchToTab("preview");
-    }
+    window.fileTabs?.init(editorState.mode);
+    setLoadingState(false);
+    setSaveStatus("Select a file");
+    window.fileTabs?.setEmptyState?.(true);
   });
 })();

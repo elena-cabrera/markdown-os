@@ -8,7 +8,7 @@ Markdown-OS is a developer-focused, CLI-driven markdown editor that runs as a lo
 
 **Tech Stack:**
 - Backend: Python 3.11+ with FastAPI, Typer CLI, Uvicorn ASGI server, Watchdog for file monitoring
-- Frontend: Vanilla HTML/CSS/JavaScript with Marked.js (markdown parsing), Mermaid.js (diagrams), highlight.js (syntax highlighting), svg-pan-zoom (interactive diagrams)
+- Frontend: Vanilla HTML/CSS/JavaScript with TipTap (ProseMirror), Mermaid.js (diagrams), KaTeX (math), highlight.js (syntax highlighting), svg-pan-zoom (interactive diagrams)
 
 ## Common Commands
 
@@ -40,6 +40,9 @@ uv run pytest -v
 
 # Run tests with output capture disabled (see print statements)
 uv run pytest -s
+
+# Build TipTap vendor bundle (developer-only)
+cd frontend && npm install && npm run build
 ```
 
 ### Running the Application
@@ -93,11 +96,12 @@ External file change → Watchdog detects → WebSocket notifies browser
 - **Error handling**: Custom FileReadError and FileWriteError exceptions
 
 #### 4. Frontend (`markdown_os/static/`)
-- **index.html**: Main editor page with tabbed interface (Edit/Preview modes)
-- **js/editor.js**: Content loading, tab switching, conflict handling, auto-save with 1s debouncing
-- **js/markdown.js**: Markdown rendering with Marked.js, Mermaid diagram rendering, syntax highlighting, code block enhancements (copy button, language labels)
+- **index.html**: Main editor page with single-pane WYSIWYG surface
+- **js/editor.js**: Content loading, conflict handling, autosave, websocket sync
+- **js/wysiwyg.js**: TipTap lifecycle and markdown round-trip helpers
+- **js/wysiwyg-toolbar.js**: Formatting toolbar controls and active-state sync
 - **js/theme.js**: Theme preference management, system preference detection, highlight theme switching, Mermaid re-render trigger
-- **js/toc.js**: Auto-generated table of contents from headings with smooth scrolling
+- **js/toc.js**: Auto-generated table of contents from headings in `.ProseMirror`
 - **js/websocket.js**: WebSocket connection for external file change notifications
 - **css/styles.css**: Layout and styling
 

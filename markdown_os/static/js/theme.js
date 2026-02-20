@@ -340,6 +340,10 @@
           },
         }),
       );
+
+      // NodeViews listen to the event, but this explicit call keeps theme switches
+      // responsive when the editor was initialized after the event listener.
+      window.wysiwyg?.rerenderMermaid?.();
     }
 
     openDropdown(options = {}) {
