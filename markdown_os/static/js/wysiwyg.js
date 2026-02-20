@@ -18,6 +18,7 @@
     mermaidTheme: null,
     fullscreenPanZoom: null,
     fullscreenPreviousFocus: null,
+    fullscreenRenderToken: 0,
     blockEditTarget: null,
     blockEditType: null,
   };
@@ -206,6 +207,9 @@
     }
     if (kind === "check") {
       return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7L9 18l-5-5"></path></svg>';
+    }
+    if (kind === "reset") {
+      return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 21l-6-6M3.268 12.043A7.02 7.02 0 0 0 9.902 17a7.01 7.01 0 0 0 7.043-6.131a7 7 0 0 0-5.314-7.672A7.02 7.02 0 0 0 3.39 7.6"></path><path d="M3 4v4h4"></path></svg>';
     }
     return "";
   }
@@ -491,7 +495,7 @@
       reset.className = "mermaid-zoom-btn";
       reset.type = "button";
       reset.title = "Reset view";
-      reset.textContent = "↻";
+      reset.innerHTML = actionIconSvg("reset");
       reset.addEventListener("click", () => {
         const pz = container._panZoomInstance;
         if (!pz) {
@@ -647,6 +651,45 @@
     } else {
       item.classList.remove("is-checked");
     }
+  }
+
+  function openLinkInNewTab(linkElement) {
+    const href = linkElement?.getAttribute("href");
+    if (!href) {
+      return;
+    }
+    window.open(href, "_blank", "noopener");
+  }
+
+  function editLinkElement(linkElement) {
+    if (!linkElement) {
+      return;
+    }
+
+    const currentHref = linkElement.getAttribute("href") || "";
+    const currentLabel = linkElement.textContent || "";
+    const nextHref = window.prompt("Edit link URL", currentHref || "https://");
+    if (nextHref === null) {
+      return;
+    }
+
+    const trimmedHref = nextHref.trim();
+    if (!trimmedHref) {
+      const textNode = document.createTextNode(currentLabel || currentHref || "");
+      linkElement.replaceWith(textNode);
+      emitChange();
+      return;
+    }
+
+    const nextLabel = window.prompt("Edit link text", currentLabel || trimmedHref);
+    if (nextLabel === null) {
+      return;
+    }
+
+    linkElement.setAttribute("href", trimmedHref);
+    linkElement.textContent = nextLabel.trim() || trimmedHref;
+    decorateLinks();
+    emitChange();
   }
 
   function makeTaskListsInteractive() {
@@ -1256,10 +1299,16 @@
       closeMermaidFullscreen();
     }
 
+    state.fullscreenRenderToken += 1;
+    const renderToken = state.fullscreenRenderToken;
+
     state.fullscreenPreviousFocus =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
 
-    content.innerHTML = "";
+    content.innerHTML = '<div class="mermaid-fullscreen-loading"><div class="content-loading-spinner"></div></div>';
+    overlay.classList.remove("hidden");
+    modal.classList.remove("hidden");
+    document.getElementById("mermaid-fullscreen-close")?.focus();
 
     let svgElement = null;
 
@@ -1268,6 +1317,9 @@
         ensureMermaidInitialized();
         const fullscreenId = `mermaid-fullscreen-${Date.now()}`;
         const result = await window.mermaid.render(fullscreenId, mermaidSource);
+        if (renderToken !== state.fullscreenRenderToken || modal.classList.contains("hidden")) {
+          return;
+        }
         content.innerHTML = result.svg;
         svgElement = content.querySelector("svg");
       } catch (error) {
@@ -1286,6 +1338,9 @@
     }
 
     if (!svgElement) {
+      if (renderToken === state.fullscreenRenderToken) {
+        content.innerHTML = '<div class="math-error-block">Unable to render diagram in fullscreen view.</div>';
+      }
       return;
     }
 
@@ -1295,22 +1350,18 @@
     svgElement.style.width = "100%";
     svgElement.style.height = "100%";
 
-    overlay.classList.remove("hidden");
-    modal.classList.remove("hidden");
-
     if (window.svgPanZoom) {
       state.fullscreenPanZoom = window.svgPanZoom(svgElement, {
         controlIconsEnabled: false,
         zoomScaleSensitivity: 0.4,
         minZoom: 0.2,
         maxZoom: 40,
-        fit: false,
+        fit: true,
         center: true,
       });
+      state.fullscreenPanZoom.fit();
       state.fullscreenPanZoom.center();
     }
-
-    document.getElementById("mermaid-fullscreen-close")?.focus();
   }
 
   function closeMermaidFullscreen() {
@@ -1768,20 +1819,51 @@
   }
 
   function handleRootClick(event) {
+    const link = event.target.closest("a[href]");
+    if (link && state.root?.contains(link)) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.metaKey || event.ctrlKey) {
+        openLinkInNewTab(link);
+      } else {
+        editLinkElement(link);
+      }
+      return;
+    }
+
     const block = event.target.closest(".code-block, .mermaid-container, .math-display, .math-inline");
-    if (!block || event.target.closest("button, a, input")) {
+    if (!block || event.target.closest("button, input")) {
       return;
     }
 
     if (block.classList.contains("code-block")) {
       openBlockEditor("code", block);
-    } else if (block.classList.contains("mermaid-container")) {
-      openBlockEditor("mermaid", block);
     } else if (block.classList.contains("math-display")) {
       openBlockEditor("math-display", block);
     } else if (block.classList.contains("math-inline")) {
       openBlockEditor("math-inline", block);
     }
+  }
+
+  function setLinkModifierCursorState(isActive) {
+    document.documentElement.classList.toggle("link-open-modifier", Boolean(isActive));
+  }
+
+  function handleModifierKeyState(event) {
+    setLinkModifierCursorState(Boolean(event.metaKey || event.ctrlKey));
+  }
+
+  function bindModifierLinkCursorState() {
+    document.addEventListener("keydown", handleModifierKeyState);
+    document.addEventListener("keyup", handleModifierKeyState);
+    window.addEventListener("blur", () => {
+      setLinkModifierCursorState(false);
+    });
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) {
+        setLinkModifierCursorState(false);
+      }
+    });
   }
 
   function bindFullscreenListeners() {
@@ -1870,6 +1952,7 @@
 
     configureMarked();
     bindRootEvents();
+    bindModifierLinkCursorState();
     bindFullscreenListeners();
     bindBlockEditListeners();
 

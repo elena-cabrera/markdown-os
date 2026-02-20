@@ -88,3 +88,53 @@ def test_wysiwyg_inline_code_command_toggles_existing_code() -> None:
     assert "function unwrapCodeElement(codeElement)" in source
     assert "const singleCodeSelection = startCode && endCode && startCode === endCode;" in source
     assert "if (singleCodeSelection) {" in source
+
+
+def test_wysiwyg_mermaid_fullscreen_shows_loading_state() -> None:
+    """Verify Mermaid fullscreen opens with a loading spinner before SVG render."""
+
+    source = _read_static_js("wysiwyg.js")
+
+    assert "mermaid-fullscreen-loading" in source
+    assert "content-loading-spinner" in source
+    assert "fit: true" in source
+
+
+def test_wysiwyg_links_support_open_and_edit_click_paths() -> None:
+    """Verify links can open in new tab and be edited from click handling."""
+
+    source = _read_static_js("wysiwyg.js")
+
+    assert "function editLinkElement(linkElement)" in source
+    assert "if (event.metaKey || event.ctrlKey)" in source
+    assert "openLinkInNewTab(link);" in source
+    assert "editLinkElement(link);" in source
+
+
+def test_wysiwyg_mermaid_canvas_click_no_longer_opens_editor() -> None:
+    """Verify Mermaid block clicks do not trigger click-to-edit modal."""
+
+    source = _read_static_js("wysiwyg.js")
+
+    assert 'event.target.closest("button, input")' in source
+    assert 'block.classList.contains("mermaid-container")' not in source
+
+
+def test_wysiwyg_modifier_key_updates_link_cursor_state() -> None:
+    """Verify Cmd/Ctrl key state toggles link-open cursor mode."""
+
+    source = _read_static_js("wysiwyg.js")
+
+    assert "function setLinkModifierCursorState(isActive)" in source
+    assert "document.documentElement.classList.toggle(\"link-open-modifier\"" in source
+    assert "function bindModifierLinkCursorState()" in source
+    assert "document.addEventListener(\"keydown\", handleModifierKeyState);" in source
+
+
+def test_wysiwyg_mermaid_reset_uses_svg_icon() -> None:
+    """Verify Mermaid reset controls use the SVG reset icon helper."""
+
+    source = _read_static_js("wysiwyg.js")
+
+    assert "if (kind === \"reset\")" in source
+    assert "reset.innerHTML = actionIconSvg(\"reset\")" in source

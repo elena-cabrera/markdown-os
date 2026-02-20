@@ -463,5 +463,4 @@ uv run markdown-os example --force
 
 ```
 
-Happy writing.  
-![image](images/CleanShot-2026-02-16-at-20-47-18-20260216-194724-167926.png)
+Happy writing.
