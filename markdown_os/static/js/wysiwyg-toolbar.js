@@ -135,6 +135,12 @@
           await window.wysiwyg.exec("link");
           updateInlineButtonState();
         }
+      } else if (key === "e") {
+        event.preventDefault();
+        if (window.wysiwyg?.exec) {
+          await window.wysiwyg.exec("inlineCode");
+          updateInlineButtonState();
+        }
       }
     });
   }

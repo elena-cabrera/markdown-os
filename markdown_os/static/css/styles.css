@@ -1211,29 +1211,12 @@ body {
   position: absolute;
   top: 8px;
   right: 8px;
-  width: 28px;
-  height: 28px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--panel-bg);
-  color: var(--text-muted);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  opacity: 0.65;
-  transition: opacity 0.15s ease;
   z-index: 2;
 }
 
-.mermaid-fullscreen-trigger:hover {
-  opacity: 1;
-}
-
-.mermaid-fullscreen-trigger:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+.mermaid-fullscreen-trigger svg {
+  width: 15px;
+  height: 15px;
 }
 
 .mermaid-error {

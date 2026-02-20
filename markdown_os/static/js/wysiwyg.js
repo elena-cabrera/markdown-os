@@ -433,7 +433,7 @@
     const existingFullscreenButton = container.querySelector(".mermaid-fullscreen-trigger");
     if (!existingFullscreenButton) {
       const fullscreenButton = createActionButton("fullscreen", "View diagram fullscreen");
-      fullscreenButton.className = "mermaid-fullscreen-trigger";
+      fullscreenButton.classList.add("mermaid-fullscreen-trigger");
       fullscreenButton.addEventListener("click", (event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -860,6 +860,37 @@
       return;
     }
 
+    if (command === "inlineCode") {
+      const selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0) {
+        return;
+      }
+
+      const range = selection.getRangeAt(0);
+      if (!state.root.contains(range.commonAncestorContainer)) {
+        return;
+      }
+
+      if (range.collapsed) {
+        insertHtmlAtSelection("<code>code</code>");
+        emitChange();
+        return;
+      }
+
+      const selectedText = selection.toString();
+      if (!selectedText || selectedText.includes("\n")) {
+        return;
+      }
+
+      const codeNode = document.createElement("code");
+      codeNode.textContent = selectedText;
+      range.deleteContents();
+      range.insertNode(codeNode);
+      placeCaretAtEnd(codeNode);
+      emitChange();
+      return;
+    }
+
     if (command === "h1" || command === "h2" || command === "h3") {
       document.execCommand("formatBlock", false, command.toUpperCase());
       addHeadingIds(state.root);
@@ -1254,6 +1285,19 @@
     selection.addRange(range);
   }
 
+  function placeCaretAtEnd(node) {
+    const selection = window.getSelection();
+    if (!selection || !node) {
+      return;
+    }
+
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    range.collapse(false);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+
   function replaceInlineMatch(textNode, offset, pattern, tagName) {
     const beforeCursor = textNode.textContent?.slice(0, offset) || "";
     const match = beforeCursor.match(pattern);
@@ -1263,6 +1307,7 @@
 
     const fullMatch = match[0];
     const content = match[1];
+    const trailingSpace = match[2] || "";
     const startOffset = beforeCursor.length - fullMatch.length;
     if (startOffset < 0) {
       return false;
@@ -1275,15 +1320,21 @@
 
     const markNode = document.createElement(tagName);
     markNode.textContent = content;
-    const spacer = document.createTextNode(" ");
-
-    range.insertNode(spacer);
     range.insertNode(markNode);
+    let spacer = null;
+    if (trailingSpace) {
+      spacer = document.createTextNode(trailingSpace);
+      markNode.after(spacer);
+    }
 
     const selection = window.getSelection();
     if (selection) {
       const nextRange = document.createRange();
-      nextRange.setStart(spacer, 1);
+      if (spacer) {
+        nextRange.setStart(spacer, trailingSpace.length);
+      } else {
+        nextRange.setStartAfter(markNode);
+      }
       nextRange.collapse(true);
       selection.removeAllRanges();
       selection.addRange(nextRange);
@@ -1309,10 +1360,12 @@
     }
 
     const patterns = [
-      { regex: /\*\*([^*\n]+)\*\*\s$/, tag: "strong" },
-      { regex: /~~([^~\n]+)~~\s$/, tag: "del" },
-      { regex: /`([^`\n]+)`\s$/, tag: "code" },
-      { regex: /\*([^*\n]+)\*\s$/, tag: "em" },
+      { regex: /\*\*([^*\n]+)\*\*(\s?)$/, tag: "strong" },
+      { regex: /__([^_\n]+)__(\s?)$/, tag: "strong" },
+      { regex: /~~([^~\n]+)~~(\s?)$/, tag: "del" },
+      { regex: /`([^`\n]+)`(\s?)$/, tag: "code" },
+      { regex: /\*([^*\n]+)\*(\s?)$/, tag: "em" },
+      { regex: /_([^_\n]+)_(\s?)$/, tag: "em" },
     ];
 
     for (const { regex, tag } of patterns) {
@@ -1337,41 +1390,78 @@
 
     const blockText = (block.textContent || "").replace(/\u00a0/g, " ");
 
-    const headingMatch = blockText.match(/^(#{1,6}) $/);
+    const headingMatch = blockText.match(/^(#{1,6})\s+(.*)$/);
     if (headingMatch) {
       const level = headingMatch[1].length;
+      const content = headingMatch[2] || "";
       const heading = document.createElement(`h${level}`);
-      heading.innerHTML = "<br>";
+      if (content) {
+        heading.textContent = content;
+      } else {
+        heading.innerHTML = "<br>";
+      }
       block.replaceWith(heading);
       addHeadingIds(state.root);
-      placeCaretAtStart(heading);
+      placeCaretAtEnd(heading);
       return true;
     }
 
-    if (/^> $/.test(blockText)) {
+    const quoteMatch = blockText.match(/^>\s?(.*)$/);
+    if (quoteMatch) {
+      const content = quoteMatch[1] || "";
       const quote = document.createElement("blockquote");
-      quote.innerHTML = "<p><br></p>";
+      const paragraph = document.createElement("p");
+      if (content) {
+        paragraph.textContent = content;
+      } else {
+        paragraph.innerHTML = "<br>";
+      }
+      quote.appendChild(paragraph);
       block.replaceWith(quote);
-      placeCaretAtStart(quote.querySelector("p") || quote);
+      placeCaretAtEnd(paragraph);
       return true;
     }
 
-    if (/^[-*+] $/.test(blockText)) {
-      block.textContent = "";
-      placeCaretAtStart(block);
-      document.execCommand("insertUnorderedList", false);
+    const unorderedMatch = blockText.match(/^[-*+]\s+(.*)$/);
+    if (unorderedMatch) {
+      const content = unorderedMatch[1] || "";
+      const list = document.createElement("ul");
+      const item = document.createElement("li");
+      if (content) {
+        item.textContent = content;
+      } else {
+        item.innerHTML = "<br>";
+      }
+      list.appendChild(item);
+      block.replaceWith(list);
+      placeCaretAtEnd(item);
       return true;
     }
 
-    if (/^\d+[.)] $/.test(blockText)) {
-      block.textContent = "";
-      placeCaretAtStart(block);
-      document.execCommand("insertOrderedList", false);
+    const orderedMatch = blockText.match(/^(\d+)[.)]\s+(.*)$/);
+    if (orderedMatch) {
+      const start = Number.parseInt(orderedMatch[1], 10) || 1;
+      const content = orderedMatch[2] || "";
+      const list = document.createElement("ol");
+      if (start > 1) {
+        list.start = start;
+      }
+      const item = document.createElement("li");
+      if (content) {
+        item.textContent = content;
+      } else {
+        item.innerHTML = "<br>";
+      }
+      list.appendChild(item);
+      block.replaceWith(list);
+      placeCaretAtEnd(item);
       return true;
     }
 
-    if (/^- \[(?: |x|X)\] $/.test(blockText)) {
-      const checked = /- \[(?:x|X)\] /.test(blockText);
+    const taskMatch = blockText.match(/^[-*+]\s+\[( |x|X)\]\s*(.*)$/);
+    if (taskMatch) {
+      const checked = (taskMatch[1] || "").toLowerCase() === "x";
+      const content = taskMatch[2] || "";
       const list = document.createElement("ul");
       list.className = "task-list";
       const item = document.createElement("li");
@@ -1380,13 +1470,13 @@
       checkbox.type = "checkbox";
       checkbox.checked = checked;
       checkbox.setAttribute("contenteditable", "false");
-      const label = document.createTextNode(" ");
+      const label = document.createTextNode(content ? ` ${content}` : " ");
       item.appendChild(checkbox);
       item.appendChild(label);
       list.appendChild(item);
       block.replaceWith(list);
       makeTaskListsInteractive();
-      placeCaretAtStart(item);
+      placeCaretAtEnd(item);
       return true;
     }
 
@@ -1398,11 +1488,16 @@
       return;
     }
 
-    if (event.key !== " " && event.key !== "Spacebar") {
+    const isSpaceKey = event.key === " " || event.key === "Spacebar";
+    const shouldCheckInline = isSpaceKey || event.key === "*" || event.key === "_" || event.key === "`" || event.key === "~";
+    if (!isSpaceKey && !shouldCheckInline) {
       return;
     }
 
-    let didTransform = applyBlockMarkdownShortcut();
+    let didTransform = false;
+    if (isSpaceKey) {
+      didTransform = applyBlockMarkdownShortcut();
+    }
     if (!didTransform) {
       didTransform = applyInlineMarkdownShortcut();
     }

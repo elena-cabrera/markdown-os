@@ -38,10 +38,13 @@ def test_wysiwyg_supports_markdown_shortcuts_during_typing() -> None:
     source = _read_static_js("wysiwyg.js")
 
     assert "function applyBlockMarkdownShortcut()" in source
-    assert "if (event.key !== \" \" && event.key !== \"Spacebar\")" in source
-    assert "const headingMatch = blockText.match(/^(#{1,6}) $/);" in source
-    assert "if (/^\\d+[.)] $/.test(blockText))" in source
+    assert "const headingMatch = blockText.match(/^(#{1,6})\\s+(.*)$/);" in source
+    assert "const orderedMatch = blockText.match(/^(\\d+)[.)]\\s+(.*)$/);" in source
+    assert "const taskMatch = blockText.match(/^[-*+]\\s+\\[( |x|X)\\]\\s*(.*)$/);" in source
     assert "function applyInlineMarkdownShortcut()" in source
+    assert "{ regex: /`([^`\\n]+)`(\\s?)$/, tag: \"code\" }" in source
+    assert "event.key === \"*\"" in source
+    assert "event.key === \"`\"" in source
 
 
 def test_wysiwyg_uses_icon_action_buttons_for_edit_and_copy() -> None:
@@ -52,3 +55,12 @@ def test_wysiwyg_uses_icon_action_buttons_for_edit_and_copy() -> None:
     assert "function createActionButton(kind, title)" in source
     assert "copyButton = createActionButton(\"copy\", \"Copy code\")" in source
     assert "editButton = createActionButton(\"edit\", \"Edit code block\")" in source
+
+
+def test_wysiwyg_toolbar_exposes_ctrl_e_inline_code_shortcut() -> None:
+    """Verify Ctrl/Cmd+E maps to the inline code command."""
+
+    source = _read_static_js("wysiwyg-toolbar.js")
+
+    assert "else if (key === \"e\")" in source
+    assert "await window.wysiwyg.exec(\"inlineCode\")" in source
