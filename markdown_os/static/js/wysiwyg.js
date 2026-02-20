@@ -3,6 +3,7 @@
     editor: null,
     markdownListeners: new Set(),
     selectionListeners: new Set(),
+    headingShortcutCleanup: null,
   };
 
   function editorElement() {
@@ -24,6 +25,64 @@
     return fn(wysiwygState.editor);
   }
 
+  function detachHeadingShortcutHandler() {
+    if (!wysiwygState.headingShortcutCleanup) {
+      return;
+    }
+    wysiwygState.headingShortcutCleanup();
+    wysiwygState.headingShortcutCleanup = null;
+  }
+
+  function attachHeadingShortcutHandler(editor) {
+    const editorDom = editor?.view?.dom;
+    if (!editorDom) {
+      return;
+    }
+
+    const handleKeydown = (event) => {
+      if (
+        event.key !== " " ||
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.shiftKey
+      ) {
+        return;
+      }
+
+      const selection = editor.state.selection;
+      if (!selection.empty) {
+        return;
+      }
+
+      const { $from } = selection;
+      const parentNode = $from.parent;
+      if (!parentNode?.isTextblock || parentNode.type.name !== "paragraph") {
+        return;
+      }
+
+      const shortcutText = parentNode.textBetween(0, $from.parentOffset, undefined, "");
+      if (!/^#{1,3}$/.test(shortcutText)) {
+        return;
+      }
+
+      event.preventDefault();
+      const blockStart = $from.start();
+      const level = shortcutText.length;
+      editor
+        .chain()
+        .focus()
+        .deleteRange({ from: blockStart, to: blockStart + level })
+        .toggleHeading({ level })
+        .run();
+    };
+
+    editorDom.addEventListener("keydown", handleKeydown);
+    wysiwygState.headingShortcutCleanup = () => {
+      editorDom.removeEventListener("keydown", handleKeydown);
+    };
+  }
+
   function init(options = {}) {
     const bundle = tiptapBundle();
     const targetElement = editorElement();
@@ -31,6 +90,7 @@
       return null;
     }
 
+    detachHeadingShortcutHandler();
     if (wysiwygState.editor) {
       wysiwygState.editor.destroy();
     }
@@ -65,6 +125,7 @@
     });
 
     wysiwygState.editor = editor;
+    attachHeadingShortcutHandler(editor);
     return editor;
   }
 
