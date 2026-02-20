@@ -138,3 +138,23 @@ def test_wysiwyg_mermaid_reset_uses_svg_icon() -> None:
 
     assert "if (kind === \"reset\")" in source
     assert "reset.innerHTML = actionIconSvg(\"reset\")" in source
+
+
+def test_frontend_uses_custom_dialogs_instead_of_native_prompt_confirm() -> None:
+    """Verify editor surfaces no longer call native prompt/confirm dialogs."""
+
+    for filename in ("wysiwyg.js", "editor.js", "tabs.js"):
+        source = _read_static_js(filename)
+        assert "window.prompt(" not in source
+        assert "window.confirm(" not in source
+
+
+def test_wysiwyg_mermaid_uses_inline_toolbar_for_action_buttons() -> None:
+    """Verify Mermaid action buttons are placed in dedicated inline toolbar."""
+
+    source = _read_static_js("wysiwyg.js")
+
+    assert "let toolbar = container.querySelector(\".mermaid-inline-toolbar\");" in source
+    assert "toolbar.className = \"mermaid-inline-toolbar\";" in source
+    assert "toolbar.appendChild(editButton);" in source
+    assert "toolbar.appendChild(fullscreenButton);" in source

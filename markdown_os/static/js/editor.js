@@ -420,9 +420,14 @@
       return;
     }
 
-    const shouldReload = window.confirm(
-      "This file was changed externally and you have unsaved changes. Reload and discard your changes?",
-    );
+    const shouldReload = await window.markdownDialogs?.confirm?.({
+      title: "External Change Detected",
+      message:
+        "This file was changed externally and you have unsaved changes. Reload and discard your changes?",
+      confirmText: "Reload",
+      cancelText: "Keep mine",
+      confirmVariant: "danger",
+    });
     if (!shouldReload) {
       setSaveStatus("External change ignored");
       return;

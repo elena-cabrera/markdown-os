@@ -1162,10 +1162,26 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   position: relative;
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 10px;
+  padding: 44px 10px 10px;
   margin: 16px 0;
   overflow: hidden;
   background: var(--mermaid-bg);
+}
+
+.mermaid-inline-toolbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 36px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel-bg);
+  z-index: 4;
 }
 
 .mermaid-container .mermaid {
@@ -1226,10 +1242,8 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 }
 
 .mermaid-fullscreen-trigger {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: 2;
+  position: static;
+  z-index: auto;
 }
 
 .mermaid-fullscreen-trigger svg {
@@ -1237,6 +1251,8 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   height: 15px;
 }
 
+.mermaid-inline-toolbar .block-edit-trigger,
+.mermaid-inline-toolbar .mermaid-fullscreen-trigger,
 .mermaid-container .block-edit-trigger,
 .mermaid-container .mermaid-fullscreen-trigger {
   cursor: pointer !important;

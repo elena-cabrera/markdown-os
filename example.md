@@ -20,7 +20,7 @@ Use this file to:
 
 ### Notes
 
--   The sidebar `` `table` `` of contents is generated from headings.
+-   The sidebar table of contents is generated from headings.
 -   Code blocks include language labels and copy actions.
 -   Mermaid blocks can be pan/zoom enabled in the preview.
 
@@ -116,7 +116,9 @@ Heading depth influences:
 
 -   [x]  Create markdown file
 -   [x]  Open file in editor
--   [ ]  Add project-specific notes
+
+-   [ ] Add project-specific notes
+
 -   [ ]  Share with team
 
 ---
@@ -125,9 +127,9 @@ Heading depth influences:
 
 Inline link to the project page: [Markdown Guide](https://www.markdownguide.org).
 
-Autolink style URL: [https://example.org/docs](https://example.org/docs).
+Autolink style URL: [example-link](https://example.org/docs).
 
-Email autolink: [devnull@example.org](mailto:devnull@example.org).
+Email autolink: [devnull@example.com](mailto:devnull@example.org).
 
 Reference-style link usage:
 

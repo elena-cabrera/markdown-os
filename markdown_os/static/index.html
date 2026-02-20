@@ -357,6 +357,38 @@
       </div>
     </div>
 
+    <div id="custom-dialog-overlay" class="modal-overlay hidden"></div>
+    <div id="custom-dialog-modal" class="modal hidden" role="dialog" aria-modal="true">
+      <div class="modal-content">
+        <h3 id="custom-dialog-title" class="modal-title">Confirm action</h3>
+        <p id="custom-dialog-message" class="modal-message hidden"></p>
+        <div id="custom-dialog-fields" class="block-edit-fields hidden">
+          <label id="custom-dialog-input1-label" class="block-edit-label hidden" for="custom-dialog-input1"
+            >Value</label
+          >
+          <input
+            id="custom-dialog-input1"
+            class="block-edit-input hidden"
+            type="text"
+            autocomplete="off"
+          />
+          <label id="custom-dialog-input2-label" class="block-edit-label hidden" for="custom-dialog-input2"
+            >Value</label
+          >
+          <input
+            id="custom-dialog-input2"
+            class="block-edit-input hidden"
+            type="text"
+            autocomplete="off"
+          />
+        </div>
+        <div class="modal-actions">
+          <button id="custom-dialog-confirm" class="btn btn-primary" type="button">Confirm</button>
+          <button id="custom-dialog-cancel" class="btn btn-tertiary" type="button">Cancel</button>
+        </div>
+      </div>
+    </div>
+
     <div id="block-edit-overlay" class="modal-overlay hidden"></div>
     <div id="block-edit-modal" class="modal hidden" role="dialog" aria-modal="true">
       <div class="modal-content">
@@ -376,6 +408,7 @@
 
     <script src="/static/js/theme.js"></script>
     <script src="/static/js/websocket.js"></script>
+    <script src="/static/js/dialogs.js"></script>
     <script src="/static/js/wysiwyg.js"></script>
     <script src="/static/js/wysiwyg-toolbar.js"></script>
     <script src="/static/js/toc.js"></script>

@@ -447,23 +447,26 @@
   }
 
   function addMermaidControls(container) {
-    const existingEdit = container.querySelector(".block-edit-trigger");
+    let toolbar = container.querySelector(".mermaid-inline-toolbar");
+    if (!toolbar) {
+      toolbar = document.createElement("div");
+      toolbar.className = "mermaid-inline-toolbar";
+      container.prepend(toolbar);
+    }
+
+    const existingEdit = toolbar.querySelector(".block-edit-trigger");
     if (!existingEdit) {
       const editButton = createActionButton("edit", "Edit diagram");
       editButton.classList.add("block-edit-trigger");
-      editButton.style.position = "absolute";
-      editButton.style.top = "8px";
-      editButton.style.right = "42px";
-      editButton.style.zIndex = "2";
       editButton.addEventListener("click", (event) => {
         event.preventDefault();
         event.stopPropagation();
         openBlockEditor("mermaid", container);
       });
-      container.appendChild(editButton);
+      toolbar.appendChild(editButton);
     }
 
-    const existingFullscreenButton = container.querySelector(".mermaid-fullscreen-trigger");
+    const existingFullscreenButton = toolbar.querySelector(".mermaid-fullscreen-trigger");
     if (!existingFullscreenButton) {
       const fullscreenButton = createActionButton("fullscreen", "View diagram fullscreen");
       fullscreenButton.classList.add("mermaid-fullscreen-trigger");
@@ -474,7 +477,7 @@
         const svg = container.querySelector("svg");
         openMermaidFullscreen(source, svg);
       });
-      container.appendChild(fullscreenButton);
+      toolbar.appendChild(fullscreenButton);
     }
 
     let controls = container.querySelector(".mermaid-zoom-controls");
@@ -661,19 +664,32 @@
     window.open(href, "_blank", "noopener");
   }
 
-  function editLinkElement(linkElement) {
+  async function editLinkElement(linkElement) {
     if (!linkElement) {
       return;
     }
 
     const currentHref = linkElement.getAttribute("href") || "";
     const currentLabel = linkElement.textContent || "";
-    const nextHref = window.prompt("Edit link URL", currentHref || "https://");
-    if (nextHref === null) {
+    const result = await window.markdownDialogs?.promptPair?.({
+      title: "Edit link",
+      first: {
+        label: "URL",
+        value: currentHref || "https://",
+        placeholder: "https://example.com",
+      },
+      second: {
+        label: "Text",
+        value: currentLabel || currentHref || "Link",
+      },
+      confirmText: "Save",
+      cancelText: "Cancel",
+    });
+    if (!result) {
       return;
     }
 
-    const trimmedHref = nextHref.trim();
+    const trimmedHref = (result.first || "").trim();
     if (!trimmedHref) {
       const textNode = document.createTextNode(currentLabel || currentHref || "");
       linkElement.replaceWith(textNode);
@@ -681,13 +697,8 @@
       return;
     }
 
-    const nextLabel = window.prompt("Edit link text", currentLabel || trimmedHref);
-    if (nextLabel === null) {
-      return;
-    }
-
     linkElement.setAttribute("href", trimmedHref);
-    linkElement.textContent = nextLabel.trim() || trimmedHref;
+    linkElement.textContent = (result.second || "").trim() || trimmedHref;
     decorateLinks();
     emitChange();
   }
@@ -804,7 +815,7 @@
     cloneRoot.querySelectorAll(".copy-button, .block-edit-trigger, .mermaid-fullscreen-trigger").forEach((node) => {
       node.remove();
     });
-    cloneRoot.querySelectorAll(".mermaid-zoom-controls, .code-line-numbers").forEach((node) => {
+    cloneRoot.querySelectorAll(".mermaid-zoom-controls, .mermaid-inline-toolbar, .code-line-numbers").forEach((node) => {
       node.remove();
     });
 
@@ -1050,7 +1061,13 @@
     if (command === "link") {
       const selectedText = window.getSelection()?.toString() || "";
       const existing = payload.url || "https://";
-      const linkUrl = window.prompt("Enter URL", existing);
+      const linkUrl = await window.markdownDialogs?.prompt?.({
+        title: "Insert link",
+        label: "URL",
+        value: existing,
+        placeholder: "https://example.com",
+        confirmText: "Insert",
+      });
       if (!linkUrl) {
         return;
       }
@@ -1108,7 +1125,12 @@
         return;
       }
 
-      const imageUrl = window.prompt("Image URL");
+      const imageUrl = await window.markdownDialogs?.prompt?.({
+        title: "Insert image",
+        label: "Image URL",
+        placeholder: "https://example.com/image.png",
+        confirmText: "Insert",
+      });
       if (!imageUrl) {
         return;
       }
@@ -1818,7 +1840,7 @@
     emitChange();
   }
 
-  function handleRootClick(event) {
+  async function handleRootClick(event) {
     const link = event.target.closest("a[href]");
     if (link && state.root?.contains(link)) {
       event.preventDefault();
@@ -1826,7 +1848,7 @@
       if (event.metaKey || event.ctrlKey) {
         openLinkInNewTab(link);
       } else {
-        editLinkElement(link);
+        await editLinkElement(link);
       }
       return;
     }
