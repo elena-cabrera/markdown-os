@@ -122,6 +122,7 @@
       content: "",
       lastSavedContent: "",
       isDirty: false,
+      hasLocalEdits: false,
       isLoaded: false,
       isSaving: false,
       saveTimeout: null,
@@ -270,9 +271,19 @@
       return;
     }
 
-    tabData.content = window.getCurrentMarkdown?.() || "";
+    const currentMarkdown = window.getCurrentMarkdown?.();
+    if (typeof currentMarkdown === "string") {
+      const shouldKeepExistingContent =
+        currentMarkdown === "" && tabData.content !== "" && !tabData.hasLocalEdits;
+      if (!shouldKeepExistingContent) {
+        tabData.content = currentMarkdown;
+      }
+    }
     tabData.scrollTop = window.wysiwyg?.getScrollTop?.() || 0;
     tabData.isDirty = tabData.content !== tabData.lastSavedContent;
+    if (!tabData.isDirty) {
+      tabData.hasLocalEdits = false;
+    }
     renderTabBar();
   }
 
@@ -375,6 +386,7 @@
       tabData.content = payload.content || "";
       tabData.lastSavedContent = tabData.content;
       tabData.isDirty = false;
+      tabData.hasLocalEdits = false;
       tabData.hasExternalConflict = false;
       tabData.isLoaded = true;
       return true;
@@ -431,6 +443,9 @@
     }
 
     tabData.isDirty = tabData.content !== tabData.lastSavedContent;
+    if (!tabData.isDirty) {
+      tabData.hasLocalEdits = false;
+    }
     renderTabBar();
     return tabData.isDirty;
   }
@@ -443,10 +458,18 @@
     }
 
     if (targetPath === tabsState.activeTabPath) {
-      tabData.content = window.getCurrentMarkdown?.() || "";
+      const currentMarkdown = window.getCurrentMarkdown?.();
+      if (typeof currentMarkdown === "string") {
+        const shouldKeepExistingContent =
+          currentMarkdown === "" && tabData.content !== "" && !tabData.hasLocalEdits;
+        if (!shouldKeepExistingContent) {
+          tabData.content = currentMarkdown;
+        }
+      }
     }
     tabData.isDirty = tabData.content !== tabData.lastSavedContent;
     if (!tabData.isDirty) {
+      tabData.hasLocalEdits = false;
       setSaveStatus("Saved", "saved");
       return true;
     }
@@ -483,6 +506,7 @@
 
       nextTabData.lastSavedContent = nextTabData.content;
       nextTabData.isDirty = false;
+      nextTabData.hasLocalEdits = false;
       nextTabData.hasExternalConflict = false;
 
       if (tabsState.activeTabPath === targetPath) {
@@ -521,7 +545,7 @@
   }
 
   async function resolveBackgroundConflict(tabData) {
-    if (!tabData.hasExternalConflict || !tabData.isDirty) {
+    if (!tabData.hasExternalConflict || !tabData.isDirty || !tabData.hasLocalEdits) {
       return true;
     }
 
@@ -560,6 +584,11 @@
     const currentTab = getTabData(currentPath);
     if (!skipCurrentSave && currentTab) {
       saveCurrentTabState(currentPath);
+      if (currentTab.isDirty && !currentTab.hasLocalEdits) {
+        currentTab.content = currentTab.lastSavedContent;
+        currentTab.isDirty = false;
+        renderTabBar();
+      }
       if (currentTab.isDirty) {
         const hasConflict = await checkForExternalChanges(currentPath);
         if (hasConflict) {
@@ -634,6 +663,12 @@
       return false;
     }
 
+    if (tabData.isDirty && !tabData.hasLocalEdits) {
+      tabData.content = tabData.lastSavedContent;
+      tabData.isDirty = false;
+      renderTabBar();
+    }
+
     if (tabData.isDirty) {
       const choice = await showCloseDirtyTabDialog(basename(filePath));
       if (choice === "save") {
@@ -690,6 +725,7 @@
         tabData.content = detail.content;
         tabData.lastSavedContent = detail.content;
         tabData.isDirty = false;
+        tabData.hasLocalEdits = false;
         tabData.hasExternalConflict = false;
         tabData.isLoaded = true;
       }
@@ -708,6 +744,7 @@
       tabData.content = detail.content;
       tabData.lastSavedContent = detail.content;
       tabData.isDirty = false;
+      tabData.hasLocalEdits = false;
       tabData.hasExternalConflict = false;
       window.generateTOC?.();
       setSaveStatus("Reloaded from disk", "saved");
@@ -729,6 +766,7 @@
     tabData.content = detail.content;
     tabData.lastSavedContent = detail.content;
     tabData.isDirty = false;
+    tabData.hasLocalEdits = false;
     tabData.hasExternalConflict = false;
     window.generateTOC?.();
     setSaveStatus("Reloaded from disk", "saved");

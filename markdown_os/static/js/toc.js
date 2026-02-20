@@ -1,6 +1,6 @@
 (() => {
   const tocState = {
-    headings: [],
+    headingIds: [],
     isScrollBound: false,
   };
 
@@ -25,7 +25,8 @@
   function addHeadingIds(headings) {
     const usedIds = new Map();
     headings.forEach((heading) => {
-      const rawId = heading.id || slugifyHeading(heading.textContent || "section");
+      const slug = slugifyHeading(heading.textContent || "section");
+      const rawId = heading.id || slug || "section";
       const duplicateCount = usedIds.get(rawId) || 0;
       usedIds.set(rawId, duplicateCount + 1);
       heading.id = duplicateCount === 0 ? rawId : `${rawId}-${duplicateCount + 1}`;
@@ -69,16 +70,31 @@
 
       const item = document.createElement("li");
       const link = document.createElement("a");
-      link.href = `#${heading.id}`;
-      link.dataset.targetId = heading.id;
+      const targetHeadingId = heading.id;
+      link.href = `#${targetHeadingId}`;
+      link.dataset.targetId = targetHeadingId;
       link.textContent = title;
       link.addEventListener("click", (event) => {
         event.preventDefault();
-        heading.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-        });
-        setActiveTOCLink(heading.id);
+        const targetHeading = document.getElementById(targetHeadingId);
+        if (!(targetHeading instanceof HTMLElement)) {
+          return;
+        }
+
+        const container = scrollContainer();
+        if (container && container.contains(targetHeading)) {
+          container.scrollTo({
+            top: Math.max(0, targetHeading.offsetTop - 12),
+            behavior: "smooth",
+          });
+        } else {
+          targetHeading.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+        }
+
+        setActiveTOCLink(targetHeadingId);
       });
 
       item.appendChild(link);
@@ -92,13 +108,20 @@
 
   function updateActiveTOCItem() {
     const container = scrollContainer();
-    if (!container || tocState.headings.length === 0) {
+    if (!container || tocState.headingIds.length === 0) {
+      return;
+    }
+
+    const headings = tocState.headingIds
+      .map((headingId) => document.getElementById(headingId))
+      .filter((heading) => heading instanceof HTMLElement);
+    if (headings.length === 0) {
       return;
     }
 
     const scrollPosition = container.scrollTop + 120;
-    let activeHeadingId = tocState.headings[0].id;
-    tocState.headings.forEach((heading) => {
+    let activeHeadingId = headings[0].id;
+    headings.forEach((heading) => {
       if (heading.offsetTop <= scrollPosition) {
         activeHeadingId = heading.id;
       }
@@ -131,12 +154,12 @@
     const headings = Array.from(contentRoot.querySelectorAll("h1, h2, h3, h4, h5, h6"));
     if (headings.length === 0) {
       toc.innerHTML = '<p class="tree-empty-state">No headings</p>';
-      tocState.headings = [];
+      tocState.headingIds = [];
       return;
     }
 
     addHeadingIds(headings);
-    tocState.headings = headings;
+    tocState.headingIds = headings.map((heading) => heading.id);
 
     toc.innerHTML = "";
     toc.appendChild(createTOCTree(headings));

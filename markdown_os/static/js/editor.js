@@ -401,6 +401,7 @@
         return;
       }
       tabData.content = markdown;
+      tabData.hasLocalEdits = true;
 
       const isDirty = window.fileTabs.updateTabDirtyState(activePath);
       if (isDirty) {
