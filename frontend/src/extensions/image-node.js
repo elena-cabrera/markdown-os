@@ -70,7 +70,7 @@ export const UploadImage = Extension.create({
               return false;
             }
             event.preventDefault();
-            uploadAndInsert(view.editor, file);
+            uploadAndInsert(extensionThis.editor, file);
             return true;
           },
           handleDrop(view, event) {
@@ -84,7 +84,7 @@ export const UploadImage = Extension.create({
               left: event.clientX,
               top: event.clientY,
             });
-            uploadAndInsert(view.editor, file, position?.pos ?? null);
+            uploadAndInsert(extensionThis.editor, file, position?.pos ?? null);
             return true;
           },
         },
