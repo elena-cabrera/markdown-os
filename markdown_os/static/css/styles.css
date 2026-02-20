@@ -1506,3 +1506,76 @@ body {
     padding: 10px;
   }
 }
+
+.wysiwyg-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.wysiwyg-toolbar-btn {
+  border: 1px solid var(--border-color);
+  background: var(--card-background);
+  color: var(--text-color);
+  border-radius: 6px;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.wysiwyg-toolbar-btn.active {
+  background: var(--primary-color);
+  color: #fff;
+}
+
+.wysiwyg-toolbar-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border-color);
+  margin: 0 0.25rem;
+}
+
+#wysiwyg-container {
+  display: flex;
+}
+
+#wysiwyg-editor {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  padding: 1.25rem;
+}
+
+#wysiwyg-editor .ProseMirror {
+  min-height: 100%;
+  outline: none;
+  color: var(--text-color);
+  line-height: 1.65;
+}
+
+#wysiwyg-editor .ProseMirror h1,
+#wysiwyg-editor .ProseMirror h2,
+#wysiwyg-editor .ProseMirror h3,
+#wysiwyg-editor .ProseMirror h4,
+#wysiwyg-editor .ProseMirror h5,
+#wysiwyg-editor .ProseMirror h6 {
+  margin-top: 1.25rem;
+}
+
+#wysiwyg-editor .ProseMirror pre {
+  padding: 0.9rem;
+  border-radius: 8px;
+  overflow: auto;
+}
+
+#wysiwyg-editor .ProseMirror table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+#wysiwyg-editor .ProseMirror th,
+#wysiwyg-editor .ProseMirror td {
+  border: 1px solid var(--border-color);
+  padding: 0.45rem 0.55rem;
+}

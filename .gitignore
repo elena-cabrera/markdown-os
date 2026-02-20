@@ -16,3 +16,6 @@ wheels/
 # images directory
 /images
 
+
+# frontend dependencies
+frontend/node_modules/

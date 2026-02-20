@@ -8,7 +8,7 @@ Markdown-OS is a developer-focused, CLI-driven markdown editor that runs as a lo
 
 **Tech Stack:**
 - Backend: Python 3.11+ with FastAPI, Typer CLI, Uvicorn ASGI server, Watchdog for file monitoring
-- Frontend: Vanilla HTML/CSS/JavaScript with Marked.js (markdown parsing), Mermaid.js (diagrams), highlight.js (syntax highlighting), svg-pan-zoom (interactive diagrams)
+- Frontend: Vanilla HTML/CSS/JavaScript with a TipTap-style WYSIWYG bundle, Mermaid.js (diagrams), KaTeX (math), highlight.js (syntax highlighting), svg-pan-zoom (interactive diagrams)
 
 ## Common Commands
 
@@ -40,6 +40,17 @@ uv run pytest -v
 
 # Run tests with output capture disabled (see print statements)
 uv run pytest -s
+```
+
+
+
+### Frontend Bundle Build
+```bash
+# Install frontend tool dependencies
+cd frontend && npm install
+
+# Build committed TipTap vendor bundle
+cd frontend && npm run build
 ```
 
 ### Running the Application
@@ -93,9 +104,10 @@ External file change → Watchdog detects → WebSocket notifies browser
 - **Error handling**: Custom FileReadError and FileWriteError exceptions
 
 #### 4. Frontend (`markdown_os/static/`)
-- **index.html**: Main editor page with tabbed interface (Edit/Preview modes)
-- **js/editor.js**: Content loading, tab switching, conflict handling, auto-save with 1s debouncing
-- **js/markdown.js**: Markdown rendering with Marked.js, Mermaid diagram rendering, syntax highlighting, code block enhancements (copy button, language labels)
+- **index.html**: Main editor page with single-surface WYSIWYG editor + formatting toolbar
+- **js/editor.js**: Content loading/saving, autosave, external change handling, and WYSIWYG image uploads
+- **js/wysiwyg.js**: WYSIWYG editor bootstrap and markdown round-trip API (`getMarkdown`/`setMarkdown`)
+- **js/wysiwyg-toolbar.js**: Toolbar actions and active-state syncing for common formatting commands
 - **js/theme.js**: Theme preference management, system preference detection, highlight theme switching, Mermaid re-render trigger
 - **js/toc.js**: Auto-generated table of contents from headings with smooth scrolling
 - **js/websocket.js**: WebSocket connection for external file change notifications
@@ -116,14 +128,11 @@ External file change → Watchdog detects → WebSocket notifies browser
 - Events are throttled to max one notification per 0.2s
 - Browser receives `{"type": "file_changed", "content": "<new content>"}` via WebSocket
 
-#### Auto-save and Mode Behavior
-- Files open in `Preview` mode by default (`read-first` behavior).
-- `Edit` mode is active only when the Edit tab is selected.
-- Editor input triggers debounced save after 1 second of inactivity
-- Preview renders on demand when Preview tab is active (not on every edit keystroke)
+#### Auto-save and Editor Behavior
+- Files open directly in the WYSIWYG surface (single-mode editing)
+- Editor updates trigger debounced save after 1 second of inactivity
 - Save status indicator shows "Saving...", "Saved", or error states
-- Switching `Edit → Preview` auto-saves unless a conflict is detected
-- Conflict detection compares `/api/content` against `lastSavedContent`; if different and there are unsaved edits, a 3-button modal is shown (`Save My Changes`, `Discard My Changes`, `Cancel`)
+- Conflict/external change handling compares in-memory markdown against disk content
 - Server timestamps internal writes to distinguish from external changes
 
 #### Theme Behavior
