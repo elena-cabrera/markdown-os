@@ -55,6 +55,7 @@ def test_wysiwyg_uses_icon_action_buttons_for_edit_and_copy() -> None:
     assert "function createActionButton(kind, title)" in source
     assert "copyButton = createActionButton(\"copy\", \"Copy code\")" in source
     assert "editButton = createActionButton(\"edit\", \"Edit code block\")" in source
+    assert "button.innerHTML = actionIconSvg(\"check\")" in source
 
 
 def test_wysiwyg_backspace_unwraps_list_item_at_start() -> None:

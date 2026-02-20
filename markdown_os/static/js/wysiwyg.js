@@ -204,6 +204,9 @@
     if (kind === "fullscreen") {
       return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H3v5M21 8V3h-5M16 21h5v-5M3 16v5h5"></path></svg>';
     }
+    if (kind === "check") {
+      return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7L9 18l-5-5"></path></svg>';
+    }
     return "";
   }
 
@@ -218,10 +221,36 @@
   }
 
   function flashCopied(button) {
+    const originalIcon = button.innerHTML;
+    const originalTitle = button.getAttribute("title") || "";
+    const originalLabel = button.getAttribute("aria-label") || "";
+    const previousTimerId = Number.parseInt(button.dataset.copyTimerId || "", 10);
+    if (Number.isFinite(previousTimerId)) {
+      window.clearTimeout(previousTimerId);
+    }
+
+    button.innerHTML = actionIconSvg("check");
+    button.setAttribute("title", "Copied");
+    button.setAttribute("aria-label", "Copied");
     button.classList.add("copied");
-    window.setTimeout(() => {
+
+    const timerId = window.setTimeout(() => {
       button.classList.remove("copied");
-    }, 900);
+      button.innerHTML = originalIcon;
+      if (originalTitle) {
+        button.setAttribute("title", originalTitle);
+      } else {
+        button.removeAttribute("title");
+      }
+      if (originalLabel) {
+        button.setAttribute("aria-label", originalLabel);
+      } else {
+        button.removeAttribute("aria-label");
+      }
+      delete button.dataset.copyTimerId;
+    }, 1500);
+
+    button.dataset.copyTimerId = String(timerId);
   }
 
   function buildCodeBlock(codeElement) {
