@@ -170,13 +170,11 @@
         icon: "undo",
         title: "Undo",
         command: (editor) => editor.chain().focus().undo().run(),
-        isDisabled: (editor) => !editor.can().chain().focus().undo().run(),
       },
       {
         icon: "redo",
         title: "Redo",
         command: (editor) => editor.chain().focus().redo().run(),
-        isDisabled: (editor) => !editor.can().chain().focus().redo().run(),
       },
     ];
   }
