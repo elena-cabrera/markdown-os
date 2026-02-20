@@ -9,13 +9,9 @@ Use this file to:
 -   See Mermaid diagrams render inline.
 -   See math equations (inline and display) when KaTeX is enabled.
 -   Explore heading structure in the table of contents sidebar.
--   Edit content and observe auto-save behavior.
+-   Edit content and **observe** auto-save behavior.
 
----
-
-![image](images/CleanShot-2026-02-16-at-20-46-50-20260216-194655-892845.png)
-
-## Quick Start
+# Quick Start
 
 1.  Switch between **Edit** and **Preview** tabs.
 2.  Change some text in Edit mode.

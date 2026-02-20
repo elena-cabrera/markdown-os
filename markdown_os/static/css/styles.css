@@ -1047,43 +1047,49 @@ body {
   gap: 6px;
 }
 
-.copy-button {
-  border: 1px solid var(--copy-border);
+.action-icon-button,
+.copy-button,
+.block-edit-trigger {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border);
   border-radius: 6px;
-  background: var(--copy-bg);
-  color: var(--copy-text);
-  font-size: 11px;
-  padding: 3px 8px;
+  background: var(--panel-bg);
+  color: var(--text-muted);
   cursor: pointer;
-  transition:
-    border-color 0.15s ease,
-    color 0.15s ease,
-    background-color 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.65;
+  padding: 0;
+  transition: opacity 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
-.copy-button:hover {
-  border-color: var(--copy-border-hover);
-  color: var(--copy-text-hover);
+.action-icon-button svg,
+.copy-button svg,
+.block-edit-trigger svg {
+  width: 15px;
+  height: 15px;
+}
+
+.action-icon-button:hover,
+.copy-button:hover,
+.block-edit-trigger:hover {
+  opacity: 1;
+}
+
+.action-icon-button:focus-visible,
+.copy-button:focus-visible,
+.block-edit-trigger:focus-visible {
+  opacity: 1;
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .copy-button.copied {
+  opacity: 1;
   color: var(--success);
   border-color: var(--copy-copied-border);
-}
-
-.block-edit-trigger {
-  border: 1px solid var(--copy-border);
-  border-radius: 6px;
-  background: var(--copy-bg);
-  color: var(--copy-text);
-  font-size: 11px;
-  padding: 3px 8px;
-  cursor: pointer;
-}
-
-.block-edit-trigger:hover {
-  border-color: var(--copy-border-hover);
-  color: var(--copy-text-hover);
 }
 
 .code-block pre {

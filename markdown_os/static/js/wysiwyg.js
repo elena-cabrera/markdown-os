@@ -194,6 +194,36 @@
     document.body.removeChild(fallbackInput);
   }
 
+  function actionIconSvg(kind) {
+    if (kind === "copy") {
+      return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15V6a2 2 0 0 1 2-2h9"></path></svg>';
+    }
+    if (kind === "edit") {
+      return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3z"></path></svg>';
+    }
+    if (kind === "fullscreen") {
+      return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H3v5M21 8V3h-5M16 21h5v-5M3 16v5h5"></path></svg>';
+    }
+    return "";
+  }
+
+  function createActionButton(kind, title) {
+    const button = document.createElement("button");
+    button.className = "action-icon-button";
+    button.type = "button";
+    button.title = title;
+    button.setAttribute("aria-label", title);
+    button.innerHTML = actionIconSvg(kind);
+    return button;
+  }
+
+  function flashCopied(button) {
+    button.classList.add("copied");
+    window.setTimeout(() => {
+      button.classList.remove("copied");
+    }, 900);
+  }
+
   function buildCodeBlock(codeElement) {
     const preElement = codeElement.parentElement;
     if (!preElement || preElement.closest(".code-block")) {
@@ -229,31 +259,21 @@
     const actions = document.createElement("div");
     actions.className = "code-block-actions";
 
-    const copyButton = document.createElement("button");
-    copyButton.className = "copy-button";
-    copyButton.type = "button";
-    copyButton.textContent = "Copy";
+    const copyButton = createActionButton("copy", "Copy code");
+    copyButton.classList.add("copy-button");
     copyButton.addEventListener("click", async (event) => {
       event.preventDefault();
       event.stopPropagation();
       try {
-        await copyToClipboard(codeSource);
-        copyButton.textContent = "Copied";
-        copyButton.classList.add("copied");
-        window.setTimeout(() => {
-          copyButton.textContent = "Copy";
-          copyButton.classList.remove("copied");
-        }, 1200);
+        await copyToClipboard(wrapper.dataset.rawSource || "");
+        flashCopied(copyButton);
       } catch (error) {
         console.error("Failed to copy code content.", error);
       }
     });
 
-    const editButton = document.createElement("button");
-    editButton.className = "block-edit-trigger";
-    editButton.type = "button";
-    editButton.textContent = "Edit";
-    editButton.title = "Edit code block";
+    const editButton = createActionButton("edit", "Edit code block");
+    editButton.classList.add("block-edit-trigger");
     editButton.addEventListener("click", (event) => {
       event.preventDefault();
       event.stopPropagation();
@@ -336,31 +356,23 @@
         const actions = document.createElement("div");
         actions.className = "math-block-actions";
 
-        const copyButton = document.createElement("button");
-        copyButton.className = "copy-button math-copy-button";
-        copyButton.type = "button";
-        copyButton.textContent = "Copy LaTeX";
+        const copyButton = createActionButton("copy", "Copy LaTeX");
+        copyButton.classList.add("copy-button", "math-copy-button");
         copyButton.addEventListener("click", async (event) => {
           event.preventDefault();
           event.stopPropagation();
           try {
-            await copyToClipboard(source);
-            copyButton.textContent = "Copied";
-            copyButton.classList.add("copied");
-            window.setTimeout(() => {
-              copyButton.textContent = "Copy LaTeX";
-              copyButton.classList.remove("copied");
-            }, 1200);
+            const latestSource = element.getAttribute("data-math-source") || "";
+            await copyToClipboard(latestSource);
+            flashCopied(copyButton);
           } catch (error) {
             console.error("Failed to copy LaTeX content.", error);
           }
         });
 
-        const editButton = document.createElement("button");
-        editButton.className = "block-edit-trigger math-copy-button";
-        editButton.style.right = "94px";
-        editButton.type = "button";
-        editButton.textContent = "Edit";
+        const editButton = createActionButton("edit", "Edit equation");
+        editButton.classList.add("block-edit-trigger", "math-copy-button");
+        editButton.style.right = "40px";
         editButton.addEventListener("click", (event) => {
           event.preventDefault();
           event.stopPropagation();
@@ -404,11 +416,8 @@
   function addMermaidControls(container) {
     const existingEdit = container.querySelector(".block-edit-trigger");
     if (!existingEdit) {
-      const editButton = document.createElement("button");
-      editButton.className = "block-edit-trigger";
-      editButton.type = "button";
-      editButton.title = "Edit diagram";
-      editButton.textContent = "Edit";
+      const editButton = createActionButton("edit", "Edit diagram");
+      editButton.classList.add("block-edit-trigger");
       editButton.style.position = "absolute";
       editButton.style.top = "8px";
       editButton.style.right = "42px";
@@ -423,12 +432,8 @@
 
     const existingFullscreenButton = container.querySelector(".mermaid-fullscreen-trigger");
     if (!existingFullscreenButton) {
-      const fullscreenButton = document.createElement("button");
+      const fullscreenButton = createActionButton("fullscreen", "View diagram fullscreen");
       fullscreenButton.className = "mermaid-fullscreen-trigger";
-      fullscreenButton.type = "button";
-      fullscreenButton.title = "View fullscreen";
-      fullscreenButton.setAttribute("aria-label", "View diagram fullscreen");
-      fullscreenButton.textContent = "⛶";
       fullscreenButton.addEventListener("click", (event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -1214,6 +1219,202 @@
     state.fullscreenPreviousFocus = null;
   }
 
+  function isWithinNonEditable(node) {
+    return Boolean(node?.parentElement?.closest('[contenteditable="false"]'));
+  }
+
+  function closestEditableBlock(node) {
+    if (!node || !state.root) {
+      return null;
+    }
+
+    const startNode = node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+    if (!startNode || !state.root.contains(startNode)) {
+      return null;
+    }
+
+    return startNode.closest(
+      "p, div, li, blockquote, h1, h2, h3, h4, h5, h6",
+    );
+  }
+
+  function placeCaretAtStart(node) {
+    const selection = window.getSelection();
+    if (!selection || !node) {
+      return;
+    }
+
+    const range = document.createRange();
+    if (!node.firstChild) {
+      node.appendChild(document.createElement("br"));
+    }
+    range.setStart(node, 0);
+    range.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+
+  function replaceInlineMatch(textNode, offset, pattern, tagName) {
+    const beforeCursor = textNode.textContent?.slice(0, offset) || "";
+    const match = beforeCursor.match(pattern);
+    if (!match) {
+      return false;
+    }
+
+    const fullMatch = match[0];
+    const content = match[1];
+    const startOffset = beforeCursor.length - fullMatch.length;
+    if (startOffset < 0) {
+      return false;
+    }
+
+    const range = document.createRange();
+    range.setStart(textNode, startOffset);
+    range.setEnd(textNode, offset);
+    range.deleteContents();
+
+    const markNode = document.createElement(tagName);
+    markNode.textContent = content;
+    const spacer = document.createTextNode(" ");
+
+    range.insertNode(spacer);
+    range.insertNode(markNode);
+
+    const selection = window.getSelection();
+    if (selection) {
+      const nextRange = document.createRange();
+      nextRange.setStart(spacer, 1);
+      nextRange.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(nextRange);
+    }
+
+    return true;
+  }
+
+  function applyInlineMarkdownShortcut() {
+    const selection = window.getSelection();
+    if (!selection || !selection.isCollapsed) {
+      return false;
+    }
+
+    const anchorNode = selection.anchorNode;
+    if (!anchorNode || anchorNode.nodeType !== Node.TEXT_NODE || isWithinNonEditable(anchorNode)) {
+      return false;
+    }
+
+    const offset = selection.anchorOffset;
+    if (offset <= 0) {
+      return false;
+    }
+
+    const patterns = [
+      { regex: /\*\*([^*\n]+)\*\*\s$/, tag: "strong" },
+      { regex: /~~([^~\n]+)~~\s$/, tag: "del" },
+      { regex: /`([^`\n]+)`\s$/, tag: "code" },
+      { regex: /\*([^*\n]+)\*\s$/, tag: "em" },
+    ];
+
+    for (const { regex, tag } of patterns) {
+      if (replaceInlineMatch(anchorNode, offset, regex, tag)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  function applyBlockMarkdownShortcut() {
+    const selection = window.getSelection();
+    if (!selection || !selection.isCollapsed || !state.root) {
+      return false;
+    }
+
+    const block = closestEditableBlock(selection.anchorNode);
+    if (!block || block === state.root || isWithinNonEditable(block)) {
+      return false;
+    }
+
+    const blockText = (block.textContent || "").replace(/\u00a0/g, " ");
+
+    const headingMatch = blockText.match(/^(#{1,6}) $/);
+    if (headingMatch) {
+      const level = headingMatch[1].length;
+      const heading = document.createElement(`h${level}`);
+      heading.innerHTML = "<br>";
+      block.replaceWith(heading);
+      addHeadingIds(state.root);
+      placeCaretAtStart(heading);
+      return true;
+    }
+
+    if (/^> $/.test(blockText)) {
+      const quote = document.createElement("blockquote");
+      quote.innerHTML = "<p><br></p>";
+      block.replaceWith(quote);
+      placeCaretAtStart(quote.querySelector("p") || quote);
+      return true;
+    }
+
+    if (/^[-*+] $/.test(blockText)) {
+      block.textContent = "";
+      placeCaretAtStart(block);
+      document.execCommand("insertUnorderedList", false);
+      return true;
+    }
+
+    if (/^\d+[.)] $/.test(blockText)) {
+      block.textContent = "";
+      placeCaretAtStart(block);
+      document.execCommand("insertOrderedList", false);
+      return true;
+    }
+
+    if (/^- \[(?: |x|X)\] $/.test(blockText)) {
+      const checked = /- \[(?:x|X)\] /.test(blockText);
+      const list = document.createElement("ul");
+      list.className = "task-list";
+      const item = document.createElement("li");
+      item.className = "task-list-item";
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.checked = checked;
+      checkbox.setAttribute("contenteditable", "false");
+      const label = document.createTextNode(" ");
+      item.appendChild(checkbox);
+      item.appendChild(label);
+      list.appendChild(item);
+      block.replaceWith(list);
+      makeTaskListsInteractive();
+      placeCaretAtStart(item);
+      return true;
+    }
+
+    return false;
+  }
+
+  async function handleRootKeyUp(event) {
+    if (state.suppressInput) {
+      return;
+    }
+
+    if (event.key !== " " && event.key !== "Spacebar") {
+      return;
+    }
+
+    let didTransform = applyBlockMarkdownShortcut();
+    if (!didTransform) {
+      didTransform = applyInlineMarkdownShortcut();
+    }
+
+    if (!didTransform) {
+      return;
+    }
+
+    await decorateDocument();
+    emitChange();
+  }
+
   function handleRootInput() {
     if (state.suppressInput) {
       return;
@@ -1322,6 +1523,7 @@
     state.root.addEventListener("input", handleRootInput);
     state.root.addEventListener("change", handleRootChange);
     state.root.addEventListener("click", handleRootClick);
+    state.root.addEventListener("keyup", handleRootKeyUp);
   }
 
   function init() {
