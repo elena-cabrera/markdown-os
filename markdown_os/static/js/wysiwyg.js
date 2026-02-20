@@ -810,6 +810,33 @@
     document.execCommand("insertHTML", false, html);
   }
 
+  function closestCodeElement(node) {
+    if (!node) {
+      return null;
+    }
+
+    const startNode = node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+    if (!startNode) {
+      return null;
+    }
+
+    const code = startNode.closest("code");
+    if (!code || !state.root?.contains(code)) {
+      return null;
+    }
+    return code;
+  }
+
+  function unwrapCodeElement(codeElement) {
+    if (!codeElement || !codeElement.parentNode) {
+      return null;
+    }
+
+    const textNode = document.createTextNode(codeElement.textContent || "");
+    codeElement.replaceWith(textNode);
+    return textNode;
+  }
+
   async function insertImage(path, alt = "image") {
     insertHtmlAtSelection(`<p><img src="${path}" alt="${alt}" /></p><p><br></p>`);
     await decorateDocument();
@@ -871,7 +898,24 @@
         return;
       }
 
+      const startCode = closestCodeElement(range.startContainer);
+      const endCode = closestCodeElement(range.endContainer);
+      const singleCodeSelection = startCode && endCode && startCode === endCode;
+
       if (range.collapsed) {
+        if (startCode) {
+          const textNode = unwrapCodeElement(startCode);
+          if (textNode) {
+            const nextRange = document.createRange();
+            nextRange.setStart(textNode, textNode.textContent.length);
+            nextRange.collapse(true);
+            selection.removeAllRanges();
+            selection.addRange(nextRange);
+            emitChange();
+          }
+          return;
+        }
+
         insertHtmlAtSelection("<code>code</code>");
         emitChange();
         return;
@@ -882,11 +926,26 @@
         return;
       }
 
+      if (singleCodeSelection) {
+        const textNode = unwrapCodeElement(startCode);
+        if (textNode) {
+          const nextRange = document.createRange();
+          nextRange.selectNodeContents(textNode);
+          selection.removeAllRanges();
+          selection.addRange(nextRange);
+          emitChange();
+        }
+        return;
+      }
+
       const codeNode = document.createElement("code");
       codeNode.textContent = selectedText;
       range.deleteContents();
       range.insertNode(codeNode);
-      placeCaretAtEnd(codeNode);
+      const nextRange = document.createRange();
+      nextRange.selectNodeContents(codeNode);
+      selection.removeAllRanges();
+      selection.addRange(nextRange);
       emitChange();
       return;
     }
@@ -1298,6 +1357,116 @@
     selection.addRange(range);
   }
 
+  function placeCaretAtNodeStart(node) {
+    const selection = window.getSelection();
+    if (!selection || !node) {
+      return;
+    }
+
+    const range = document.createRange();
+    if (node.firstChild) {
+      range.setStart(node.firstChild, 0);
+    } else {
+      range.setStart(node, 0);
+    }
+    range.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+
+  function isRangeAtElementStart(range, element) {
+    const probe = range.cloneRange();
+    probe.setStart(element, 0);
+    const prefixText = (probe.toString() || "").replace(/\u00a0/g, " ").trim();
+    return prefixText.length === 0;
+  }
+
+  function createParagraphFromListItem(listItem) {
+    const paragraph = document.createElement("p");
+    const fragment = document.createDocumentFragment();
+
+    Array.from(listItem.childNodes).forEach((node) => {
+      if (
+        node.nodeType === Node.ELEMENT_NODE &&
+        node.nodeName === "INPUT" &&
+        node.getAttribute("type") === "checkbox"
+      ) {
+        return;
+      }
+      fragment.appendChild(node.cloneNode(true));
+    });
+
+    paragraph.appendChild(fragment);
+
+    if (paragraph.firstChild?.nodeType === Node.TEXT_NODE) {
+      paragraph.firstChild.textContent = paragraph.firstChild.textContent.replace(/^\s+/, "");
+    }
+
+    const normalizedText = (paragraph.textContent || "").replace(/\u00a0/g, " ").trim();
+    if (!normalizedText && !paragraph.querySelector("img, code, a, strong, em, del, span, math")) {
+      paragraph.innerHTML = "<br>";
+    }
+
+    return paragraph;
+  }
+
+  function unwrapListItemToParagraph(listItem) {
+    const list = listItem?.parentElement;
+    if (!list || (list.nodeName !== "UL" && list.nodeName !== "OL")) {
+      return null;
+    }
+
+    const paragraph = createParagraphFromListItem(listItem);
+    const parent = list.parentNode;
+    if (!parent) {
+      return null;
+    }
+
+    const listItems = Array.from(list.children).filter((node) => node.nodeName === "LI");
+    const itemIndex = listItems.indexOf(listItem);
+    const isOnlyItem = listItems.length === 1;
+
+    if (isOnlyItem) {
+      parent.replaceChild(paragraph, list);
+      return paragraph;
+    }
+
+    if (list.firstElementChild === listItem) {
+      parent.insertBefore(paragraph, list);
+      listItem.remove();
+      return paragraph;
+    }
+
+    if (list.lastElementChild === listItem) {
+      listItem.remove();
+      if (list.nextSibling) {
+        parent.insertBefore(paragraph, list.nextSibling);
+      } else {
+        parent.appendChild(paragraph);
+      }
+      return paragraph;
+    }
+
+    const trailingList = list.cloneNode(false);
+    let current = listItem.nextSibling;
+    while (current) {
+      const next = current.nextSibling;
+      trailingList.appendChild(current);
+      current = next;
+    }
+
+    listItem.remove();
+    if (list.nextSibling) {
+      parent.insertBefore(paragraph, list.nextSibling);
+      parent.insertBefore(trailingList, paragraph.nextSibling);
+    } else {
+      parent.appendChild(paragraph);
+      parent.appendChild(trailingList);
+    }
+
+    return paragraph;
+  }
+
   function replaceInlineMatch(textNode, offset, pattern, tagName) {
     const beforeCursor = textNode.textContent?.slice(0, offset) || "";
     const match = beforeCursor.match(pattern);
@@ -1351,6 +1520,9 @@
 
     const anchorNode = selection.anchorNode;
     if (!anchorNode || anchorNode.nodeType !== Node.TEXT_NODE || isWithinNonEditable(anchorNode)) {
+      return false;
+    }
+    if (closestCodeElement(anchorNode)) {
       return false;
     }
 
@@ -1510,6 +1682,43 @@
     emitChange();
   }
 
+  async function handleRootKeyDown(event) {
+    if (state.suppressInput || event.key !== "Backspace") {
+      return;
+    }
+
+    const selection = window.getSelection();
+    if (!selection || !selection.isCollapsed || selection.rangeCount === 0) {
+      return;
+    }
+
+    const anchorNode = selection.anchorNode;
+    if (!anchorNode || isWithinNonEditable(anchorNode)) {
+      return;
+    }
+
+    const listItem =
+      (anchorNode.nodeType === Node.TEXT_NODE ? anchorNode.parentElement : anchorNode)?.closest("li");
+    if (!listItem || !state.root?.contains(listItem)) {
+      return;
+    }
+
+    const range = selection.getRangeAt(0);
+    if (!isRangeAtElementStart(range, listItem)) {
+      return;
+    }
+
+    const replacementParagraph = unwrapListItemToParagraph(listItem);
+    if (!replacementParagraph) {
+      return;
+    }
+
+    event.preventDefault();
+    placeCaretAtNodeStart(replacementParagraph);
+    await decorateDocument();
+    emitChange();
+  }
+
   function handleRootInput() {
     if (state.suppressInput) {
       return;
@@ -1616,6 +1825,7 @@
     }
 
     state.root.addEventListener("input", handleRootInput);
+    state.root.addEventListener("keydown", handleRootKeyDown);
     state.root.addEventListener("change", handleRootChange);
     state.root.addEventListener("click", handleRootClick);
     state.root.addEventListener("keyup", handleRootKeyUp);

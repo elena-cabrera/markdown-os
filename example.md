@@ -4,12 +4,12 @@ Welcome to **Markdown-OS**. This file demonstrates editor capabilities and commo
 
 Use this file to:
 
--   Verify preview rendering.
+-   Verify preview rendering.
 -   Inspect syntax highlighting for code blocks.
 -   See Mermaid diagrams render inline.
 -   See math equations (inline and display) when KaTeX is enabled.
 -   Explore heading structure in the table of contents sidebar.
--   Edit content and **observe** auto-save behavior.
+-   Edit content and **observe** auto-save behavior.
 
 # Quick Start
 
@@ -20,7 +20,7 @@ Use this file to:
 
 ### Notes
 
--   The sidebar table of contents is generated from headings.
+-   The sidebar `` `table` `` of contents is generated from headings.
 -   Code blocks include language labels and copy actions.
 -   Mermaid blocks can be pan/zoom enabled in the preview.
 

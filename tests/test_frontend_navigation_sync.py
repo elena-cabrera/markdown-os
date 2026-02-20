@@ -57,6 +57,18 @@ def test_wysiwyg_uses_icon_action_buttons_for_edit_and_copy() -> None:
     assert "editButton = createActionButton(\"edit\", \"Edit code block\")" in source
 
 
+def test_wysiwyg_backspace_unwraps_list_item_at_start() -> None:
+    """Verify Backspace at list item start exits list mode into a paragraph."""
+
+    source = _read_static_js("wysiwyg.js")
+
+    assert "async function handleRootKeyDown(event)" in source
+    assert "event.key !== \"Backspace\"" in source
+    assert "function unwrapListItemToParagraph(listItem)" in source
+    assert "if (!isRangeAtElementStart(range, listItem))" in source
+    assert "placeCaretAtNodeStart(replacementParagraph);" in source
+
+
 def test_wysiwyg_toolbar_exposes_ctrl_e_inline_code_shortcut() -> None:
     """Verify Ctrl/Cmd+E maps to the inline code command."""
 
@@ -64,3 +76,14 @@ def test_wysiwyg_toolbar_exposes_ctrl_e_inline_code_shortcut() -> None:
 
     assert "else if (key === \"e\")" in source
     assert "await window.wysiwyg.exec(\"inlineCode\")" in source
+
+
+def test_wysiwyg_inline_code_command_toggles_existing_code() -> None:
+    """Verify inline-code command unwraps when selection is already in code."""
+
+    source = _read_static_js("wysiwyg.js")
+
+    assert "function closestCodeElement(node)" in source
+    assert "function unwrapCodeElement(codeElement)" in source
+    assert "const singleCodeSelection = startCode && endCode && startCode === endCode;" in source
+    assert "if (singleCodeSelection) {" in source
