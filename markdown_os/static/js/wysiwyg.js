@@ -18,10 +18,36 @@
     mermaidTheme: null,
     fullscreenPanZoom: null,
     fullscreenPreviousFocus: null,
+    fullscreenPreviousScrollTop: null,
     fullscreenRenderToken: 0,
     blockEditTarget: null,
     blockEditType: null,
+    blockEditPreviousScrollTop: null,
   };
+
+  function focusWithoutScroll(element) {
+    if (!element || typeof element.focus !== "function") {
+      return;
+    }
+
+    try {
+      element.focus({ preventScroll: true });
+    } catch (_error) {
+      element.focus();
+    }
+  }
+
+  function restoreEditorScrollPosition(scrollTop) {
+    if (!state.container || !Number.isFinite(scrollTop)) {
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      if (state.container) {
+        state.container.scrollTop = scrollTop;
+      }
+    });
+  }
 
   function slugifyHeading(text) {
     return text
@@ -442,16 +468,54 @@
     state.mermaidTheme = theme;
   }
 
+  function createMermaidSourceNode(sourceContent) {
+    const mermaidElement = document.createElement("div");
+    mermaidElement.className = "mermaid";
+    mermaidElement.textContent = sourceContent;
+    mermaidElement.setAttribute("data-original-content", sourceContent);
+    return mermaidElement;
+  }
+
+  function ensureMermaidCanvas(container) {
+    let canvas = container.querySelector(".mermaid-canvas");
+    if (!canvas) {
+      canvas = document.createElement("div");
+      canvas.className = "mermaid-canvas";
+      container.appendChild(canvas);
+    }
+
+    const detachedMermaidNode = container.querySelector(":scope > .mermaid");
+    if (detachedMermaidNode) {
+      canvas.prepend(detachedMermaidNode);
+    }
+
+    return canvas;
+  }
+
   function renderMermaidError(container, source) {
-    container.innerHTML = `<div class="mermaid-error">Invalid mermaid syntax:\n${source}</div>`;
+    if (container._panZoomInstance) {
+      container._panZoomInstance.destroy();
+      container._panZoomInstance = null;
+    }
+
+    const canvas = ensureMermaidCanvas(container);
+    const errorBlock = document.createElement("div");
+    errorBlock.className = "mermaid-error";
+    errorBlock.textContent = `Invalid mermaid syntax:\n${source}`;
+    canvas.replaceChildren(errorBlock);
+    addMermaidControls(container);
   }
 
   function addMermaidControls(container) {
+    const canvas = ensureMermaidCanvas(container);
+
     let toolbar = container.querySelector(".mermaid-inline-toolbar");
     if (!toolbar) {
       toolbar = document.createElement("div");
       toolbar.className = "mermaid-inline-toolbar";
-      container.prepend(toolbar);
+    }
+    if (toolbar.parentElement !== container) {
+      container.insertBefore(toolbar, canvas);
     }
 
     const existingEdit = toolbar.querySelector(".block-edit-trigger");
@@ -474,7 +538,7 @@
         event.preventDefault();
         event.stopPropagation();
         const source = container.dataset.mermaidSource || "";
-        const svg = container.querySelector("svg");
+        const svg = canvas.querySelector("svg");
         openMermaidFullscreen(source, svg);
       });
       toolbar.appendChild(fullscreenButton);
@@ -523,7 +587,9 @@
       controls.appendChild(zoomIn);
       controls.appendChild(reset);
       controls.appendChild(zoomOut);
-      container.appendChild(controls);
+    }
+    if (controls.parentElement !== canvas) {
+      canvas.appendChild(controls);
     }
   }
 
@@ -532,9 +598,9 @@
       return;
     }
 
-    state.root.querySelectorAll(".mermaid-container svg").forEach((svg) => {
-      const container = svg.closest(".mermaid-container");
-      if (!container) {
+    state.root.querySelectorAll(".mermaid-container .mermaid-canvas svg").forEach((svg) => {
+      const canvas = svg.closest(".mermaid-canvas");
+      if (!canvas) {
         return;
       }
 
@@ -546,7 +612,7 @@
         if (bbox.width <= 0) {
           return;
         }
-        const containerWidth = container.clientWidth || container.offsetWidth;
+        const containerWidth = canvas.clientWidth || canvas.offsetWidth;
         if (!containerWidth) {
           return;
         }
@@ -563,7 +629,7 @@
       return;
     }
 
-    state.root.querySelectorAll(".mermaid-container svg").forEach((svgElement) => {
+    state.root.querySelectorAll(".mermaid-container .mermaid-canvas svg").forEach((svgElement) => {
       if (svgElement.getAttribute(panZoomKey) === "true") {
         return;
       }
@@ -608,17 +674,16 @@
       mermaidContainer.setAttribute("contenteditable", "false");
       mermaidContainer.dataset.mermaidSource = sourceContent;
 
-      const mermaidElement = document.createElement("div");
-      mermaidElement.className = "mermaid";
-      mermaidElement.textContent = sourceContent;
-      mermaidElement.setAttribute("data-original-content", sourceContent);
-      mermaidContainer.appendChild(mermaidElement);
+      const canvas = document.createElement("div");
+      canvas.className = "mermaid-canvas";
+      canvas.appendChild(createMermaidSourceNode(sourceContent));
+      mermaidContainer.appendChild(canvas);
 
       preElement.replaceWith(mermaidContainer);
     });
 
     const mermaidNodes = Array.from(
-      state.root.querySelectorAll(".mermaid-container .mermaid"),
+      state.root.querySelectorAll(".mermaid-container .mermaid-canvas .mermaid"),
     );
 
     if (mermaidNodes.length === 0) {
@@ -1205,6 +1270,8 @@
     modal.classList.add("hidden");
     state.blockEditTarget = null;
     state.blockEditType = null;
+    restoreEditorScrollPosition(state.blockEditPreviousScrollTop);
+    state.blockEditPreviousScrollTop = null;
   }
 
   async function applyBlockEdit() {
@@ -1248,7 +1315,8 @@
 
     if (state.blockEditType === "mermaid") {
       state.blockEditTarget.dataset.mermaidSource = source;
-      state.blockEditTarget.innerHTML = `<div class="mermaid" data-original-content="${escapeHtmlAttribute(source)}">${source}</div>`;
+      const canvas = ensureMermaidCanvas(state.blockEditTarget);
+      canvas.replaceChildren(createMermaidSourceNode(source));
       addMermaidControls(state.blockEditTarget);
       await renderMermaidDiagrams();
       closeBlockEditor();
@@ -1279,6 +1347,7 @@
 
     state.blockEditTarget = target;
     state.blockEditType = type;
+    state.blockEditPreviousScrollTop = state.container?.scrollTop ?? null;
 
     if (type === "code") {
       title.textContent = "Edit code block";
@@ -1305,7 +1374,7 @@
 
     overlay.classList.remove("hidden");
     modal.classList.remove("hidden");
-    sourceInput.focus();
+    focusWithoutScroll(sourceInput);
     sourceInput.select();
   }
 
@@ -1323,6 +1392,7 @@
 
     state.fullscreenRenderToken += 1;
     const renderToken = state.fullscreenRenderToken;
+    state.fullscreenPreviousScrollTop = state.container?.scrollTop ?? null;
 
     state.fullscreenPreviousFocus =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -1330,7 +1400,7 @@
     content.innerHTML = '<div class="mermaid-fullscreen-loading"><div class="content-loading-spinner"></div></div>';
     overlay.classList.remove("hidden");
     modal.classList.remove("hidden");
-    document.getElementById("mermaid-fullscreen-close")?.focus();
+    focusWithoutScroll(document.getElementById("mermaid-fullscreen-close"));
 
     let svgElement = null;
 
@@ -1405,10 +1475,10 @@
       content.innerHTML = "";
     }
 
-    if (state.fullscreenPreviousFocus) {
-      state.fullscreenPreviousFocus.focus();
-    }
+    focusWithoutScroll(state.fullscreenPreviousFocus);
     state.fullscreenPreviousFocus = null;
+    restoreEditorScrollPosition(state.fullscreenPreviousScrollTop);
+    state.fullscreenPreviousScrollTop = null;
   }
 
   function isWithinNonEditable(node) {
@@ -1947,7 +2017,8 @@
     const diagrams = state.root.querySelectorAll(".mermaid-container");
     diagrams.forEach((container) => {
       const source = container.dataset.mermaidSource || "";
-      container.innerHTML = `<div class="mermaid" data-original-content="${escapeHtmlAttribute(source)}">${source}</div>`;
+      const canvas = ensureMermaidCanvas(container);
+      canvas.replaceChildren(createMermaidSourceNode(source));
     });
     await renderMermaidDiagrams();
   }

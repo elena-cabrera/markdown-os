@@ -1,4 +1,40 @@
 (() => {
+  function focusWithoutScroll(element) {
+    if (!element || typeof element.focus !== "function") {
+      return;
+    }
+
+    try {
+      element.focus({ preventScroll: true });
+    } catch (_error) {
+      element.focus();
+    }
+  }
+
+  function captureEditorScrollTop() {
+    const editorContainer = document.getElementById("editor-container");
+    if (!editorContainer) {
+      return null;
+    }
+
+    return editorContainer.scrollTop;
+  }
+
+  function restoreEditorScrollTop(scrollTop) {
+    if (!Number.isFinite(scrollTop)) {
+      return;
+    }
+
+    const editorContainer = document.getElementById("editor-container");
+    if (!editorContainer) {
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      editorContainer.scrollTop = scrollTop;
+    });
+  }
+
   function getElements() {
     return {
       overlay: document.getElementById("custom-dialog-overlay"),
@@ -52,6 +88,7 @@
     }
 
     const previousFocus = document.activeElement;
+    const previousScrollTop = captureEditorScrollTop();
 
     elements.title.textContent = config.title || "Confirm action";
 
@@ -123,9 +160,8 @@
         hideDialog(elements);
         hideFields(elements);
 
-        if (previousFocus && typeof previousFocus.focus === "function") {
-          previousFocus.focus();
-        }
+        focusWithoutScroll(previousFocus);
+        restoreEditorScrollTop(previousScrollTop);
 
         resolve(result);
       };
@@ -160,10 +196,10 @@
       };
 
       if (fields.length > 0) {
-        elements.input1.focus();
+        focusWithoutScroll(elements.input1);
         elements.input1.select();
       } else {
-        elements.confirmButton.focus();
+        focusWithoutScroll(elements.confirmButton);
       }
     });
   }

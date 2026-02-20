@@ -227,7 +227,20 @@
       }
 
       const previousFocus = document.activeElement;
+      const previousScrollTop = window.wysiwyg?.getScrollTop?.() ?? null;
       let choiceMade = false;
+
+      const focusWithoutScroll = (element) => {
+        if (!element || typeof element.focus !== "function") {
+          return;
+        }
+
+        try {
+          element.focus({ preventScroll: true });
+        } catch (_error) {
+          element.focus();
+        }
+      };
 
       const cleanup = () => {
         document.removeEventListener("keydown", onEscape);
@@ -246,8 +259,11 @@
         modal.classList.add("hidden");
         overlay.classList.add("hidden");
         cleanup();
-        if (previousFocus && typeof previousFocus.focus === "function") {
-          previousFocus.focus();
+        focusWithoutScroll(previousFocus);
+        if (Number.isFinite(previousScrollTop)) {
+          window.requestAnimationFrame(() => {
+            window.wysiwyg?.setScrollTop?.(previousScrollTop);
+          });
         }
         resolve(choice);
       };
@@ -266,7 +282,7 @@
 
       modal.classList.remove("hidden");
       overlay.classList.remove("hidden");
-      saveButton.focus();
+      focusWithoutScroll(saveButton);
     });
   }
 

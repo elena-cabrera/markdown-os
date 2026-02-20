@@ -1162,17 +1162,14 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   position: relative;
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 44px 10px 10px;
   margin: 16px 0;
   overflow: hidden;
   background: var(--mermaid-bg);
+  display: flex;
+  flex-direction: column;
 }
 
 .mermaid-inline-toolbar {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
   height: 36px;
   display: flex;
   justify-content: flex-end;
@@ -1184,6 +1181,13 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   z-index: 4;
 }
 
+.mermaid-canvas {
+  position: relative;
+  padding: 10px;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .mermaid-container .mermaid {
   display: block;
   width: 100%;
@@ -1191,7 +1195,7 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 }
 
 /* Override Mermaid's inline max-width so the SVG fills the container (useMaxWidth sets px max-width). */
-.mermaid-container svg {
+.mermaid-canvas svg {
   display: block;
   width: 100% !important;
   max-width: none !important;
@@ -1200,11 +1204,11 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   cursor: grab;
 }
 
-.mermaid-container svg:active {
+.mermaid-canvas svg:active {
   cursor: grabbing;
 }
 
-.mermaid-container .mermaid-zoom-controls {
+.mermaid-canvas .mermaid-zoom-controls {
   bottom: 10px;
   right: 10px;
 }
@@ -1256,6 +1260,11 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 .mermaid-container .block-edit-trigger,
 .mermaid-container .mermaid-fullscreen-trigger {
   cursor: pointer !important;
+}
+
+.mermaid-inline-toolbar .block-edit-trigger svg,
+.mermaid-inline-toolbar .mermaid-fullscreen-trigger svg {
+  pointer-events: none;
 }
 
 .mermaid-error {

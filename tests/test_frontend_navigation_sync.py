@@ -10,6 +10,13 @@ def _read_static_js(filename: str) -> str:
     return (root / "markdown_os" / "static" / "js" / filename).read_text(encoding="utf-8")
 
 
+def _read_static_css(filename: str) -> str:
+    """Return the source text for a CSS file under markdown_os/static/css."""
+
+    root = Path(__file__).resolve().parents[1]
+    return (root / "markdown_os" / "static" / "css" / filename).read_text(encoding="utf-8")
+
+
 def test_toc_reads_wysiwyg_headings_and_scrolls_editor() -> None:
     """Verify TOC is derived from the unified WYSIWYG heading DOM."""
 
@@ -158,3 +165,31 @@ def test_wysiwyg_mermaid_uses_inline_toolbar_for_action_buttons() -> None:
     assert "toolbar.className = \"mermaid-inline-toolbar\";" in source
     assert "toolbar.appendChild(editButton);" in source
     assert "toolbar.appendChild(fullscreenButton);" in source
+
+
+def test_wysiwyg_mermaid_toolbar_is_separate_from_canvas_layer() -> None:
+    """Verify Mermaid controls are outside the zoomable canvas layer."""
+
+    source = _read_static_js("wysiwyg.js")
+    styles = _read_static_css("styles.css")
+
+    assert "function ensureMermaidCanvas(container)" in source
+    assert "canvas.className = \"mermaid-canvas\";" in source
+    assert "container.insertBefore(toolbar, canvas);" in source
+    assert "canvas.appendChild(controls);" in source
+    assert ".mermaid-canvas svg" in styles
+    assert ".mermaid-container svg {" not in styles
+
+
+def test_dialogs_restore_editor_scroll_after_modal_close() -> None:
+    """Verify dialog close paths preserve editor scroll and avoid focus scrolling."""
+
+    dialogs_source = _read_static_js("dialogs.js")
+    editor_source = _read_static_js("editor.js")
+    tabs_source = _read_static_js("tabs.js")
+
+    assert "function captureEditorScrollTop()" in dialogs_source
+    assert "function restoreEditorScrollTop(scrollTop)" in dialogs_source
+    assert "element.focus({ preventScroll: true })" in dialogs_source
+    assert "window.wysiwyg?.setScrollTop?.(previousScrollTop);" in editor_source
+    assert "window.wysiwyg?.setScrollTop?.(previousScrollTop);" in tabs_source
