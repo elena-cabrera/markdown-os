@@ -1,7 +1,6 @@
-"""Regression tests for TOC navigation sync between edit/read modes."""
+"""Regression tests for unified WYSIWYG TOC and folder tab synchronization."""
 
 from pathlib import Path
-import re
 
 
 def _read_static_js(filename: str) -> str:
@@ -11,45 +10,23 @@ def _read_static_js(filename: str) -> str:
     return (root / "markdown_os" / "static" / "js" / filename).read_text(encoding="utf-8")
 
 
-def test_toc_uses_visible_mode_for_click_and_active_updates() -> None:
-    """
-    Verify TOC interaction depends on the visible pane mode, not stale state.
-
-    This guards the regression where edit-mode TOC behavior could remain bound
-    to preview-mode state, breaking click-to-scroll and active link updates.
-    """
+def test_toc_reads_wysiwyg_headings_and_scrolls_editor() -> None:
+    """Verify TOC is derived from the unified WYSIWYG heading DOM."""
 
     source = _read_static_js("toc.js")
 
-    assert "function getCurrentMode()" in source
-    assert 'return editorContainer?.classList.contains("active") ? "edit" : "preview";' in source
-    assert 'if (getCurrentMode() === "edit") {' in source
-    assert 'if (getCurrentMode() !== "preview") {' in source
-    assert 'if (getCurrentMode() !== "edit") {' in source
+    assert "window.wysiwyg?.getHeadingElements?.()" in source
+    assert "window.wysiwyg?.scrollHeadingIntoView?.(targetId)" in source
+    assert "findActiveHeadingIndex" in source
+    assert "editor-container" in source
 
 
-def test_folder_tabs_mode_switch_keeps_heading_position_in_sync() -> None:
-    """
-    Verify tab-mode edit/read switching synchronizes by active heading index.
-
-    This guards the regression where folder mode skipped heading-based sync and
-    TOC updates during mode switches.
-    """
+def test_folder_tabs_use_wysiwyg_markdown_and_scroll_state() -> None:
+    """Verify tab state and switching use WYSIWYG markdown and a single scroll surface."""
 
     source = _read_static_js("tabs.js")
 
-    assert re.search(
-        r'if \(tabName === "edit"\)\s*\{'
-        r'[\s\S]*?findActivePreviewHeadingIndex'
-        r'[\s\S]*?syncEditorScroll\(activeIndex\)'
-        r'[\s\S]*?generateTOC'
-        r'[\s\S]*?updateActiveTOCItemForEdit',
-        source,
-    )
-    assert re.search(
-        r'tabName !== "preview"'
-        r'[\s\S]*?findActiveEditHeadingIndex'
-        r'[\s\S]*?syncPreviewScroll\(activeIndex\)'
-        r'[\s\S]*?updateActiveTOCItem',
-        source,
-    )
+    assert "window.wysiwyg?.getMarkdown?.()" in source
+    assert "window.wysiwyg?.setMarkdown?.(tabData.content, { silent: true })" in source
+    assert "window.wysiwyg?.setScrollTop?.(tabData.scrollTop)" in source
+    assert "setActiveMode" not in source

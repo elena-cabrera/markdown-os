@@ -4,27 +4,29 @@ Welcome to **Markdown-OS**. This file demonstrates editor capabilities and commo
 
 Use this file to:
 
-- Verify preview rendering.
-- Inspect syntax highlighting for code blocks.
-- See Mermaid diagrams render inline.
-- See math equations (inline and display) when KaTeX is enabled.
-- Explore heading structure in the table of contents sidebar.
-- Edit content and observe auto-save behavior.
+-   Verify preview rendering.
+-   Inspect syntax highlighting for code blocks.
+-   See Mermaid diagrams render inline.
+-   See math equations (inline and display) when KaTeX is enabled.
+-   Explore heading structure in the table of contents sidebar.
+-   Edit content and observe auto-save behavior.
 
 ---
+
 ![image](images/CleanShot-2026-02-16-at-20-46-50-20260216-194655-892845.png)
+
 ## Quick Start
 
-1. Switch between **Edit** and **Preview** tabs.
-2. Change some text in Edit mode.
-3. Wait one second and observe save status updates.
-4. Open the browser console if you are validating rendering behavior.
+1.  Switch between **Edit** and **Preview** tabs.
+2.  Change some text in Edit mode.
+3.  Wait one second and observe save status updates.
+4.  Open the browser console if you are validating rendering behavior.
 
 ### Notes
 
-- The sidebar table of contents is generated from headings.
-- Code blocks include language labels and copy actions.
-- Mermaid blocks can be pan/zoom enabled in the preview.
+-   The sidebar table of contents is generated from headings.
+-   Code blocks include language labels and copy actions.
+-   Mermaid blocks can be pan/zoom enabled in the preview.
 
 ---
 
@@ -32,17 +34,17 @@ Use this file to:
 
 Regular text can be mixed with:
 
-- **Bold text**
-- *Italic text*
-- ***Bold italic text***
-- ~~Strikethrough text~~
-- `inline code`
+-   **Bold text**
+-   _Italic text_
+-   _**Bold italic text**_
+-   ~Strikethrough text~
+-   `inline code`
 
 You can also combine styles:
 
-- **Bold with `inline code`**
-- *Italic with [a link](https://example.com)*
-- ~~Crossed out with **bold** details~~
+-   **Bold with `inline code`**
+-   _Italic with [a link](https://example.com)_
+-   ~Crossed out with **bold** details~
 
 ### Paragraph Wrapping
 
@@ -66,9 +68,9 @@ Another paragraph can include abbreviations like API, CLI, and URL to ensure fon
 
 Heading depth influences:
 
-- TOC indentation and navigation.
-- Visual hierarchy in documentation.
-- Anchor linking behavior.
+-   TOC indentation and navigation.
+-   Visual hierarchy in documentation.
+-   Anchor linking behavior.
 
 ---
 
@@ -76,45 +78,50 @@ Heading depth influences:
 
 ### Unordered Lists
 
-- Dash item one
-- Dash item two
-  - Nested dash child A
-  - Nested dash child B
-- Dash item three
-
-* Star item one
-* Star item two
-  * Nested star child
-
-+ Plus item one
-+ Plus item two
-  + Nested plus child
+-   Dash item one
+    
+-   Dash item two
+    
+    -   Nested dash child A
+    -   Nested dash child B
+-   Dash item three
+    
+-   Star item one
+    
+-   Star item two
+    
+    -   Nested star child
+-   Plus item one
+    
+-   Plus item two
+    
+    -   Nested plus child
 
 ### Ordered Lists
 
-1. First step
-2. Second step
-3. Third step
-   1. Nested ordered step A
-   2. Nested ordered step B
-4. Fourth step
+1.  First step
+2.  Second step
+3.  Third step
+    1.  Nested ordered step A
+    2.  Nested ordered step B
+4.  Fourth step
 
 ### Mixed Nested Lists
 
-1. Build release checklist
-   - Confirm tests pass
-   - Confirm lint passes
-   - Confirm version notes
-2. Publish artifacts
-   - Upload package
-   - Announce release
+1.  Build release checklist
+    -   Confirm tests pass
+    -   Confirm lint passes
+    -   Confirm version notes
+2.  Publish artifacts
+    -   Upload package
+    -   Announce release
 
 ### Task Lists
 
-- [x] Create markdown file
-- [x] Open file in editor
-- [ ] Add project-specific notes
-- [ ] Share with team
+-   [x]  Create markdown file
+-   [x]  Open file in editor
+-   [ ]  Add project-specific notes
+-   [ ]  Share with team
 
 ---
 
@@ -122,17 +129,14 @@ Heading depth influences:
 
 Inline link to the project page: [Markdown Guide](https://www.markdownguide.org).
 
-Autolink style URL: <https://example.org/docs>.
+Autolink style URL: [https://example.org/docs](https://example.org/docs).
 
-Email autolink: <devnull@example.org>.
+Email autolink: [devnull@example.org](mailto:devnull@example.org).
 
 Reference-style link usage:
 
-- Read the [project README][project-readme].
-- Check [FastAPI docs][fastapi-docs] for backend details.
-
-[project-readme]: https://github.com/example/repo#readme
-[fastapi-docs]: https://fastapi.tiangolo.com/
+-   Read the [project README](https://github.com/example/repo#readme).
+-   Check [FastAPI docs](https://fastapi.tiangolo.com/) for backend details.
 
 Relative link example: [Local notes](./notes.md)
 
@@ -165,7 +169,7 @@ If images do not load, syntax still demonstrates expected markdown structure.
 ### Alignment Table
 
 | Left | Center | Right |
-| :--- | :----: | ----: |
+| :-- | :-: | --: |
 | apple | banana | carrot |
 | delta | echo | foxtrot |
 | gamma | helix | ion |
@@ -185,15 +189,15 @@ If images do not load, syntax still demonstrates expected markdown structure.
 
 > Single-level quote for highlighting an important note.
 
-> Multi-line quote can span several lines and remain in the same block.
+> Multi-line quote can span several lines and remain in the same block.  
 > This is useful for callouts and commentary.
 
 > Nested quote example:
->
+> 
 > > Level two quote text.
-> >
-> > - Quoted bullet point
-> > - Another quoted bullet point
+> > 
+> > -   Quoted bullet point
+> > -   Another quoted bullet point
 
 ---
 
@@ -203,7 +207,6 @@ If images do not load, syntax still demonstrates expected markdown structure.
 
 ```python
 from pathlib import Path
-
 
 def summarize_markdown(path: Path) -> dict[str, int]:
     """Return quick counters for markdown diagnostics."""
@@ -217,10 +220,10 @@ def summarize_markdown(path: Path) -> dict[str, int]:
         "code_fence_count": code_fence_count // 2,
     }
 
-
 if __name__ == "__main__":
     result = summarize_markdown(Path("example.md"))
     print(result)
+
 ```
 
 ### JavaScript
@@ -242,6 +245,7 @@ const renderTasks = (items) => {
 };
 
 console.log(renderTasks(tasks));
+
 ```
 
 ### Bash
@@ -258,6 +262,7 @@ uv run markdown-os example ./sandbox/example.md --force
 
 echo "Run tests"
 uv run pytest -q
+
 ```
 
 ### Plain Text
@@ -265,6 +270,7 @@ uv run pytest -q
 ```text
 Code blocks can be used for logs, output snippets, and structured text.
 No syntax highlighting is expected for plain text blocks.
+
 ```
 
 ---
@@ -283,6 +289,7 @@ flowchart TD
     Persist --> Render[Refresh preview]
     Wait --> Edit
     Render --> Done([Done])
+
 ```
 
 ### Sequence Diagram
@@ -300,6 +307,7 @@ sequenceDiagram
     FileSystem-->>API: Success
     API-->>Browser: 200 OK
     Browser-->>User: Saved indicator
+
 ```
 
 ### State Diagram
@@ -312,6 +320,7 @@ stateDiagram-v2
     Saving --> Idle: write ok
     Saving --> Error: write failed
     Error --> Editing: retry
+
 ```
 
 ---
@@ -322,9 +331,9 @@ LaTeX-style math can be written with single dollars for inline math and double d
 
 ### Inline Math
 
-- Einstein’s mass–energy equivalence: $E = mc^2$
-- Greek letters: $\alpha$, $\beta$, $\gamma$, $\omega$
-- Pythagorean identity: $x^2 + y^2 = z^2$
+-   Einstein’s mass–energy equivalence: $E = mc^2$
+-   Greek letters: $\alpha$, $\beta$, $\gamma$, $\omega$
+-   Pythagorean identity: $x^2 + y^2 = z^2$
 
 ### Display Equations
 
@@ -372,9 +381,9 @@ Three equivalent syntaxes:
 
 ---
 
-***
+---
 
-___
+---
 
 ---
 
@@ -382,28 +391,25 @@ ___
 
 Escaping markdown characters:
 
-- A literal asterisk: \*
-- A literal backtick: \`
-- A literal bracket: \[
+-   A literal asterisk: \*
+-   A literal backtick: \`
+-   A literal bracket: \[
 
 Inline HTML examples:
 
-<kbd>Ctrl</kbd> + <kbd>S</kbd> can be represented with HTML tags.
+Ctrl + S can be represented with HTML tags.
 
-<details>
-  <summary>Expandable details block</summary>
-  This block uses inline HTML and may render depending on markdown engine settings.
-</details>
+Expandable details block This block uses inline HTML and may render depending on markdown engine settings.
 
 Footnote example:
 
-Markdown-OS focuses on interactive editing.[^interactive-note]
+Markdown-OS focuses on interactive editing.\[^interactive-note\]
 
-[^interactive-note]: You can modify this file and immediately observe preview changes.
+\[^interactive-note\]: You can modify this file and immediately observe preview changes.
 
 Definition-like structure (plain markdown style):
 
-Term
+Term  
 : Definition text can be simulated for documentation readability.
 
 ---
@@ -412,18 +418,18 @@ Term
 
 Use this section when validating the editor after changes:
 
-- Confirm syntax highlighting appears for Python, JavaScript, and Bash.
-- Confirm Mermaid diagrams render without console errors.
-- Confirm math equations render (if KaTeX is loaded) or show as raw LaTeX.
-- Confirm TOC includes major sections and nested headings.
-- Confirm auto-save status changes from saving to saved.
-- Confirm code block copy buttons appear.
+-   Confirm syntax highlighting appears for Python, JavaScript, and Bash.
+-   Confirm Mermaid diagrams render without console errors.
+-   Confirm math equations render (if KaTeX is loaded) or show as raw LaTeX.
+-   Confirm TOC includes major sections and nested headings.
+-   Confirm auto-save status changes from saving to saved.
+-   Confirm code block copy buttons appear.
 
 If something fails:
 
-1. Reload the page once.
-2. Check browser developer tools console.
-3. Verify `uv run markdown-os open <file>` started without backend errors.
+1.  Reload the page once.
+2.  Check browser developer tools console.
+3.  Verify `uv run markdown-os open <file>` started without backend errors.
 
 ---
 
@@ -431,11 +437,11 @@ If something fails:
 
 Write your own markdown below and test live behavior:
 
-- Add headings and confirm TOC updates.
-- Add another code block and confirm copy button behavior.
-- Paste a Mermaid diagram and confirm rendering.
+-   Add headings and confirm TOC updates.
+-   Add another code block and confirm copy button behavior.
+-   Paste a Mermaid diagram and confirm rendering.
 
-````markdown
+```markdown
 ## My Notes
 
 - Item A
@@ -443,20 +449,23 @@ Write your own markdown below and test live behavior:
 
 ```python
 print("Try your own example")
+
 ```
-````
+
+```text
 
 ---
 
 ## Next Steps
 
-- Use this file as a quick syntax reference.
-- Duplicate it for team documentation templates.
-- Regenerate a fresh copy anytime with:
+-   Use this file as a quick syntax reference.
+-   Duplicate it for team documentation templates.
+-   Regenerate a fresh copy anytime with:
 
 ```bash
 uv run markdown-os example --force
+
 ```
 
-Happy writing.
+Happy writing.  
 ![image](images/CleanShot-2026-02-16-at-20-47-18-20260216-194724-167926.png)
