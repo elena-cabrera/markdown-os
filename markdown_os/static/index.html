@@ -176,6 +176,45 @@
             </div>
           </section>
 
+          <div id="search-bar" class="search-bar hidden" role="search" aria-label="Find in document">
+            <input
+              type="text"
+              id="search-input"
+              class="search-bar-input"
+              placeholder="Find..."
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <span id="search-match-count" class="search-match-count" aria-live="polite"></span>
+            <button id="search-prev-btn" class="search-nav-btn" type="button" title="Previous (Shift+Enter)">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <path
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="1.5"
+                  d="M12 5.5V19m6-8s-4.419-6-6-6s-6 6-6 6"
+                />
+              </svg>
+            </button>
+            <button id="search-next-btn" class="search-nav-btn" type="button" title="Next (Enter)">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <path
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="1.5"
+                  d="M12 18.502v-13.5m6 8s-4.419 6-6 6s-6-6-6-6"
+                />
+              </svg>
+            </button>
+            <button id="search-close-btn" class="search-close-btn" type="button" title="Close (Esc)">
+              &#x2715;
+            </button>
+          </div>
+
           <div id="floating-toolbar" class="floating-toolbar" role="toolbar" aria-label="Formatting toolbar">
             <div class="toolbar-group">
               <button class="toolbar-button" type="button" data-command="bold" title="Bold (Ctrl+B)" aria-label="Bold">
@@ -411,6 +450,7 @@
     <script src="/static/js/dialogs.js"></script>
     <script src="/static/js/wysiwyg.js"></script>
     <script src="/static/js/wysiwyg-toolbar.js"></script>
+    <script src="/static/js/search.js"></script>
     <script src="/static/js/toc.js"></script>
     <script src="/static/js/file-tree.js"></script>
     <script src="/static/js/tabs.js"></script>
