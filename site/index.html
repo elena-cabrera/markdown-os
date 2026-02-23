@@ -1,0 +1,1393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>markdown-os — Lightweight Markdown Editor</title>
+    <meta name="description" content="Lightweight markdown editor on your browser. CLI-driven with Mermaid diagrams, syntax highlighting, themes, and real-time sync.">
+    <meta name="keywords" content="markdown, editor, CLI, developer tools, Mermaid, WYSIWYG, syntax highlighting">
+    <meta name="author" content="Elena Cabrera">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="markdown-os — Lightweight Markdown Editor">
+    <meta property="og:description" content="Visualize and edit markdown files in your browser, with more features than built-in IDE preview.">
+    <meta property="og:image" content="images/hero-screenshot.png">
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="markdown-os — Lightweight Markdown Editor">
+    <meta name="twitter:description" content="Visualize and edit markdown files in your browser, with more features than built-in IDE preview.">
+    <meta name="twitter:image" content="images/hero-screenshot.png">
+
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+
+    <style>
+        /* ========== Reset & Base ========== */
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --color-bg: #ffffff;
+            --color-text: #1a1a1a;
+            --color-text-secondary: #666666;
+            --color-border: #e8e8e8;
+            --color-surface: #f5f5f5;
+            --color-dark: #1a1a1a;
+            --color-dark-hover: #333333;
+            --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            --font-mono: 'SF Mono', 'Monaco', 'Inconsolata', 'Courier New', monospace;
+            --max-width: 1120px;
+            --radius: 8px;
+            --radius-lg: 12px;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            color: var(--color-text);
+            background: var(--color-bg);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        img {
+            display: block;
+            max-width: 100%;
+        }
+
+        /* ========== Header ========== */
+        .site-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--color-border);
+            transform: translateY(0);
+            transition: transform 0.3s ease;
+        }
+
+        .site-header.hidden {
+            transform: translateY(-100%);
+        }
+
+        .header-content {
+            max-width: var(--max-width);
+            margin: 0 auto;
+            padding: 16px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .logo-icon {
+            width: 27px;
+            height: 27px;
+            flex-shrink: 0;
+        }
+
+        .header-nav {
+            display: flex;
+            align-items: center;
+            gap: 32px;
+        }
+
+        .header-nav a {
+            font-size: 14px;
+            color: var(--color-text-secondary);
+            transition: color 0.15s;
+        }
+
+        .header-nav a:hover {
+            color: var(--color-text);
+        }
+
+        /* ========== Buttons ========== */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border-radius: var(--radius);
+            font-size: 14px;
+            font-weight: 500;
+            font-family: var(--font-sans);
+            cursor: pointer;
+            transition: all 0.15s;
+            border: 1px solid transparent;
+        }
+
+        .btn-primary {
+            background: var(--color-dark);
+            color: white;
+            border-color: var(--color-dark);
+        }
+
+        .btn-primary:hover {
+            background: var(--color-dark-hover);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--color-text);
+            border-color: var(--color-border);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--color-text);
+        }
+
+        .btn-white {
+            background: white;
+            color: var(--color-dark);
+            border-color: white;
+        }
+
+        .btn-white:hover {
+            background: #f0f0f0;
+            border-color: #f0f0f0;
+        }
+
+        /* ========== Hero Section ========== */
+        .hero {
+            max-width: var(--max-width);
+            margin: 0 auto;
+            padding: 140px 32px 60px; /* extra top to clear fixed header */
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            align-items: center;
+        }
+
+        .hero-content h1 {
+            font-size: 44px;
+            font-weight: 700;
+            letter-spacing: -1.5px;
+            line-height: 1.15;
+            margin-bottom: 16px;
+        }
+
+        .hero-content p {
+            font-size: 16px;
+            color: var(--color-text-secondary);
+            line-height: 1.6;
+            margin-bottom: 28px;
+            max-width: 440px;
+        }
+
+        .hero-cta {
+            margin-bottom: 32px;
+        }
+
+        /* Install widget — terminal-style box with tab bar */
+        .install-widget {
+            max-width: 380px;
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+
+        .install-tabs {
+            display: flex;
+            gap: 0;
+            padding: 0 12px;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .install-tab {
+            padding: 10px 12px 8px;
+            font-size: 13px;
+            font-family: var(--font-sans);
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            color: var(--color-text-secondary);
+            transition: all 0.15s;
+        }
+
+        .install-tab.active {
+            color: var(--color-text);
+            border-bottom-color: var(--color-text);
+            font-weight: 500;
+        }
+
+        .install-tab:hover:not(.active) {
+            color: var(--color-text);
+        }
+
+        .install-command {
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            font-family: var(--font-mono);
+            font-size: 13px;
+        }
+
+        .install-command.active {
+            display: flex;
+        }
+
+        .install-command code {
+            color: var(--color-text);
+        }
+
+        .copy-btn {
+            background: none;
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 12px;
+            cursor: pointer;
+            color: var(--color-text-secondary);
+            font-family: var(--font-sans);
+            transition: all 0.15s;
+            flex-shrink: 0;
+        }
+
+        .copy-btn:hover {
+            border-color: var(--color-text-secondary);
+            color: var(--color-text);
+        }
+
+        /* Hero screenshot */
+        .hero-screenshot {
+            position: relative;
+        }
+
+        .hero-screenshot-img {
+            width: 100%;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--color-border);
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+        }
+
+        .hero-screenshot-placeholder {
+            width: 100%;
+            aspect-ratio: 4 / 3;
+            background: var(--color-surface);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--color-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--color-text-secondary);
+            font-size: 14px;
+        }
+
+        /* ========== Features Section ========== */
+        .features-section {
+            padding: 60px 32px 80px;
+        }
+
+        .features-header {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        .features-header h2 {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 8px;
+        }
+
+        .features-header p {
+            font-size: 16px;
+            color: var(--color-text-secondary);
+        }
+
+        .features-grid {
+            max-width: var(--max-width);
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .feature-card {
+            background: var(--color-bg);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            transition: box-shadow 0.2s;
+        }
+
+        .feature-card:hover {
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+        }
+
+        .feature-card-img {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            background: var(--color-surface);
+            border-bottom: 1px solid var(--color-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .feature-card-img img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* ========== Feature Animations (mini product demos) ========== */
+        .feature-demo {
+            width: 85%;
+            height: 80%;
+            border-radius: 6px;
+            overflow: hidden;
+            font-family: var(--font-mono);
+            font-size: 11px;
+            position: relative;
+        }
+
+        /* --- 1. Mermaid: code → diagram morph --- */
+        .demo-mermaid {
+            display: flex;
+            background: #1e293b;
+        }
+
+        .demo-mermaid-code {
+            flex: 1;
+            padding: 10px 12px;
+            color: #94a3b8;
+            line-height: 1.5;
+            border-right: 1px solid #334155;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .demo-mermaid-code .kw { color: #c084fc; }
+        .demo-mermaid-code .str { color: #67e8f9; }
+        .demo-mermaid-code .arrow { color: #fbbf24; }
+
+        .demo-mermaid-diagram {
+            flex: 1.2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px;
+        }
+
+        .demo-mermaid-diagram svg {
+            width: 100%;
+            height: auto;
+        }
+
+        .mermaid-node {
+            animation: mermaidFadeIn 0.5s ease both;
+        }
+        .mermaid-node:nth-child(2) { animation-delay: 0.8s; }
+        .mermaid-node:nth-child(3) { animation-delay: 1.6s; }
+        .mermaid-node:nth-child(4) { animation-delay: 2.4s; }
+
+        .mermaid-edge {
+            stroke-dasharray: 40;
+            stroke-dashoffset: 40;
+        }
+        .mermaid-edge-1 { animation: mermaidDraw 0.6s 1.1s ease forwards; }
+        .mermaid-edge-2 { animation: mermaidDraw 0.6s 1.9s ease forwards; }
+        .mermaid-edge-3 { animation: mermaidDraw 0.6s 2.7s ease forwards; }
+
+        @keyframes mermaidFadeIn {
+            from { opacity: 0; transform: scale(0.85); }
+            to   { opacity: 1; transform: scale(1); }
+        }
+        @keyframes mermaidDraw {
+            to { stroke-dashoffset: 0; }
+        }
+
+        /* --- 2. Task list: checkboxes animate --- */
+        .demo-tasks {
+            background: #fff;
+            padding: 16px 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 8px;
+            font-family: var(--font-sans);
+            font-size: 13px;
+            color: #333;
+        }
+
+        .demo-task {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .demo-checkbox {
+            width: 15px;
+            height: 15px;
+            border-radius: 3px;
+            border: 1.5px solid #ccc;
+            flex-shrink: 0;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .demo-checkbox.checked {
+            background: #1a1a1a;
+            border-color: #1a1a1a;
+        }
+
+        .demo-checkbox.checked::after {
+            content: '';
+            position: absolute;
+            left: 4px;
+            top: 1px;
+            width: 4px;
+            height: 8px;
+            border: solid white;
+            border-width: 0 1.5px 1.5px 0;
+            transform: rotate(45deg);
+        }
+
+        .demo-task-text {
+            transition: all 0.3s ease;
+        }
+
+        .demo-task-text.done {
+            text-decoration: line-through;
+            color: #aaa;
+        }
+
+        .demo-task:nth-child(1) .demo-checkbox { animation: taskCheck 0.3s 1s ease forwards; }
+        .demo-task:nth-child(1) .demo-task-text { animation: taskStrike 0.3s 1s ease forwards; }
+        .demo-task:nth-child(3) .demo-checkbox { animation: taskCheck 0.3s 2s ease forwards; }
+        .demo-task:nth-child(3) .demo-task-text { animation: taskStrike 0.3s 2s ease forwards; }
+        .demo-task:nth-child(4) .demo-checkbox { animation: taskCheck 0.3s 3s ease forwards; }
+        .demo-task:nth-child(4) .demo-task-text { animation: taskStrike 0.3s 3s ease forwards; }
+
+        @keyframes taskCheck {
+            to { background: #1a1a1a; border-color: #1a1a1a; }
+        }
+        @keyframes taskStrike {
+            to { text-decoration: line-through; color: #aaa; }
+        }
+
+        /* --- 3. Syntax highlighting: code typing --- */
+        .demo-syntax {
+            background: #1e293b;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .demo-syntax-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 12px;
+            background: #1e3a5f;
+            font-size: 10px;
+            color: #94a3b8;
+        }
+
+        .demo-syntax-copy {
+            font-size: 9px;
+            border: 1px solid #475569;
+            border-radius: 3px;
+            padding: 2px 6px;
+            color: #cbd5e1;
+        }
+
+        .demo-syntax-body {
+            padding: 10px 12px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            line-height: 1.6;
+        }
+
+        .demo-syntax-line {
+            display: flex;
+            gap: 8px;
+            opacity: 0;
+            animation: syntaxTypeLine 0.3s ease forwards;
+        }
+
+        .demo-syntax-line:nth-child(1) { animation-delay: 0.3s; }
+        .demo-syntax-line:nth-child(2) { animation-delay: 0.7s; }
+        .demo-syntax-line:nth-child(3) { animation-delay: 1.1s; }
+        .demo-syntax-line:nth-child(4) { animation-delay: 1.5s; }
+        .demo-syntax-line:nth-child(5) { animation-delay: 1.9s; }
+        .demo-syntax-line:nth-child(6) { animation-delay: 2.3s; }
+
+        .demo-syntax-num { color: #475569; min-width: 14px; text-align: right; }
+        .syn-kw { color: #c084fc; }
+        .syn-fn { color: #67e8f9; }
+        .syn-str { color: #86efac; }
+        .syn-cm { color: #64748b; font-style: italic; }
+        .syn-op { color: #fbbf24; }
+        .syn-var { color: #f8fafc; }
+        .syn-num { color: #fb923c; }
+
+        @keyframes syntaxTypeLine {
+            from { opacity: 0; transform: translateX(-4px); }
+            to   { opacity: 1; transform: translateX(0); }
+        }
+
+        /* --- 4. TOC: scrolling highlight --- */
+        .demo-toc {
+            display: flex;
+            background: #fff;
+        }
+
+        .demo-toc-sidebar {
+            width: 45%;
+            padding: 12px;
+            border-right: 1px solid #e8e8e8;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            font-family: var(--font-sans);
+        }
+
+        .demo-toc-item {
+            font-size: 11px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            color: #666;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .demo-toc-item.indent {
+            padding-left: 20px;
+            font-size: 10px;
+        }
+
+        .demo-toc-item.active {
+            background: #f0f0f0;
+            color: #1a1a1a;
+            font-weight: 500;
+        }
+
+        .demo-toc-content {
+            flex: 1;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .demo-toc-heading {
+            font-family: var(--font-sans);
+            font-size: 12px;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        .demo-toc-text {
+            height: 4px;
+            background: #e8e8e8;
+            border-radius: 2px;
+        }
+
+        .demo-toc-text.w75 { width: 75%; }
+        .demo-toc-text.w90 { width: 90%; }
+        .demo-toc-text.w60 { width: 60%; }
+        .demo-toc-text.w80 { width: 80%; }
+
+        /* TOC animation: cycle active item */
+        .demo-toc-item:nth-child(1) { animation: tocActive 8s ease infinite; }
+        .demo-toc-item:nth-child(2) { animation: tocActive 8s 2s ease infinite; }
+        .demo-toc-item:nth-child(3) { animation: tocActive 8s 4s ease infinite; }
+        .demo-toc-item:nth-child(4) { animation: tocActive 8s 6s ease infinite; }
+
+        @keyframes tocActive {
+            0%, 20%  { background: #f0f0f0; color: #1a1a1a; font-weight: 500; }
+            30%, 100% { background: transparent; color: #666; font-weight: 400; }
+        }
+
+        /* --- 5. File tree & tabs --- */
+        .demo-workspace {
+            display: flex;
+            flex-direction: column;
+            background: #fff;
+        }
+
+        .demo-ws-tabs {
+            display: flex;
+            border-bottom: 1px solid #e8e8e8;
+            font-family: var(--font-sans);
+            font-size: 10px;
+            background: #fafafa;
+        }
+
+        .demo-ws-tab {
+            padding: 6px 14px;
+            color: #999;
+            border-right: 1px solid #e8e8e8;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .demo-ws-tab.active {
+            color: #1a1a1a;
+            background: #fff;
+            font-weight: 500;
+            border-bottom: 2px solid #1a1a1a;
+        }
+
+        .demo-ws-body {
+            display: flex;
+            flex: 1;
+        }
+
+        .demo-ws-tree {
+            width: 38%;
+            border-right: 1px solid #e8e8e8;
+            padding: 8px;
+            font-family: var(--font-sans);
+            font-size: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .demo-ws-file {
+            padding: 3px 6px;
+            border-radius: 3px;
+            color: #666;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .demo-ws-file.active {
+            background: #f0f0f0;
+            color: #1a1a1a;
+            font-weight: 500;
+        }
+
+        .demo-ws-file.indent { padding-left: 18px; }
+
+        .demo-ws-file-icon { font-size: 9px; opacity: 0.5; }
+
+        .demo-ws-editor {
+            flex: 1;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .demo-ws-editor-line {
+            height: 4px;
+            background: #e8e8e8;
+            border-radius: 2px;
+        }
+
+        /* Workspace animation: click file, open tab */
+        .demo-ws-tab:nth-child(1) { animation: wsTabActive 6s ease infinite; }
+        .demo-ws-tab:nth-child(2) { animation: wsTabActive 6s 2s ease infinite; }
+        .demo-ws-tab:nth-child(3) { animation: wsTabActive 6s 4s ease infinite; }
+
+        .demo-ws-file:nth-child(3) { animation: wsFileActive 6s ease infinite; }
+        .demo-ws-file:nth-child(4) { animation: wsFileActive 6s 2s ease infinite; }
+        .demo-ws-file:nth-child(5) { animation: wsFileActive 6s 4s ease infinite; }
+
+        @keyframes wsTabActive {
+            0%, 28%  { color: #1a1a1a; background: #fff; font-weight: 500; border-bottom: 2px solid #1a1a1a; }
+            38%, 100% { color: #999; background: transparent; font-weight: 400; border-bottom: 2px solid transparent; }
+        }
+        @keyframes wsFileActive {
+            0%, 28%  { background: #f0f0f0; color: #1a1a1a; font-weight: 500; }
+            38%, 100% { background: transparent; color: #666; font-weight: 400; }
+        }
+
+        /* --- 6. Themes: color cycling --- */
+        .demo-themes {
+            display: flex;
+            flex-direction: column;
+            animation: themeBgCycle 10s ease infinite;
+        }
+
+        .demo-themes-bar {
+            padding: 6px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: var(--font-sans);
+            font-size: 10px;
+            animation: themeBarCycle 10s ease infinite;
+            border-bottom: 1px solid;
+            animation: themeBarBorder 10s ease infinite;
+        }
+
+        .demo-themes-dots {
+            display: flex;
+            gap: 5px;
+        }
+
+        .demo-theme-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            border: 1.5px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .demo-theme-dot:nth-child(1) { background: #fff; border-color: #ccc; }
+        .demo-theme-dot:nth-child(2) { background: #0f172a; }
+        .demo-theme-dot:nth-child(3) { background: #282a36; }
+        .demo-theme-dot:nth-child(4) { background: #eceff4; border-color: #c7d0df; }
+        .demo-theme-dot:nth-child(5) { background: #2e3440; }
+        .demo-theme-dot:nth-child(6) { background: #f5f5f5; border-color: #d0d0d0; }
+
+        .demo-theme-dot-active {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            border: 2px solid;
+            position: absolute;
+            animation: themeRingCycle 10s ease infinite;
+            pointer-events: none;
+        }
+
+        .demo-themes-body {
+            flex: 1;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            justify-content: center;
+        }
+
+        .demo-themes-line {
+            height: 4px;
+            border-radius: 2px;
+            animation: themeLineCycle 10s ease infinite;
+        }
+
+        .demo-themes-line.heading {
+            height: 8px;
+            width: 40%;
+            margin-bottom: 4px;
+            animation: themeHeadingCycle 10s ease infinite;
+        }
+
+        .demo-themes-line:nth-child(2) { width: 90%; }
+        .demo-themes-line:nth-child(3) { width: 75%; }
+        .demo-themes-line:nth-child(4) { width: 85%; }
+        .demo-themes-line:nth-child(5) { width: 60%; }
+
+        .demo-themes-code {
+            border-radius: 4px;
+            padding: 8px;
+            margin-top: 4px;
+            animation: themeCodeCycle 10s ease infinite;
+        }
+
+        .demo-themes-code-line {
+            height: 3px;
+            border-radius: 2px;
+            margin-bottom: 4px;
+            animation: themeCodeLineCycle 10s ease infinite;
+        }
+        .demo-themes-code-line:nth-child(1) { width: 65%; }
+        .demo-themes-code-line:nth-child(2) { width: 80%; }
+        .demo-themes-code-line:nth-child(3) { width: 50%; }
+
+        /* Theme cycle: light → dark → dracula → nord-light → nord-dark → lofi */
+        @keyframes themeBgCycle {
+            0%, 14%     { background: #ffffff; }
+            18%, 30%    { background: #1e293b; }
+            34%, 47%    { background: #3a3d4d; }
+            51%, 64%    { background: #f7f9fc; }
+            68%, 80%    { background: #3a4151; }
+            84%, 100%   { background: #ffffff; }
+        }
+        @keyframes themeBarBorder {
+            0%, 14%     { border-color: #e8e8e8; color: #666; }
+            18%, 30%    { border-color: #334155; color: #94a3b8; }
+            34%, 47%    { border-color: #6272a4; color: #c0c2d3; }
+            51%, 64%    { border-color: #c7d0df; color: #5b677a; }
+            68%, 80%    { border-color: #4c566a; color: #a3adbf; }
+            84%, 100%   { border-color: #d0d0d0; color: #888; }
+        }
+        @keyframes themeLineCycle {
+            0%, 14%     { background: #e8e8e8; }
+            18%, 30%    { background: #334155; }
+            34%, 47%    { background: #44475a; }
+            51%, 64%    { background: #d8dee9; }
+            68%, 80%    { background: #4c566a; }
+            84%, 100%   { background: #d0d0d0; }
+        }
+        @keyframes themeHeadingCycle {
+            0%, 14%     { background: #1a1a1a; }
+            18%, 30%    { background: #e2e8f0; }
+            34%, 47%    { background: #f8f8f2; }
+            51%, 64%    { background: #2e3440; }
+            68%, 80%    { background: #eceff4; }
+            84%, 100%   { background: #333; }
+        }
+        @keyframes themeCodeCycle {
+            0%, 14%     { background: #f5f5f5; }
+            18%, 30%    { background: #0f172a; }
+            34%, 47%    { background: #2f3241; }
+            51%, 64%    { background: #edf1f7; }
+            68%, 80%    { background: #2f3644; }
+            84%, 100%   { background: #eaeaea; }
+        }
+        @keyframes themeCodeLineCycle {
+            0%, 14%     { background: #ccc; }
+            18%, 30%    { background: #475569; }
+            34%, 47%    { background: #6272a4; }
+            51%, 64%    { background: #c7d0df; }
+            68%, 80%    { background: #4c566a; }
+            84%, 100%   { background: #bbb; }
+        }
+        @keyframes themeRingCycle {
+            0%, 14%     { border-color: #1a1a1a; left: 0; }
+            18%, 30%    { border-color: #60a5fa; left: 15px; }
+            34%, 47%    { border-color: #bd93f9; left: 30px; }
+            51%, 64%    { border-color: #5e81ac; left: 45px; }
+            68%, 80%    { border-color: #88c0d0; left: 60px; }
+            84%, 100%   { border-color: #555; left: 75px; }
+        }
+
+        .feature-card-body {
+            padding: 24px;
+        }
+
+        .feature-card-body h3 {
+            font-size: 17px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            letter-spacing: -0.2px;
+        }
+
+        .feature-card-body p {
+            font-size: 14px;
+            color: var(--color-text-secondary);
+            line-height: 1.6;
+        }
+
+        /* ========== Bottom CTA ========== */
+        .cta-section {
+            background: var(--color-dark);
+            padding: 80px 32px;
+            text-align: center;
+        }
+
+        .cta-section h2 {
+            font-size: 36px;
+            font-weight: 700;
+            color: white;
+            letter-spacing: -1px;
+            margin-bottom: 8px;
+        }
+
+        .cta-section p {
+            font-size: 16px;
+            color: #999;
+            margin-bottom: 32px;
+        }
+
+        /* ========== Footer ========== */
+        .site-footer {
+            background: #0d0d0d;
+            color: #999;
+            padding: 40px 32px;
+        }
+
+        .footer-content {
+            max-width: var(--max-width);
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .footer-brand {
+            font-size: 13px;
+        }
+
+        .footer-brand span {
+            color: white;
+            font-weight: 600;
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 24px;
+        }
+
+        .footer-links a {
+            font-size: 13px;
+            color: #999;
+            transition: color 0.15s;
+        }
+
+        .footer-links a:hover {
+            color: white;
+        }
+
+        /* ========== Scroll Animations ========== */
+        .reveal {
+            opacity: 0;
+            transform: translateY(24px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Stagger feature cards */
+        .feature-card.reveal:nth-child(2) { transition-delay: 0.1s; }
+        .feature-card.reveal:nth-child(3) { transition-delay: 0.15s; }
+        .feature-card.reveal:nth-child(4) { transition-delay: 0.2s; }
+        .feature-card.reveal:nth-child(5) { transition-delay: 0.25s; }
+        .feature-card.reveal:nth-child(6) { transition-delay: 0.3s; }
+
+        /* Hero elements stagger */
+        .hero-content.reveal { transition-delay: 0s; }
+        .hero-screenshot.reveal { transition-delay: 0.15s; }
+
+        /* CTA */
+        .cta-section .reveal { transition-delay: 0.05s; }
+
+        /* ========== Responsive ========== */
+        @media (max-width: 1024px) {
+            .hero {
+                grid-template-columns: 1fr;
+                gap: 40px;
+                padding: 60px 32px 40px;
+            }
+
+            .hero-content h1 {
+                font-size: 36px;
+            }
+
+            .hero-screenshot {
+                order: -1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header-content {
+                padding: 14px 20px;
+            }
+
+            .header-nav {
+                gap: 20px;
+            }
+
+            .hero {
+                padding: 100px 20px 32px;
+            }
+
+            .hero-content h1 {
+                font-size: 30px;
+                letter-spacing: -1px;
+            }
+
+            .hero-content p {
+                font-size: 15px;
+            }
+
+            .install-widget {
+                max-width: 100%;
+            }
+
+            .features-section {
+                padding: 40px 20px 60px;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .features-header h2 {
+                font-size: 24px;
+            }
+
+            .cta-section {
+                padding: 60px 20px;
+            }
+
+            .cta-section h2 {
+                font-size: 28px;
+            }
+
+            .footer-content {
+                flex-direction: column;
+                gap: 20px;
+                text-align: center;
+            }
+
+            .site-footer {
+                padding: 32px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ===== Header ===== -->
+    <header class="site-header">
+        <div class="header-content">
+            <a href="#" class="logo" onclick="window.scrollTo({top:0,behavior:'smooth'});return false;">
+                <svg class="logo-icon" width="27" height="27" viewBox="0 0 27 27" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M0 5C0 2.23858 2.23858 0 5 0H22C24.7614 0 27 2.23858 27 5V22C27 24.7614 24.7614 27 22 27H5C2.23858 27 0 24.7614 0 22V5Z" fill="#1C1C1E"/>
+                    <path d="M19.6105 8.66L20.0705 18.86L21.7905 19.56L21.6705 20H16.9305L16.8105 19.56L17.7105 19.12C18.1371 18.92 18.3438 18.66 18.3305 18.34L17.8905 8.54L14.0505 19.6L12.8105 20L12.4305 19.8L8.69047 8.56L8.13047 18.86L9.65047 19.56L9.53047 20H5.33047L5.21047 19.56L6.31047 19.1C6.6438 18.9533 6.83714 18.8067 6.89047 18.66C6.9038 18.5933 6.91714 18.4867 6.93047 18.34L7.43047 8.14L5.71047 7.44L5.83047 7H9.87047L10.1305 7.2L13.5105 17.64L17.0505 7H21.2105L21.3305 7.44L20.2305 7.9C19.8038 8.07333 19.5971 8.32667 19.6105 8.66Z" fill="white"/>
+                </svg>
+                markdown-os
+            </a>
+            <nav class="header-nav">
+                <a href="#features">Features</a>
+                <a href="https://github.com/elena-cabrera/markdown-os" target="_blank" rel="noopener">GitHub</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- ===== Hero ===== -->
+    <section class="hero">
+        <div class="hero-content reveal">
+            <h1>Lightweight Markdown editor on your browser</h1>
+            <p>markdown-os lets you visualize and edit markdown files in your browser, with more features than built-in IDE preview</p>
+
+            <div class="hero-cta">
+                <a href="https://github.com/elena-cabrera/markdown-os" class="btn btn-primary" target="_blank" rel="noopener">View on GitHub</a>
+            </div>
+
+            <div class="install-widget">
+                <div class="install-tabs">
+                    <button class="install-tab active" data-tab="uv">uv</button>
+                    <button class="install-tab" data-tab="pip">pip</button>
+                </div>
+                <div class="install-command active" id="tab-uv">
+                    <code>uv tool install markdown-os</code>
+                    <button class="copy-btn" data-copy="uv tool install markdown-os" aria-label="Copy install command">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    </button>
+                </div>
+                <div class="install-command" id="tab-pip">
+                    <code>pip install markdown-os</code>
+                    <button class="copy-btn" data-copy="pip install markdown-os" aria-label="Copy install command">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="hero-screenshot reveal">
+            <div class="hero-screenshot-placeholder">Screenshot placeholder</div>
+        </div>
+    </section>
+
+    <!-- ===== Features ===== -->
+    <section class="features-section" id="features">
+        <div class="features-header reveal">
+            <h2>Built for developers</h2>
+            <p>View and edit AI-generated .md files easily</p>
+        </div>
+
+        <div class="features-grid">
+            <!-- 1. Mermaid Diagrams -->
+            <div class="feature-card reveal">
+                <div class="feature-card-img">
+                    <div class="feature-demo demo-mermaid">
+                        <div class="demo-mermaid-code">
+                            <span><span class="kw">graph</span> TD</span>
+                            <span>&nbsp;&nbsp;A[<span class="str">CLI</span>] <span class="arrow">--&gt;</span> B[<span class="str">Server</span>]</span>
+                            <span>&nbsp;&nbsp;B <span class="arrow">--&gt;</span> C[<span class="str">Browser</span>]</span>
+                            <span>&nbsp;&nbsp;C <span class="arrow">--&gt;</span> D[<span class="str">Editor</span>]</span>
+                        </div>
+                        <div class="demo-mermaid-diagram">
+                            <svg viewBox="0 0 120 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <g class="mermaid-node"><rect x="30" y="4" width="60" height="26" rx="4" fill="#334155" stroke="#60a5fa" stroke-width="1.5"/><text x="60" y="21" text-anchor="middle" fill="#e2e8f0" font-size="10" font-family="sans-serif">CLI</text></g>
+                                <line x1="60" y1="30" x2="60" y2="44" stroke="#60a5fa" stroke-width="1.5" class="mermaid-edge mermaid-edge-1"/>
+                                <g class="mermaid-node"><rect x="24" y="44" width="72" height="26" rx="4" fill="#334155" stroke="#60a5fa" stroke-width="1.5"/><text x="60" y="61" text-anchor="middle" fill="#e2e8f0" font-size="10" font-family="sans-serif">Server</text></g>
+                                <line x1="60" y1="70" x2="60" y2="86" stroke="#60a5fa" stroke-width="1.5" class="mermaid-edge mermaid-edge-2"/>
+                                <g class="mermaid-node"><rect x="20" y="86" width="80" height="26" rx="4" fill="#334155" stroke="#60a5fa" stroke-width="1.5"/><text x="60" y="103" text-anchor="middle" fill="#e2e8f0" font-size="10" font-family="sans-serif">Browser</text></g>
+                                <line x1="60" y1="112" x2="60" y2="126" stroke="#60a5fa" stroke-width="1.5" class="mermaid-edge mermaid-edge-3"/>
+                                <g class="mermaid-node"><rect x="26" y="126" width="68" height="26" rx="4" fill="#334155" stroke="#60a5fa" stroke-width="1.5"/><text x="60" y="143" text-anchor="middle" fill="#e2e8f0" font-size="10" font-family="sans-serif">Editor</text></g>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+                <div class="feature-card-body">
+                    <h3>Visualize Mermaid Diagrams</h3>
+                    <p>Embed flowcharts, sequence diagrams, and more. Rendered live and easy to visualize with zoom and pan tools that are not available in basic IDE preview.</p>
+                </div>
+            </div>
+
+            <!-- 2. Interactive Task Lists -->
+            <div class="feature-card reveal">
+                <div class="feature-card-img">
+                    <div class="feature-demo demo-tasks">
+                        <div class="demo-task">
+                            <div class="demo-checkbox"></div>
+                            <span class="demo-task-text">Set up FastAPI server</span>
+                        </div>
+                        <div class="demo-task">
+                            <div class="demo-checkbox checked"><span style="display:none"></span></div>
+                            <span class="demo-task-text done">Write markdown parser</span>
+                        </div>
+                        <div class="demo-task">
+                            <div class="demo-checkbox"></div>
+                            <span class="demo-task-text">Add WebSocket sync</span>
+                        </div>
+                        <div class="demo-task">
+                            <div class="demo-checkbox"></div>
+                            <span class="demo-task-text">Deploy to production</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="feature-card-body">
+                    <h3>Interactive task lists</h3>
+                    <p>Clickable checkboxes for task lists that work as you'd expect. Check items off directly in the editor without touching the raw markdown.</p>
+                </div>
+            </div>
+
+            <!-- 3. Syntax Highlighting -->
+            <div class="feature-card reveal">
+                <div class="feature-card-img">
+                    <div class="feature-demo demo-syntax">
+                        <div class="demo-syntax-header">
+                            <span>python</span>
+                            <span class="demo-syntax-copy">Copy</span>
+                        </div>
+                        <div class="demo-syntax-body">
+                            <div class="demo-syntax-line"><span class="demo-syntax-num">1</span><span><span class="syn-kw">def</span> <span class="syn-fn">create_app</span>(handler):</span></div>
+                            <div class="demo-syntax-line"><span class="demo-syntax-num">2</span><span>&nbsp;&nbsp;<span class="syn-cm"># Initialize server</span></span></div>
+                            <div class="demo-syntax-line"><span class="demo-syntax-num">3</span><span>&nbsp;&nbsp;<span class="syn-var">app</span> <span class="syn-op">=</span> <span class="syn-fn">FastAPI</span>()</span></div>
+                            <div class="demo-syntax-line"><span class="demo-syntax-num">4</span><span>&nbsp;&nbsp;<span class="syn-var">hub</span> <span class="syn-op">=</span> <span class="syn-fn">WebSocketHub</span>()</span></div>
+                            <div class="demo-syntax-line"><span class="demo-syntax-num">5</span><span>&nbsp;&nbsp;<span class="syn-kw">return</span> <span class="syn-var">app</span></span></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="feature-card-body">
+                    <h3>Syntax highlighting</h3>
+                    <p>Code blocks with full syntax highlighting for 100+ languages. Every block includes a copy button, language label, and optional line numbers.</p>
+                </div>
+            </div>
+
+            <!-- 4. Table of Contents -->
+            <div class="feature-card reveal">
+                <div class="feature-card-img">
+                    <div class="feature-demo demo-toc">
+                        <div class="demo-toc-sidebar">
+                            <div class="demo-toc-item">Quick Start</div>
+                            <div class="demo-toc-item indent">Installation</div>
+                            <div class="demo-toc-item">Features</div>
+                            <div class="demo-toc-item indent">WYSIWYG Editor</div>
+                        </div>
+                        <div class="demo-toc-content">
+                            <div class="demo-toc-heading">Quick Start</div>
+                            <div class="demo-toc-text w90"></div>
+                            <div class="demo-toc-text w75"></div>
+                            <div class="demo-toc-text w80"></div>
+                            <div style="height: 8px"></div>
+                            <div class="demo-toc-heading">Installation</div>
+                            <div class="demo-toc-text w60"></div>
+                            <div class="demo-toc-text w90"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="feature-card-body">
+                    <h3>Automatic Table of Contents</h3>
+                    <p>Auto-generated from your headings. Nested structure mirrors your document hierarchy with smooth scrolling navigation.</p>
+                </div>
+            </div>
+
+            <!-- 5. File Tree & Workspace -->
+            <div class="feature-card reveal">
+                <div class="feature-card-img">
+                    <div class="feature-demo demo-workspace">
+                        <div class="demo-ws-tabs">
+                            <div class="demo-ws-tab">README.md</div>
+                            <div class="demo-ws-tab">setup.md</div>
+                            <div class="demo-ws-tab">notes.md</div>
+                        </div>
+                        <div class="demo-ws-body">
+                            <div class="demo-ws-tree">
+                                <div class="demo-ws-file"><span class="demo-ws-file-icon">&#9660;</span> docs/</div>
+                                <div class="demo-ws-file indent"><span class="demo-ws-file-icon">&#9660;</span> guides/</div>
+                                <div class="demo-ws-file indent" style="padding-left:30px"><span class="demo-ws-file-icon">&#9724;</span> setup.md</div>
+                                <div class="demo-ws-file indent"><span class="demo-ws-file-icon">&#9724;</span> notes.md</div>
+                                <div class="demo-ws-file"><span class="demo-ws-file-icon">&#9724;</span> README.md</div>
+                            </div>
+                            <div class="demo-ws-editor">
+                                <div class="demo-ws-editor-line" style="width:45%; height:7px; background:#ddd;"></div>
+                                <div style="height:4px"></div>
+                                <div class="demo-ws-editor-line" style="width:90%"></div>
+                                <div class="demo-ws-editor-line" style="width:75%"></div>
+                                <div class="demo-ws-editor-line" style="width:85%"></div>
+                                <div style="height:4px"></div>
+                                <div class="demo-ws-editor-line" style="width:70%"></div>
+                                <div class="demo-ws-editor-line" style="width:80%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="feature-card-body">
+                    <h3>File tree & workspace</h3>
+                    <p>Open entire directories at once. Browse with the file tree sidebar, search for files, and switch between up to 15 open tabs.</p>
+                </div>
+            </div>
+
+            <!-- 6. Color Themes -->
+            <div class="feature-card reveal">
+                <div class="feature-card-img">
+                    <div class="feature-demo demo-themes">
+                        <div class="demo-themes-bar">
+                            <span style="animation:themeBarBorder 10s ease infinite;">Theme</span>
+                            <div class="demo-themes-dots" style="position:relative;">
+                                <div class="demo-theme-dot"></div>
+                                <div class="demo-theme-dot"></div>
+                                <div class="demo-theme-dot"></div>
+                                <div class="demo-theme-dot"></div>
+                                <div class="demo-theme-dot"></div>
+                                <div class="demo-theme-dot"></div>
+                                <div class="demo-theme-dot-active"></div>
+                            </div>
+                        </div>
+                        <div class="demo-themes-body">
+                            <div class="demo-themes-line heading"></div>
+                            <div class="demo-themes-line"></div>
+                            <div class="demo-themes-line"></div>
+                            <div class="demo-themes-line"></div>
+                            <div class="demo-themes-line"></div>
+                            <div class="demo-themes-code">
+                                <div class="demo-themes-code-line"></div>
+                                <div class="demo-themes-code-line"></div>
+                                <div class="demo-themes-code-line"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="feature-card-body">
+                    <h3>Color themes</h3>
+                    <p>Six built-in themes including Dracula, Nord Light, Nord Dark, and Lofi. Switch with one click to match your preferences.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== Bottom CTA ===== -->
+    <section class="cta-section">
+        <div class="reveal">
+            <h2>Start using markdown-os</h2>
+            <p>The new way to work with markdown files</p>
+            <a href="https://github.com/elena-cabrera/markdown-os" class="btn btn-white" target="_blank" rel="noopener">View on GitHub</a>
+        </div>
+    </section>
+
+    <!-- ===== Footer ===== -->
+    <footer class="site-footer">
+        <div class="footer-content">
+            <div class="footer-brand">
+                <span>markdown-os</span> &middot; CLI-driven markdown editor &middot; v0.3.0
+            </div>
+            <nav class="footer-links">
+                <a href="https://github.com/elena-cabrera/markdown-os" target="_blank" rel="noopener">GitHub</a>
+                <a href="https://pypi.org/project/markdown-os/" target="_blank" rel="noopener">PyPI</a>
+                <a href="https://github.com/elena-cabrera/markdown-os/blob/master/LICENSE" target="_blank" rel="noopener">License</a>
+            </nav>
+        </div>
+    </footer>
+
+    <!-- ===== JavaScript ===== -->
+    <script>
+        // ---- Install tab switching ----
+        document.querySelectorAll('.install-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const target = tab.dataset.tab;
+                document.querySelectorAll('.install-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.install-command').forEach(c => c.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(`tab-${target}`).classList.add('active');
+            });
+        });
+
+        // ---- Copy to clipboard ----
+        document.querySelectorAll('.copy-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const text = btn.dataset.copy;
+                try {
+                    await navigator.clipboard.writeText(text);
+                    const svg = btn.innerHTML;
+                    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+                    setTimeout(() => { btn.innerHTML = svg; }, 1500);
+                } catch (e) { /* fallback */ }
+            });
+        });
+
+        // ---- Header hide on scroll down, show on scroll up ----
+        (() => {
+            const header = document.querySelector('.site-header');
+            let lastY = 0;
+            const threshold = 10;
+
+            window.addEventListener('scroll', () => {
+                const y = window.scrollY;
+                if (y < 80) {
+                    header.classList.remove('hidden');
+                } else if (y - lastY > threshold) {
+                    header.classList.add('hidden');
+                } else if (lastY - y > threshold) {
+                    header.classList.remove('hidden');
+                }
+                lastY = y;
+            }, { passive: true });
+        })();
+
+        // ---- Scroll reveal animations ----
+        (() => {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.15 });
+
+            document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+        })();
+    </script>
+
+</body>
+</html>
