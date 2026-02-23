@@ -299,38 +299,27 @@
             stroke: #198754;
         }
 
-        /* Hero screenshot — extends to viewport right edge, cropped */
-        .hero-screenshot {
-            position: relative;
-            overflow: hidden;
-            min-height: 320px;
-            max-height: 520px;
-            width: calc(100% + max(0px, (100vw - var(--max-width)) / 2));
-            margin-right: calc(-1 * max(0px, (100vw - var(--max-width)) / 2));
+        /* Hero: single column, content only (app mock is below in own section) */
+        .hero-inner {
+            grid-template-columns: 1fr;
         }
 
-        .hero-screenshot-img {
-            width: 100%;
-            height: 100%;
-            min-height: 320px;
+        /* ========== App demo section (below hero, uses real app UI) ========== */
+        .app-demo-section {
+            padding: 0 32px 60px;
+        }
+
+        .app-demo-iframe {
             display: block;
-            object-fit: cover;
-            object-position: left center;
-            border: 5px solid #f6f7f9;
-            border-radius: var(--radius-lg);
-        }
-
-        .hero-screenshot-placeholder {
             width: 100%;
-            aspect-ratio: 4 / 3;
-            background: var(--color-surface);
-            border-radius: var(--radius-lg);
+            max-width: var(--max-width);
+            margin: 0 auto;
+            height: 560px;
+            min-height: 560px;
             border: 1px solid var(--color-border);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--color-text-secondary);
-            font-size: 14px;
+            border-radius: var(--radius-lg);
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+            background: var(--color-bg);
         }
 
         /* ========== Features Section ========== */
@@ -1071,7 +1060,7 @@
 
         /* Hero elements stagger */
         .hero-content.reveal { transition-delay: 0s; }
-        .hero-screenshot.reveal { transition-delay: 0.15s; }
+        .app-demo-section .app-demo-iframe.reveal { transition-delay: 0.12s; }
 
         /* CTA */
         .cta-section .reveal { transition-delay: 0.05s; }
@@ -1092,16 +1081,6 @@
                 font-size: 36px;
             }
 
-            .hero-screenshot {
-                order: -1;
-                min-height: 320px;
-                width: 100%;
-                margin-right: 0;
-            }
-
-            .hero-screenshot-img {
-                min-height: 320px;
-            }
         }
 
         @media (max-width: 768px) {
@@ -1121,9 +1100,13 @@
                 padding: 96px 20px 32px;
             }
 
-            .hero-screenshot {
-                width: 100%;
-                margin-right: 0;
+            .app-demo-section {
+                padding: 0 20px 40px;
+            }
+
+            .app-demo-iframe {
+                height: 480px;
+                min-height: 480px;
             }
 
             .hero-content h1 {
@@ -1221,11 +1204,12 @@
                     </div>
                 </div>
             </div>
-
-            <div class="hero-screenshot reveal">
-                <img class="hero-screenshot-img" src="images/hero-screenshot.png" alt="Markdown-OS editor with Contents sidebar, WYSIWYG preview, code block, table, and Mermaid diagram">
-            </div>
         </div>
+    </section>
+
+    <!-- ===== App demo (uses real app layout: sidebar, tabs, theme, TOC) ===== -->
+    <section class="app-demo-section">
+        <iframe src="demo-frame.html" class="app-demo-iframe reveal" title="Markdown-OS app demo" id="app-demo-iframe"></iframe>
     </section>
 
     <!-- ===== Features ===== -->
@@ -1501,7 +1485,8 @@
         });
 
         // ---- Syntax demo: copy button click + auto loop (press → Copied) ----
-        function runSyntaxCopyDemo(btn) {
+        // writeClipboard: only true on real user click; false for auto-demo to avoid permission prompt
+        function runSyntaxCopyDemo(btn, writeClipboard) {
             if (btn.dataset._copyT1) clearTimeout(Number(btn.dataset._copyT1));
             if (btn.dataset._copyT2) clearTimeout(Number(btn.dataset._copyT2));
             const body = btn.closest('.demo-syntax').querySelector('.demo-syntax-body');
@@ -1511,7 +1496,9 @@
                 btn.classList.remove('pressed');
                 btn.textContent = 'Copied';
                 btn.classList.add('copied');
-                try { navigator.clipboard.writeText(text); } catch (e) { /* ignore */ }
+                if (writeClipboard) {
+                    try { navigator.clipboard.writeText(text); } catch (e) { /* ignore */ }
+                }
                 const t2 = setTimeout(() => {
                     btn.textContent = 'Copy';
                     btn.classList.remove('copied');
@@ -1522,10 +1509,10 @@
             btn.dataset._copyT1 = String(t1);
         }
         document.querySelectorAll('.demo-syntax-copy').forEach(btn => {
-            btn.addEventListener('click', () => runSyntaxCopyDemo(btn));
+            btn.addEventListener('click', () => runSyntaxCopyDemo(btn, true));
             setTimeout(() => {
-                runSyntaxCopyDemo(btn);
-                setInterval(() => runSyntaxCopyDemo(btn), 4500);
+                runSyntaxCopyDemo(btn, false);
+                setInterval(() => runSyntaxCopyDemo(btn, false), 4500);
             }, 2200);
         });
 

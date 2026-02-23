@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Markdown-OS demo</title>
+  <link rel="stylesheet" href="../markdown_os/static/css/styles.css" />
+  <link rel="stylesheet" href="../markdown_os/static/css/themes.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" crossorigin="anonymous" />
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <style>
+    /* Demo-only: no loading banner, container always visible */
+    .loading-banner { display: none !important; }
+    #app-container { display: flex !important; }
+    html, body { overflow: auto; height: auto; min-height: 100%; }
+    .container { height: 560px; min-height: 560px; }
+    /* Prevent actual interaction */
+    .theme-dropdown-toggle { pointer-events: none; }
+    .file-tab { pointer-events: none; cursor: default; }
+    .tree-folder-header, .tree-file-link { pointer-events: none; cursor: default; }
+    .history-button { pointer-events: none; cursor: default; }
+    #toc a { pointer-events: none; cursor: default; }
+    /* Preview content: same typography as #wysiwyg-editor */
+    #demo-preview { color: var(--editor-text); line-height: 1.7; font-size: 16px; }
+    #demo-preview p { margin: 0 0 0.85em; }
+    #demo-preview h1, #demo-preview h2, #demo-preview h3, #demo-preview h4 { scroll-margin-top: 14px; }
+    #demo-preview pre { margin: 14px 0 20px; }
+    #demo-preview table { width: 100%; border-collapse: collapse; margin: 16px 0 20px; font-size: 15px; }
+    #demo-preview th, #demo-preview td { border: 1px solid var(--table-border); padding: 9px 14px; }
+    #demo-preview th { background: var(--table-header-bg); color: var(--table-header-text); font-weight: 600; }
+    #demo-preview tbody tr:nth-child(even) { background: var(--table-row-alt-bg); }
+    #demo-preview code { font-family: ui-monospace, monospace; }
+  </style>
+</head>
+<body>
+  <div id="app-loading" class="loading-banner">Loading...</div>
+  <div class="container" id="app-container">
+    <aside id="sidebar">
+      <div id="file-tree-container">
+        <button id="file-tree-toggle" class="sidebar-section-toggle" type="button" aria-expanded="true">
+          <svg class="toggle-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 2 8 6 4 10"></polyline></svg>
+          <span>Files</span>
+        </button>
+        <div id="file-tree-collapsible" class="sidebar-collapsible">
+          <div class="sidebar-header">
+            <input type="text" id="file-tree-search" placeholder="Search files..." class="file-tree-search" aria-label="Search files" />
+          </div>
+          <nav id="file-tree" role="tree">
+            <ul class="tree-root">
+              <li class="tree-file"><button type="button" class="tree-file-link" data-path="README.md">README.md</button></li>
+              <li class="tree-file"><button type="button" class="tree-file-link" data-path="CLAUDE.md">CLAUDE.md</button></li>
+              <li class="tree-folder">
+                <button type="button" class="tree-folder-header" data-path="docs" aria-expanded="true">
+                  <span class="folder-icon">▼</span>
+                  <span class="folder-name">docs</span>
+                </button>
+                <ul class="tree-children">
+                  <li class="tree-file"><button type="button" class="tree-file-link" data-path="docs/features/multi-user.md">multi-user.md</button></li>
+                  <li class="tree-file"><button type="button" class="tree-file-link active" data-path="docs/roadmap.md">roadmap.md</button></li>
+                </ul>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      </div>
+      <div id="toc-container">
+        <h3>Contents</h3>
+        <nav id="toc" role="navigation"></nav>
+      </div>
+    </aside>
+
+    <main id="main-content">
+      <div class="tab-nav">
+        <div class="undo-redo-group" aria-label="Edit history controls">
+          <button type="button" class="history-button" title="Undo" aria-label="Undo">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M3 8h12a6 6 0 0 1 0 12h-4"/><path d="m7 4l-1.154.877C3.95 6.318 3 7.039 3 8s.949 1.682 2.846 3.124L7 12"/></g></svg>
+          </button>
+          <button type="button" class="history-button" title="Redo" aria-label="Redo">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M21 8H9a6 6 0 0 0 0 12h4"/><path d="m17 4l1.154.877C20.05 6.318 21 7.039 21 8s-.949 1.682-2.846 3.124L17 12"/></g></svg>
+          </button>
+        </div>
+        <div id="current-file-path" class="current-file-path">
+          <span id="current-file-text">docs/roadmap.md</span>
+        </div>
+        <div class="tab-controls">
+          <div class="theme-dropdown" id="theme-dropdown">
+            <button class="theme-dropdown-toggle" type="button" aria-label="Select theme" aria-haspopup="listbox" aria-expanded="false">
+              <span class="theme-dots" id="theme-dots">
+                <span class="theme-dot" style="background:#f7f8fa;box-shadow:inset 0 0 0 1px rgba(0,0,0,.1)"></span>
+                <span class="theme-dot" style="background:#0f172a"></span>
+                <span class="theme-dot" style="background:#282a36"></span>
+                <span class="theme-dot" style="background:#eceff4;box-shadow:inset 0 0 0 1px rgba(0,0,0,.1)"></span>
+                <span class="theme-dot" style="background:#2e3440"></span>
+                <span class="theme-dot" style="background:#f5f5f5;box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)"></span>
+              </span>
+              <svg class="dropdown-chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <ul class="theme-dropdown-menu" id="theme-dropdown-menu" role="listbox" hidden></ul>
+          </div>
+          <span id="save-status" class="is-saved" aria-live="polite">Saved</span>
+        </div>
+      </div>
+
+      <div id="file-tabs-bar" class="file-tabs-bar" role="tablist" aria-label="Open files">
+        <button type="button" class="file-tab" role="tab"><span class="file-tab-name">README.md</span></button>
+        <button type="button" class="file-tab" role="tab"><span class="file-tab-name">CLAUDE.md</span></button>
+        <button type="button" class="file-tab active" role="tab"><span class="file-tab-name">docs/roadmap.md</span></button>
+        <button type="button" class="file-tab" role="tab"><span class="file-tab-name">docs/features/multi-user.md</span></button>
+      </div>
+
+      <div class="view-area">
+        <section id="editor-container" class="view active">
+          <div class="wysiwyg-wrapper">
+            <div id="demo-preview" class="demo-preview-content"></div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script>
+(function () {
+  const previewEl = document.getElementById('demo-preview');
+  const tocEl = document.getElementById('toc');
+  if (!previewEl || !tocEl) return;
+
+  const demoMd = `# Markdown-OS Showcase
+
+Welcome to **Markdown-OS**. This file demonstrates editor capabilities.
+
+## Quick Start
+
+1. Switch between **Edit** and **Preview** tabs.
+2. Change some text in Edit mode.
+3. Wait one second and observe save status updates.
+
+### Notes
+
+The sidebar table of contents is generated from headings. Code blocks include language labels and copy actions.
+
+## Text Formatting
+
+Regular text can be mixed with **bold**, _italic_, \`inline code\`, and ~strikethrough~.
+
+## Headings
+
+### Level 3 Heading
+
+#### Level 4 Heading
+
+Heading depth influences TOC indentation and navigation.
+
+## Code Block
+
+\`\`\`python
+from pathlib import Path
+
+def summarize_markdown(path: Path) -> dict[str, int]:
+    """Return quick counters for markdown diagnostics."""
+    text = path.read_text(encoding="utf-8")
+    lines = text.splitlines()
+    return {
+        "line_count": len(lines),
+        "heading_count": sum(1 for line in lines if line.startswith("#")),
+    }
+\`\`\`
+
+## Mermaid Diagram
+
+\`\`\`mermaid
+flowchart TD
+    Start([Start]) --> Input[Open markdown file]
+    Input --> Edit[Edit content]
+    Edit --> Save{Auto-save triggered?}
+    Save -->|Yes| Persist[Write to disk]
+    Save -->|No| Wait[Keep typing]
+    Persist --> Render[Refresh preview]
+    Wait --> Edit
+    Render --> Done([Done])
+\`\`\`
+
+## Table
+
+| Feature | Status | Notes |
+| --- | --- | --- |
+| Live preview | Enabled | Updates while typing |
+| Auto-save | Enabled | Debounced |
+| Mermaid | Enabled | Rendered in preview |
+
+## Lists
+
+- Dash item one
+- Dash item two
+  - Nested child A
+  - Nested child B
+- Dash item three
+`;
+
+  if (window.marked) {
+    window.marked.setOptions({ gfm: true, headerIds: true });
+    previewEl.innerHTML = window.marked.parse(demoMd);
+  }
+
+  // TOC from h2, h3, h4
+  const headings = previewEl.querySelectorAll('h2, h3, h4');
+  const rootList = document.createElement('ul');
+  rootList.className = 'root-list';
+  let listStack = [rootList];
+  let currentLevel = 1;
+  headings.forEach(function (h) {
+    const level = parseInt(h.tagName.slice(1), 10);
+    const id = h.id || ('h-' + Math.random().toString(36).slice(2));
+    if (!h.id) h.id = id;
+    const text = h.textContent || '';
+    while (level > currentLevel && listStack.length > 0) {
+      const nested = document.createElement('ul');
+      listStack[listStack.length - 1].appendChild(nested);
+      listStack.push(nested);
+      currentLevel++;
+    }
+    while (level < currentLevel && listStack.length > 1) {
+      listStack.pop();
+      currentLevel--;
+    }
+    const li = document.createElement('li');
+    const a = document.createElement('a');
+    a.href = '#' + id;
+    a.textContent = text;
+    a.addEventListener('click', function (e) { e.preventDefault(); });
+    li.appendChild(a);
+    listStack[listStack.length - 1].appendChild(li);
+    currentLevel = level;
+  });
+  tocEl.appendChild(rootList);
+
+  // Code blocks: wrap + hljs; mermaid blocks
+  const preList = Array.from(previewEl.querySelectorAll('pre > code')).map(function (c) { return c.parentElement; }).filter(Boolean);
+  preList.forEach(function (pre) {
+    const codeEl = pre.querySelector('code');
+    if (!codeEl) return;
+    const isMermaid = codeEl.classList.contains('language-mermaid') || codeEl.classList.contains('lang-mermaid');
+    if (isMermaid) {
+      const container = document.createElement('div');
+      container.className = 'mermaid-container';
+      const inner = document.createElement('div');
+      inner.className = 'mermaid-canvas';
+      const mermaidDiv = document.createElement('div');
+      mermaidDiv.className = 'mermaid';
+      mermaidDiv.textContent = codeEl.textContent || '';
+      inner.appendChild(mermaidDiv);
+      container.appendChild(inner);
+      pre.replaceWith(container);
+      return;
+    }
+    const wrap = document.createElement('div');
+    wrap.className = 'code-block';
+    const header = document.createElement('div');
+    header.className = 'code-block-header';
+    const lang = (codeEl.className.match(/language-(\w+)/) || [])[1] || 'text';
+    header.innerHTML = '<span class="code-language-label">' + lang + '</span>';
+    const parent = pre.parentElement;
+    parent.replaceChild(wrap, pre);
+    wrap.appendChild(header);
+    wrap.appendChild(pre);
+    if (window.hljs && !codeEl.classList.contains('hljs')) {
+      window.hljs.highlightElement(codeEl);
+    }
+  });
+
+  if (window.mermaid) {
+    window.mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose' });
+    window.mermaid.run({ querySelector: '.mermaid-container .mermaid', suppressErrors: true }).catch(function () {});
+  }
+
+})();
+  </script>
+</body>
+</html>
