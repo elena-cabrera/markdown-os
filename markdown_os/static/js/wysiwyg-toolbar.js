@@ -1,5 +1,28 @@
 (() => {
+  /**
+   * Returns the heading level (1–6) if the selection is inside a heading within the editor, otherwise 0.
+   *
+   * @returns {number}
+   */
+  function getCurrentHeadingLevel() {
+    const editor = document.getElementById("wysiwyg-editor");
+    const selection = window.getSelection();
+    if (!editor || !selection || selection.rangeCount === 0) {
+      return 0;
+    }
+    let node = selection.anchorNode;
+    while (node && node !== editor) {
+      if (node.nodeType === Node.ELEMENT_NODE && /^H[1-6]$/.test(node.tagName)) {
+        return Number(node.tagName[1]);
+      }
+      node = node.parentElement;
+    }
+    return 0;
+  }
+
   function updateInlineButtonState() {
+    const headingLevel = getCurrentHeadingLevel();
+
     document.querySelectorAll(".toolbar-button[data-command]").forEach((button) => {
       const command = button.dataset.command;
       if (!command) {
@@ -8,11 +31,14 @@
 
       let active = false;
       if (command === "bold") {
-        active = document.queryCommandState("bold");
+        active = headingLevel === 0 && document.queryCommandState("bold");
       } else if (command === "italic") {
         active = document.queryCommandState("italic");
       } else if (command === "strike") {
         active = document.queryCommandState("strikeThrough");
+      } else if (command === "h1" || command === "h2" || command === "h3") {
+        const level = command === "h1" ? 1 : command === "h2" ? 2 : 3;
+        active = headingLevel === level;
       } else if (command === "bulletList") {
         active = document.queryCommandState("insertUnorderedList");
       } else if (command === "orderedList") {
