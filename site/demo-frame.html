@@ -16,12 +16,8 @@
     #app-container { display: flex !important; }
     html, body { overflow: auto; height: auto; min-height: 100%; }
     .container { height: 560px; min-height: 560px; }
-    /* Prevent actual interaction */
-    .theme-dropdown-toggle { pointer-events: none; }
-    .file-tab { pointer-events: none; cursor: default; }
-    .tree-folder-header, .tree-file-link { pointer-events: none; cursor: default; }
-    .history-button { pointer-events: none; cursor: default; }
-    #toc a { pointer-events: none; cursor: default; }
+    /* Demo: no actions on click, but keep pointer + hover */
+    .theme-dropdown-toggle, .file-tab, .file-tab-close, .tree-folder-header, .tree-file-link, .history-button, .toolbar-button, .format-menu-item, #toc a, .copy-button, .block-edit-trigger, .mermaid-fullscreen-trigger, .mermaid-zoom-btn { cursor: pointer; }
     /* Preview content: same typography as #wysiwyg-editor */
     #demo-preview { color: var(--editor-text); line-height: 1.7; font-size: 16px; }
     #demo-preview p { margin: 0 0 0.85em; }
@@ -86,14 +82,11 @@
         </div>
         <div class="tab-controls">
           <div class="theme-dropdown" id="theme-dropdown">
-            <button class="theme-dropdown-toggle" type="button" aria-label="Select theme" aria-haspopup="listbox" aria-expanded="false">
+            <button class="theme-dropdown-toggle" type="button" aria-label="Select theme (current: Default Light)" aria-haspopup="listbox" aria-expanded="false" title="Theme: Default Light">
               <span class="theme-dots" id="theme-dots">
-                <span class="theme-dot" style="background:#f7f8fa;box-shadow:inset 0 0 0 1px rgba(0,0,0,.1)"></span>
-                <span class="theme-dot" style="background:#0f172a"></span>
-                <span class="theme-dot" style="background:#282a36"></span>
-                <span class="theme-dot" style="background:#eceff4;box-shadow:inset 0 0 0 1px rgba(0,0,0,.1)"></span>
-                <span class="theme-dot" style="background:#2e3440"></span>
-                <span class="theme-dot" style="background:#f5f5f5;box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)"></span>
+                <span class="theme-dot" style="background:#f7f8fa"></span>
+                <span class="theme-dot" style="background:#17233b"></span>
+                <span class="theme-dot" style="background:#2563eb"></span>
               </span>
               <svg class="dropdown-chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
             </button>
@@ -104,10 +97,10 @@
       </div>
 
       <div id="file-tabs-bar" class="file-tabs-bar" role="tablist" aria-label="Open files">
-        <button type="button" class="file-tab" role="tab"><span class="file-tab-name">README.md</span></button>
-        <button type="button" class="file-tab" role="tab"><span class="file-tab-name">CLAUDE.md</span></button>
-        <button type="button" class="file-tab active" role="tab"><span class="file-tab-name">docs/roadmap.md</span></button>
-        <button type="button" class="file-tab" role="tab"><span class="file-tab-name">docs/features/multi-user.md</span></button>
+        <button type="button" class="file-tab" role="tab"><span class="file-tab-name">README.md</span><span class="file-tab-close" role="button" aria-label="Close README.md" title="Close tab">×</span></button>
+        <button type="button" class="file-tab" role="tab"><span class="file-tab-name">CLAUDE.md</span><span class="file-tab-close" role="button" aria-label="Close CLAUDE.md" title="Close tab">×</span></button>
+        <button type="button" class="file-tab active" role="tab"><span class="file-tab-name">docs/roadmap.md</span><span class="file-tab-close" role="button" aria-label="Close docs/roadmap.md" title="Close tab">×</span></button>
+        <button type="button" class="file-tab" role="tab"><span class="file-tab-name">docs/features/multi-user.md</span><span class="file-tab-close" role="button" aria-label="Close docs/features/multi-user.md" title="Close tab">×</span></button>
       </div>
 
       <div class="view-area">
@@ -116,6 +109,57 @@
             <div id="demo-preview" class="demo-preview-content"></div>
           </div>
         </section>
+
+        <div id="floating-toolbar" class="floating-toolbar" role="toolbar" aria-label="Formatting toolbar">
+          <div class="toolbar-group">
+            <button class="toolbar-button" type="button" data-command="bold" title="Bold (Ctrl+B)" aria-label="Bold">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M5 6c0-1.414 0-2.121.44-2.56C5.878 3 6.585 3 8 3h4.579C15.02 3 17 5.015 17 7.5S15.02 12 12.579 12H5z" clip-rule="evenodd"/><path d="M12.429 12h1.238C16.06 12 18 14.015 18 16.5S16.06 21 13.667 21H8c-1.414 0-2.121 0-2.56-.44C5 20.122 5 19.415 5 18v-6"/></g></svg>
+            </button>
+            <button class="toolbar-button" type="button" data-command="italic" title="Italic (Ctrl+I)" aria-label="Italic">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="M12 4h7M8 20l8-16M5 20h7"/></svg>
+            </button>
+            <button class="toolbar-button" type="button" data-command="strike" title="Strikethrough (Ctrl+Shift+X)" aria-label="Strikethrough">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"><path stroke-linejoin="round" d="M4 12h16"/><path d="M17.5 7.667C17.5 5.089 15.038 3 12 3S6.5 5.09 6.5 7.667c0 .486.053.93.167 1.333M6 16.333C6 18.911 8.686 21 12 21s6-1.333 6-4.667c0-2.393-1.03-3.755-3.092-4.333"/></g></svg>
+            </button>
+          </div>
+          <div class="toolbar-divider" aria-hidden="true"></div>
+          <div class="toolbar-group">
+            <button class="toolbar-button" type="button" data-command="h1" title="Heading 1 (Ctrl+Alt+1)" aria-label="Heading 1">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 5v14M14 5v14m3 0h1.5m1.5 0h-1.5m0 0v-8L17 12M4 12h10"/></svg>
+            </button>
+            <button class="toolbar-button" type="button" data-command="h2" title="Heading 2 (Ctrl+Alt+2)" aria-label="Heading 2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3.5 5v14m10-14v14m7 0h-4v-.31c0-.438 0-.657.087-.852c.086-.194.249-.34.575-.634l2.605-2.344c.467-.42.733-1.018.733-1.646V13a2 2 0 1 0-4 0v.4M3.5 12h10"/></svg>
+            </button>
+            <button class="toolbar-button" type="button" data-command="h3" title="Heading 3 (Ctrl+Alt+3)" aria-label="Heading 3">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3.5 5v14m10-14v14m3-2a2 2 0 1 0 2-2a2 2 0 1 0-2-2m-13-1h10"/></svg>
+            </button>
+          </div>
+          <div class="toolbar-divider" aria-hidden="true"></div>
+          <div class="toolbar-group">
+            <button class="toolbar-button" type="button" data-command="bulletList" title="Bulleted list (Ctrl+Shift+8)" aria-label="Bulleted list">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round"><path stroke-width="1.5" d="M8 5h12"/><path stroke-linejoin="round" stroke-width="2" d="M4 5h.009M4 12h.009M4 19h.009"/><path stroke-width="1.5" d="M8 12h12M8 19h12"/></g></svg>
+            </button>
+            <button class="toolbar-button" type="button" data-command="orderedList" title="Numbered list (Ctrl+Shift+7)" aria-label="Numbered list">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"><path d="M11 6h10m-10 6h10m-10 6h10"/><path stroke-linejoin="round" d="M3 15h1.5c.279 0 .418 0 .534.023a1.2 1.2 0 0 1 .943.943C6 16.082 6 16.22 6 16.5s0 .418-.023.534a1.2 1.2 0 0 1-.943.943C4.918 18 4.78 18 4.5 18s-.418 0-.534.023a1.2 1.2 0 0 0-.943.943C3 19.082 3 19.22 3 19.5v.9c0 .283 0 .424.088.512s.23.088.512.088H6M3 3h1.2a.3.3 0 0 1 .3.3V9m0 0H3m1.5 0H6"/></g></svg>
+            </button>
+            <button class="toolbar-button" type="button" data-command="taskList" title="Task list" aria-label="Task list">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"><path d="M11 6h10m-10 6h10m-10 6h10"/><path stroke-linejoin="round" d="M3 7.393S4 8.045 4.5 9C4.5 9 6 5.25 8 4M3 18.393S4 19.045 4.5 20c0 0 1.5-3.75 3.5-5"/></g></svg>
+            </button>
+            <button class="toolbar-button" type="button" data-command="codeBlock" title="Code block" aria-label="Code block">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m16 10l1.227 1.057c.515.445.773.667.773.943s-.258.498-.773.943L16 14m-8-4l-1.227 1.057C6.258 11.502 6 11.724 6 12s.258.498.773.943L8 14m5-5l-2 6"/><path d="M2.5 12c0-4.478 0-6.718 1.391-8.109S7.521 2.5 12 2.5c4.478 0 6.718 0 8.109 1.391S21.5 7.521 21.5 12c0 4.478 0 6.718-1.391 8.109S16.479 21.5 12 21.5c-4.478 0-6.718 0-8.109-1.391S2.5 16.479 2.5 12Z"/></g></svg>
+            </button>
+            <button class="toolbar-button" type="button" data-command="link" title="Link (Ctrl+K)" aria-label="Link">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"><path d="M10 13.229q.213.349.504.654a3.56 3.56 0 0 0 4.454.59q.391-.24.73-.59l3.239-3.372c1.43-1.49 1.43-3.904 0-5.394a3.564 3.564 0 0 0-5.183 0l-.714.743"/><path d="m10.97 18.14l-.713.743a3.564 3.564 0 0 1-5.184 0c-1.43-1.49-1.43-3.905 0-5.394l3.24-3.372a3.564 3.564 0 0 1 5.183 0q.291.305.504.654"/></g></svg>
+            </button>
+          </div>
+          <div class="toolbar-divider" aria-hidden="true"></div>
+          <div class="toolbar-group format-group">
+            <button class="toolbar-button toolbar-button-label" type="button" aria-haspopup="menu" aria-expanded="false" title="Insert block">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.891 20.109C2.5 18.717 2.5 16.479 2.5 12c0-4.478 0-6.718 1.391-8.109S7.521 2.5 12 2.5c4.478 0 6.718 0 8.109 1.391S21.5 7.521 21.5 12c0 4.478 0 6.718-1.391 8.109S16.479 21.5 12 21.5c-4.478 0-6.718 0-8.109-1.391"/><path d="M2.5 9h19m-19 4h19m-19 4h19"/><path stroke-linecap="round" d="M12 21.5V9"/></g></svg>
+              <span>Format</span>
+            </button>
+          </div>
+        </div>
       </div>
     </main>
   </div>
@@ -244,12 +288,29 @@ flowchart TD
     if (isMermaid) {
       const container = document.createElement('div');
       container.className = 'mermaid-container';
+      const toolbar = document.createElement('div');
+      toolbar.className = 'mermaid-inline-toolbar';
+      const editBtn = document.createElement('button');
+      editBtn.type = 'button';
+      editBtn.className = 'block-edit-trigger action-icon-button';
+      editBtn.title = 'Edit diagram';
+      editBtn.setAttribute('aria-label', 'Edit diagram');
+      editBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3z"></path></svg>';
+      const fullscreenBtn = document.createElement('button');
+      fullscreenBtn.type = 'button';
+      fullscreenBtn.className = 'mermaid-fullscreen-trigger action-icon-button';
+      fullscreenBtn.title = 'View diagram fullscreen';
+      fullscreenBtn.setAttribute('aria-label', 'View diagram fullscreen');
+      fullscreenBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H3v5M21 8V3h-5M16 21h5v-5M3 16v5h5"></path></svg>';
+      toolbar.appendChild(editBtn);
+      toolbar.appendChild(fullscreenBtn);
       const inner = document.createElement('div');
       inner.className = 'mermaid-canvas';
       const mermaidDiv = document.createElement('div');
       mermaidDiv.className = 'mermaid';
       mermaidDiv.textContent = codeEl.textContent || '';
       inner.appendChild(mermaidDiv);
+      container.appendChild(toolbar);
       container.appendChild(inner);
       pre.replaceWith(container);
       return;
@@ -259,11 +320,31 @@ flowchart TD
     const header = document.createElement('div');
     header.className = 'code-block-header';
     const lang = (codeEl.className.match(/language-(\w+)/) || [])[1] || 'text';
+    const actions = document.createElement('div');
+    actions.className = 'code-block-actions';
+    const editBtn = document.createElement('button');
+    editBtn.type = 'button';
+    editBtn.className = 'block-edit-trigger action-icon-button';
+    editBtn.title = 'Edit code block';
+    editBtn.setAttribute('aria-label', 'Edit code block');
+    editBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3z"></path></svg>';
+    const copyBtn = document.createElement('button');
+    copyBtn.type = 'button';
+    copyBtn.className = 'copy-button action-icon-button';
+    copyBtn.title = 'Copy code';
+    copyBtn.setAttribute('aria-label', 'Copy code');
+    copyBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15V6a2 2 0 0 1 2-2h9"></path></svg>';
+    actions.appendChild(editBtn);
+    actions.appendChild(copyBtn);
     header.innerHTML = '<span class="code-language-label">' + lang + '</span>';
+    header.appendChild(actions);
+    const content = document.createElement('div');
+    content.className = 'code-block-content';
     const parent = pre.parentElement;
     parent.replaceChild(wrap, pre);
     wrap.appendChild(header);
-    wrap.appendChild(pre);
+    wrap.appendChild(content);
+    content.appendChild(pre);
     if (window.hljs && !codeEl.classList.contains('hljs')) {
       window.hljs.highlightElement(codeEl);
     }
