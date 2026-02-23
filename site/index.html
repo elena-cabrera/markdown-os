@@ -210,7 +210,6 @@
             color: #353538;
             line-height: 1.6;
             margin-bottom: 28px;
-            max-width: 440px;
         }
 
         .hero-cta {
@@ -480,60 +479,70 @@
             50%      { stroke-opacity: 0.6; }
         }
 
-        /* --- 2. Task list: checkboxes animate --- */
+        /* --- 2. Task list: match app (styles.css #wysiwyg-editor .task-list*) --- */
         .demo-tasks {
             background: #fff;
             padding: 16px 20px;
             display: flex;
             flex-direction: column;
             justify-content: center;
-            gap: 8px;
+            gap: 6px;
             font-family: var(--font-sans);
-            font-size: 13px;
-            color: #333;
+            font-size: 14px;
+            color: var(--color-text);
         }
 
         .demo-task {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
             cursor: pointer;
+            list-style: none;
+            margin: 0.35em 0;
+            padding-left: 0;
         }
 
         .demo-checkbox {
-            width: 15px;
-            height: 15px;
-            border-radius: 3px;
-            border: 1.5px solid #ccc;
+            width: 1em;
+            height: 1em;
+            border-radius: 4px;
+            border: 2px solid var(--color-border);
+            background: #fff;
             flex-shrink: 0;
             position: relative;
-            transition: all 0.3s ease;
+            transition: border-color 0.15s ease, background-color 0.15s ease;
+        }
+
+        .demo-task:hover .demo-checkbox {
+            border-color: #2563eb;
+            background: #dbeafe;
         }
 
         .demo-checkbox.checked {
-            background: #1a1a1a;
-            border-color: #1a1a1a;
+            border-color: #2563eb;
+            background: #2563eb;
         }
 
         .demo-checkbox.checked::after {
             content: '';
             position: absolute;
-            left: 4px;
-            top: 1px;
-            width: 4px;
-            height: 8px;
-            border: solid white;
-            border-width: 0 1.5px 1.5px 0;
+            left: 50%;
+            top: 50%;
+            width: 0.28em;
+            height: 0.52em;
+            margin-left: -0.2em;
+            margin-top: -0.36em;
+            border: solid #fff;
+            border-width: 0 2px 2px 0;
             transform: rotate(45deg);
         }
 
         .demo-task-text {
-            transition: all 0.3s ease;
+            transition: color 0.15s ease;
         }
 
         .demo-task-text.done {
-            text-decoration: line-through;
-            color: #aaa;
+            color: var(--color-text-secondary);
         }
 
         /* --- 3. Syntax highlighting: code typing (light theme) --- */
@@ -1102,11 +1111,21 @@
 
             .app-demo-section {
                 padding: 0 20px 40px;
+                position: relative;
+                overflow: hidden;
+                height: calc(560px * (100vw - 40px) / 1120);
             }
 
             .app-demo-iframe {
-                height: 480px;
-                min-height: 480px;
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 1120px;
+                height: 560px;
+                max-width: none;
+                margin: 0;
+                transform: scale(calc((100vw - 40px) / 1120));
+                transform-origin: top left;
             }
 
             .hero-content h1 {
@@ -1256,8 +1275,8 @@
                 <div class="feature-card-img">
                     <div class="feature-demo demo-tasks">
                         <div class="demo-task">
-                            <div class="demo-checkbox"></div>
-                            <span class="demo-task-text">Set up FastAPI server</span>
+                            <div class="demo-checkbox checked"><span style="display:none"></span></div>
+                            <span class="demo-task-text done">Set up FastAPI server</span>
                         </div>
                         <div class="demo-task">
                             <div class="demo-checkbox checked"><span style="display:none"></span></div>

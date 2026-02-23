@@ -28,6 +28,21 @@
     #demo-preview th { background: var(--table-header-bg); color: var(--table-header-text); font-weight: 600; }
     #demo-preview tbody tr:nth-child(even) { background: var(--table-row-alt-bg); }
     #demo-preview code { font-family: ui-monospace, monospace; }
+    /* Task list: no bullets, match app layout (styles.css #wysiwyg-editor .task-list*) */
+    #demo-preview ul:has(li input[type="checkbox"]) { list-style: none; padding-left: 0; margin: 0.2em 0; }
+    #demo-preview ul:has(li input[type="checkbox"]) li { list-style: none; position: relative; padding-left: 1.8em; margin: 0.35em 0; }
+    #demo-preview ul:has(li input[type="checkbox"]) li input[type="checkbox"] {
+      position: absolute; left: 0; top: 0.35em; width: 1em; height: 1em; margin: 0;
+      border: 2px solid var(--border); border-radius: 4px; background: var(--panel-bg);
+      appearance: none; -webkit-appearance: none; display: grid; place-content: center;
+    }
+    #demo-preview ul:has(li input[type="checkbox"]) li input[type="checkbox"]:checked {
+      border-color: var(--accent); background: var(--accent);
+    }
+    #demo-preview ul:has(li input[type="checkbox"]) li input[type="checkbox"]:checked::before {
+      content: ""; width: 0.28em; height: 0.52em; border: solid #fff; border-width: 0 2px 2px 0;
+      transform: rotate(45deg) translate(-5%, -5%);
+    }
   </style>
 </head>
 <body>
@@ -170,76 +185,86 @@
   const tocEl = document.getElementById('toc');
   if (!previewEl || !tocEl) return;
 
-  const demoMd = `# Markdown-OS Showcase
+  const demoMd = `# Multi-user support
 
-Welcome to **Markdown-OS**. This file demonstrates editor capabilities.
+Roadmap for adding **real-time collaboration** so multiple users can edit the same markdown file with live sync and conflict handling.
 
-## Quick Start
+## Overview
 
-1. Switch between **Edit** and **Preview** tabs.
-2. Change some text in Edit mode.
-3. Wait one second and observe save status updates.
+Multi-user support will let teams work on the same document from different browsers. Edits are synced over WebSockets; the server becomes the source of truth and broadcasts changes to all connected clients.
 
-### Notes
+## Goals
 
-The sidebar table of contents is generated from headings. Code blocks include language labels and copy actions.
+- **Live presence**: See who else has the file open (optional cursors or names).
+- **Operational transform or CRDT**: Resolve concurrent edits without losing data.
+- **Conflict UI**: When automatic merge is not possible, prompt the user (e.g. "Save mine" / "Take theirs" / "Merge manually").
 
-## Text Formatting
+## Architecture
 
-Regular text can be mixed with **bold**, _italic_, \`inline code\`, and ~strikethrough~.
+The server holds the canonical content per file. Clients open a WebSocket per file (or per session), send patches or full replaces on save, and receive broadcast updates. External file changes (e.g. from git) continue to trigger the existing "file modified externally" flow.
 
-## Headings
-
-### Level 3 Heading
-
-#### Level 4 Heading
-
-Heading depth influences TOC indentation and navigation.
-
-## Code Block
-
-\`\`\`python
-from pathlib import Path
-
-def summarize_markdown(path: Path) -> dict[str, int]:
-    """Return quick counters for markdown diagnostics."""
-    text = path.read_text(encoding="utf-8")
-    lines = text.splitlines()
-    return {
-        "line_count": len(lines),
-        "heading_count": sum(1 for line in lines if line.startswith("#")),
-    }
-\`\`\`
-
-## Mermaid Diagram
+### Sync sequence
 
 \`\`\`mermaid
-flowchart TD
-    Start([Start]) --> Input[Open markdown file]
-    Input --> Edit[Edit content]
-    Edit --> Save{Auto-save triggered?}
-    Save -->|Yes| Persist[Write to disk]
-    Save -->|No| Wait[Keep typing]
-    Persist --> Render[Refresh preview]
-    Wait --> Edit
-    Render --> Done([Done])
+sequenceDiagram
+    participant UserA
+    participant BrowserA
+    participant Server
+    participant BrowserB
+    participant UserB
+
+    UserA->>BrowserA: Edit content
+    BrowserA->>Server: PATCH /api/sync (delta)
+    Server->>Server: Apply & persist
+    Server->>BrowserB: WebSocket: doc updated
+    BrowserB->>UserB: Refresh / merge view
+
+    UserB->>BrowserB: Edit content
+    BrowserB->>Server: PATCH /api/sync (delta)
+    Server->>Server: Apply & persist
+    Server->>BrowserA: WebSocket: doc updated
+    BrowserA->>UserA: Refresh / merge view
 \`\`\`
 
-## Table
+## Implementation tasks
 
-| Feature | Status | Notes |
+- [x] Design patch format (e.g. line-based or OT/CRDT).
+- [x] Add WebSocket channel per file (or per workspace) for sync.
+- [x] Implement server-side apply + broadcast on received patches.
+- [ ] Add client-side merge (or conflict modal) when receiving remote changes.
+- [ ] Optional: presence (list of connected users) and basic cursor/selection sync.
+- [ ] Docs and E2E tests for multi-user flows.
+
+## Example API
+
+Proposed sync endpoint and payload shape (to be refined):
+
+\`\`\`python
+# POST /api/sync
+# Body: { "file": "docs/roadmap.md", "base_version": 3, "patch": [...] }
+# Response: { "version": 4, "content": "..." } or 409 Conflict
+
+from dataclasses import dataclass
+
+@dataclass
+class SyncRequest:
+    file: str
+    base_version: int
+    patch: list[dict]  # e.g. [{"op": "replace", "line": 5, "text": "new line"}]
+
+def apply_patch(content: str, patch: list[dict], base_version: int) -> tuple[str, int]:
+    """Apply patch to content; return (new_content, new_version). Raises on conflict."""
+    # Resolve against base_version; if current != base_version, return 409.
+    ...
+\`\`\`
+
+## Timeline
+
+| Phase | Scope | Target |
 | --- | --- | --- |
-| Live preview | Enabled | Updates while typing |
-| Auto-save | Enabled | Debounced |
-| Mermaid | Enabled | Rendered in preview |
-
-## Lists
-
-- Dash item one
-- Dash item two
-  - Nested child A
-  - Nested child B
-- Dash item three
+| 1 | Patch format + single-file sync | Next quarter |
+| 2 | Conflict UI + presence | Following |
+| 3 | Cursor/selection (optional) | Backlog |
 `;
 
   if (window.marked) {
