@@ -1310,8 +1310,18 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 }
 
 .mermaid-canvas .mermaid-zoom-controls {
+  position: absolute;
   bottom: 10px;
   right: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.mermaid-canvas .mermaid-zoom-controls .mermaid-zoom-btn {
+  pointer-events: auto;
 }
 
 .mermaid-zoom-btn {
@@ -1334,6 +1344,7 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 .mermaid-zoom-btn svg {
   width: 14px;
   height: 14px;
+  pointer-events: none;
 }
 
 .mermaid-zoom-btn:hover {
