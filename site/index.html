@@ -1598,8 +1598,12 @@
             const iframe = document.querySelector('.app-demo-iframe');
             if (!iframe) return;
             function updateScale() {
-                if (window.innerWidth <= 768) {
-                    iframe.style.setProperty('--demo-scale', (window.innerWidth - 40) / 1120);
+                // Use clientWidth (layout viewport) instead of innerWidth (visual viewport).
+                // On iOS Safari, innerWidth shrinks when pinch-zooming and triggers resize,
+                // which would incorrectly scale the demo down as the user zooms in.
+                const layoutWidth = document.documentElement.clientWidth;
+                if (layoutWidth <= 768) {
+                    iframe.style.setProperty('--demo-scale', (layoutWidth - 40) / 1120);
                 } else {
                     iframe.style.removeProperty('--demo-scale');
                 }
