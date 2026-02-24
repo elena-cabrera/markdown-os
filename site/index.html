@@ -1113,19 +1113,24 @@
                 padding: 0 20px 40px;
                 position: relative;
                 overflow: hidden;
-                height: calc(560px * (100vw - 40px) / 1120);
+                height: calc(560 * (100vw - 40px) / 1120);
             }
 
             .app-demo-iframe {
                 position: absolute;
-                left: 0;
+                left: 20px;
                 top: 0;
                 width: 1120px;
                 height: 560px;
                 max-width: none;
                 margin: 0;
-                transform: scale(calc((100vw - 40px) / 1120));
+                transform: scale(var(--demo-scale, 0.3));
                 transform-origin: top left;
+            }
+
+            .app-demo-iframe.reveal,
+            .app-demo-iframe.reveal.visible {
+                transform: scale(var(--demo-scale, 0.3));
             }
 
             .hero-content h1 {
@@ -1586,6 +1591,21 @@
                 }
                 lastY = y;
             }, { passive: true });
+        })();
+
+        // ---- Mobile demo iframe scale (CSS calc can't produce unitless for scale()) ----
+        (() => {
+            const iframe = document.querySelector('.app-demo-iframe');
+            if (!iframe) return;
+            function updateScale() {
+                if (window.innerWidth <= 768) {
+                    iframe.style.setProperty('--demo-scale', (window.innerWidth - 40) / 1120);
+                } else {
+                    iframe.style.removeProperty('--demo-scale');
+                }
+            }
+            updateScale();
+            window.addEventListener('resize', updateScale);
         })();
 
         // ---- Scroll reveal animations ----
