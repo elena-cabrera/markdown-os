@@ -10,14 +10,13 @@
 
 **Is this publishable today? No -- but it's close.**
 
-The core architecture is sound. The backend is clean, well-typed, and follows good patterns (atomic writes, file locking, proper path validation). The CLI is polished. The WYSIWYG editor works well for a v0.3 product. However, there are **security vulnerabilities that must be fixed before public release**, significant code duplication in the frontend that will make maintenance painful, and gaps in test coverage for critical paths. The README roadmap lists features that are already implemented (image paste, KaTeX math), which looks sloppy.
+The core architecture is sound. The backend is clean, well-typed, and follows good patterns (atomic writes, file locking, proper path validation). The CLI is polished. The WYSIWYG editor works well for a v0.3 product. However, there are **security vulnerabilities that must be fixed before public release**, significant code duplication in the frontend that will make maintenance painful, and gaps in test coverage for critical paths.
 
 The biggest concerns in order:
 1. **XSS vectors** in markdown rendering (no HTML sanitization, Mermaid `securityLevel: "loose"`)
 2. **Unpinned CDN dependency** (marked.js loaded without version lock)
 3. **Platform lock-in** (POSIX `fcntl` locks make this Linux/macOS only with no Windows fallback or clear documentation)
-4. **Stale internal files tracked in git** (`.codex/`, `.cursor/`, `landing.html`, `docs/plans/`)
-5. **~500+ lines of duplicated frontend code** between `wysiwyg.js` and `markdown.js`
+4. **~500+ lines of duplicated frontend code** between `wysiwyg.js` and `markdown.js`
 
 ---
 
@@ -110,32 +109,7 @@ function escAttr(str) { return str.replace(/["&<>]/g, c => ({'\"':'&quot;','&':'
 
 ### ORANGE -- Important (should fix soon)
 
-#### 7. Internal/editor config files tracked in git
-
-**What:** These files are checked into the repository:
-- `.codex/environments/` -- 4 Codex environment config files (references `docs/roadmap.md` which doesn't exist)
-- `.cursor/worktrees.json` -- Cursor IDE config (`{"setup-worktree": ["npm install"]}` -- incorrect for a Python project)
-- `landing.html` -- Appears to be a superseded version of `site/index.html`
-- `docs/plans/` -- Empty plans directory
-
-**Why it matters:** These are personal development environment artifacts. They add noise to the repo, confuse contributors, and make the project look unpolished. The Cursor config is actively misleading (suggests npm).
-
-**Fix:** Add `.codex/`, `.cursor/`, `docs/plans/` to `.gitignore` and remove them from tracking:
-```bash
-git rm -r --cached .codex .cursor docs/plans landing.html
-```
-
-#### 8. README roadmap lists already-implemented features
-
-**What:** The README roadmap section lists:
-- "Image paste -- Paste or drag-and-drop images into the editor" -- **Already implemented** (server.py has `/api/images`, wysiwyg.js handles paste/drop)
-- "Math equations (KaTeX) -- Inline and display LaTeX math rendering" -- **Already implemented** (KaTeX loaded in index.html, rendering in wysiwyg.js and markdown.js)
-
-**Why it matters:** Makes the project look unmaintained or careless. Users won't know these features exist.
-
-**Fix:** Move implemented features to a "Features" section. Only list genuinely planned work in the roadmap.
-
-#### 9. No CDN Subresource Integrity (SRI) hashes
+#### 7. No CDN Subresource Integrity (SRI) hashes
 
 **What:** All 8 CDN scripts/stylesheets in `index.html` are loaded without `integrity` attributes. If any CDN (jsdelivr, cdnjs) is compromised, malicious code executes in the editor with full access to the local filesystem via the API.
 
@@ -149,7 +123,7 @@ git rm -r --cached .codex .cursor docs/plans landing.html
 
 Generate hashes with `openssl dgst -sha384 -binary FILE | openssl base64 -A`.
 
-#### 10. ~500+ lines of duplicated code between wysiwyg.js and markdown.js
+#### 8. ~500+ lines of duplicated code between wysiwyg.js and markdown.js
 
 **What:** These two files share near-identical implementations of:
 - Math extension configuration and rendering (~80 lines)
@@ -163,19 +137,19 @@ Generate hashes with `openssl dgst -sha384 -binary FILE | openssl base64 -A`.
 
 **Fix:** Extract shared rendering logic into a `markdown-rendering.js` module that both `wysiwyg.js` and `markdown.js` import from.
 
-#### 11. `focusWithoutScroll` duplicated in 4 files
+#### 9. `focusWithoutScroll` duplicated in 4 files
 
 **What:** The identical `focusWithoutScroll()` helper function is copy-pasted in `wysiwyg.js`, `editor.js`, `tabs.js`, and `dialogs.js`.
 
 **Fix:** Move to a shared `utils.js` module loaded before the dependent scripts.
 
-#### 12. `setSaveStatus` and `setContentLoadingState` duplicated
+#### 10. `setSaveStatus` and `setContentLoadingState` duplicated
 
 **What:** `setSaveStatus()` is identical in `editor.js:20` and `tabs.js:13`. `setContentLoadingState()` is identical in `editor.js:75` and `tabs.js:47`. `AUTOSAVE_DELAY_MS` is declared in both files.
 
 **Fix:** Extract to shared module or have one file be the authoritative source.
 
-#### 13. No rate limiting on API endpoints
+#### 11. No rate limiting on API endpoints
 
 **What:** The `POST /api/save` and `POST /api/images` endpoints have no rate limiting. While this is a local server, the `--host 0.0.0.0` option exposes it to the network.
 
@@ -183,7 +157,7 @@ Generate hashes with `openssl dgst -sha384 -binary FILE | openssl base64 -A`.
 
 **Fix:** Add a simple in-memory rate limiter for the image upload endpoint, or document that `--host 0.0.0.0` is unsafe for untrusted networks.
 
-#### 14. No authentication or access control
+#### 12. No authentication or access control
 
 **What:** The server has no authentication mechanism. Anyone who can reach the server's port can read files, write files, and upload images. The WebSocket endpoint is also unauthenticated.
 
@@ -198,7 +172,7 @@ if host != "127.0.0.1" and host != "localhost":
     )
 ```
 
-#### 15. `_status_for_read_error` uses string matching
+#### 13. `_status_for_read_error` uses string matching
 
 **What:** `server.py:699` determines HTTP status codes by checking if `"does not exist"` appears in the error message string:
 ```python
@@ -219,7 +193,7 @@ class FileIOError(FileReadError):
     pass
 ```
 
-#### 16. WebSocketHub broadcast sends sequentially
+#### 14. WebSocketHub broadcast sends sequentially
 
 **What:** `server.py:94-98` sends to each client sequentially in a loop. If one client has a slow connection, all subsequent clients wait.
 
@@ -243,13 +217,13 @@ results = await asyncio.gather(
 
 ### YELLOW -- Nice to have
 
-#### 17. No CONTRIBUTING.md or development setup guide
+#### 15. No CONTRIBUTING.md or development setup guide
 
 **What:** The README covers installation and usage for end users, but there's no contributor guide. CLAUDE.md contains good development info but is an AI-assistant config file, not contributor documentation.
 
 **Fix:** Create a CONTRIBUTING.md covering: how to set up the dev environment, how to run tests, code style expectations, and PR process. Much of the content can be adapted from CLAUDE.md.
 
-#### 18. `document.execCommand` is deprecated
+#### 16. `document.execCommand` is deprecated
 
 **What:** `wysiwyg.js` uses `document.execCommand` extensively (lines 220, 958, 1021, 1029, etc.) for text formatting. This API is deprecated and may be removed from browsers.
 
@@ -257,13 +231,13 @@ results = await asyncio.gather(
 
 **Fix:** Long-term, migrate to the [Input Events Level 2](https://www.w3.org/TR/input-events-2/) API or use `Selection`/`Range` APIs directly for formatting operations. No immediate action needed.
 
-#### 19. `navigator.platform` is deprecated
+#### 17. `navigator.platform` is deprecated
 
 **What:** `wysiwyg-toolbar.js:151` and `search.js:335` use `navigator.platform.toUpperCase().includes("MAC")` for platform detection. This API is deprecated.
 
 **Fix:** Replace with `navigator.userAgentData?.platform` or simply check `navigator.platform` with a graceful fallback (it still works and will for a long time).
 
-#### 20. Mermaid version pinned too broadly
+#### 18. Mermaid version pinned too broadly
 
 **What:** `index.html:52` pins Mermaid to `@10` (major version only):
 ```html
@@ -274,7 +248,7 @@ results = await asyncio.gather(
 
 **Fix:** Pin to a specific minor version.
 
-#### 21. Magic number in TOC scroll offset
+#### 19. Magic number in TOC scroll offset
 
 **What:** `toc.js:80` uses a hardcoded `100` for heading activation offset:
 ```javascript
@@ -283,7 +257,7 @@ const scrollPosition = container.scrollTop + 100;
 
 **Fix:** Extract to a named constant: `const HEADING_ACTIVATION_OFFSET_PX = 100;`
 
-#### 22. Large monolithic `executeCommand` function
+#### 20. Large monolithic `executeCommand` function
 
 **What:** `wysiwyg.js` lines 1013-1211 contains a ~200-line function handling 14 different commands via sequential if-blocks.
 
@@ -296,7 +270,7 @@ const commands = {
 };
 ```
 
-#### 23. `vercel.json` and `site/` directory add confusion
+#### 21. `vercel.json` and `site/` directory add confusion
 
 **What:** The repo contains a Vercel deployment config and a `site/` directory with a landing page (~80KB HTML file with screenshots). This is the project website, not part of the editor tool.
 
@@ -304,7 +278,7 @@ const commands = {
 
 **Fix:** Consider moving the website to a separate `gh-pages` branch or a `docs/` directory. At minimum, add a comment in the README noting that `site/` is the project website, not part of the package.
 
-#### 24. `example.md` tracked but also gitignored
+#### 22. `example.md` tracked but also gitignored
 
 **What:** `.gitignore` has `/example.md` to ignore generated examples, but `example.md` is tracked in git (it's the demo file at the project root).
 
@@ -312,7 +286,7 @@ const commands = {
 
 **Fix:** Either rename the tracked example to something more specific (like `demo.md`) or remove it from tracking if it's meant to be generated.
 
-#### 25. No `py.typed` marker file
+#### 23. No `py.typed` marker file
 
 **What:** The project declares `Typing :: Typed` in its classifiers but doesn't include a `py.typed` marker file in the package. PEP 561 requires this for type checkers to recognize the package as typed.
 
@@ -414,23 +388,21 @@ const commands = {
 3. Fix Mermaid error XSS (finding #3)
 4. Pin marked.js version (finding #4)
 5. Escape HTML attributes in user-provided content (finding #5)
-6. Remove `.codex/`, `.cursor/`, `landing.html` from git tracking (finding #7)
-7. Update README roadmap (finding #8)
-8. Add Windows incompatibility notice or fix (finding #6)
-9. Add warning for non-loopback `--host` (finding #14)
+6. Add Windows incompatibility notice or fix (finding #6)
+7. Add warning for non-loopback `--host` (finding #12)
 
 ### Soon after public (1-2 weeks):
-10. Add SRI hashes to CDN resources (finding #9)
-11. Extract shared rendering code (finding #10)
-12. Extract duplicated utility functions (findings #11, #12)
-13. Add WebSocket and watchdog tests (testing gaps)
-14. Add CONTRIBUTING.md (finding #17)
-15. Fix string-based error classification (finding #15)
-16. Add parallel WebSocket broadcast (finding #16)
+8. Add SRI hashes to CDN resources (finding #7)
+9. Extract shared rendering code (finding #8)
+10. Extract duplicated utility functions (findings #9, #10)
+11. Add WebSocket and watchdog tests (testing gaps)
+12. Add CONTRIBUTING.md (finding #15)
+13. Fix string-based error classification (finding #13)
+14. Add parallel WebSocket broadcast (finding #14)
 
 ### When convenient:
-17. Pin Mermaid to specific minor version (finding #20)
-18. Add `py.typed` marker (finding #25)
-19. Consider moving site/ to gh-pages branch (finding #23)
-20. Add linting/formatting to CI
-21. Add `mypy` type checking to CI
+15. Pin Mermaid to specific minor version (finding #18)
+16. Add `py.typed` marker (finding #23)
+17. Consider moving site/ to gh-pages branch (finding #21)
+18. Add linting/formatting to CI
+19. Add `mypy` type checking to CI

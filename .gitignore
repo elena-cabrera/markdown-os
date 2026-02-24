@@ -18,3 +18,10 @@ wheels/
 
 # example file
 example.md
+
+# editor/IDE config
+.codex/
+.cursor/
+
+# superseded landing page
+landing.html
