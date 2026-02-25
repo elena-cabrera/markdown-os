@@ -188,8 +188,10 @@ def test_dialogs_restore_editor_scroll_after_modal_close() -> None:
     editor_source = _read_static_js("editor.js")
     tabs_source = _read_static_js("tabs.js")
 
+    shared_utils_source = _read_static_js("shared-utils.js")
     assert "function captureEditorScrollTop()" in dialogs_source
     assert "function restoreEditorScrollTop(scrollTop)" in dialogs_source
-    assert "element.focus({ preventScroll: true })" in dialogs_source
+    assert "element.focus({ preventScroll: true })" in shared_utils_source
+    assert "focusWithoutScroll" in dialogs_source
     assert "window.wysiwyg?.setScrollTop?.(previousScrollTop);" in editor_source
     assert "window.wysiwyg?.setScrollTop?.(previousScrollTop);" in tabs_source

@@ -12,10 +12,6 @@
 
 The core architecture is sound. The backend is clean, well-typed, and follows good patterns (atomic writes, cross-platform file locking, proper path validation). The CLI is polished. The WYSIWYG editor works well for a v0.3 product. All critical security findings have been resolved. Remaining items are code quality improvements and nice-to-haves.
 
-The biggest remaining concerns:
-
-1.  **~500+ lines of duplicated frontend code** between `wysiwyg.js` and `markdown.js`
-
 ---
 
 ## Findings by Severity
@@ -24,50 +20,7 @@ The biggest remaining concerns:
 
 ### ORANGE -- Important (should fix soon)
 
-#### 1\. No CDN Subresource Integrity (SRI) hashes
-
-**What:** All 8 CDN scripts/stylesheets in `index.html` are loaded without `integrity` attributes. If any CDN (jsdelivr, cdnjs) is compromised, malicious code executes in the editor with full access to the local filesystem via the API.
-
-**Why it matters:** The editor has filesystem access. A CDN compromise is a supply chain attack that turns every Markdown-OS user into a victim.
-
-**Fix:** Add SRI hashes to all CDN resources:
-
-```html
-<script src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"
-        integrity="sha384-..." crossorigin="anonymous"></script>
-
-```
-
-Generate hashes with `openssl dgst -sha384 -binary FILE | openssl base64 -A`.
-
-#### 2\. ~500+ lines of duplicated code between wysiwyg.js and markdown.js
-
-**What:** These two files share near-identical implementations of:
-
--   Math extension configuration and rendering (~80 lines)
--   Mermaid initialization, rendering, fullscreen, and theme handling (~200 lines)
--   Code block decorations (copy button, line numbers, language labels) (~100 lines)
--   `configureMarked()` setup (~30 lines)
--   `escapeHtmlAttribute()`, `inferLanguageLabel()`, `countCodeLines()`, `createLineNumberGutter()`, `copyToClipboard()` (~80 lines)
--   Mermaid theme mapping constant (~10 lines)
-
-**Why it matters:** Any bug fix or feature change needs to be applied in two places. This is how subtle bugs and security inconsistencies creep in.
-
-**Fix:** Extract shared rendering logic into a `markdown-rendering.js` module that both `wysiwyg.js` and `markdown.js` import from.
-
-#### 3\. `focusWithoutScroll` duplicated in 4 files
-
-**What:** The identical `focusWithoutScroll()` helper function is copy-pasted in `wysiwyg.js`, `editor.js`, `tabs.js`, and `dialogs.js`.
-
-**Fix:** Move to a shared `utils.js` module loaded before the dependent scripts.
-
-#### 4\. `setSaveStatus` and `setContentLoadingState` duplicated
-
-**What:** `setSaveStatus()` is identical in `editor.js:20` and `tabs.js:13`. `setContentLoadingState()` is identical in `editor.js:75` and `tabs.js:47`. `AUTOSAVE_DELAY_MS` is declared in both files.
-
-**Fix:** Extract to shared module or have one file be the authoritative source.
-
-#### 5\. No rate limiting on API endpoints
+#### 1\. No rate limiting on API endpoints
 
 **What:** The `POST /api/save` and `POST /api/images` endpoints have no rate limiting. While this is a local server, the `--host 0.0.0.0` option exposes it to the network.
 
@@ -75,7 +28,7 @@ Generate hashes with `openssl dgst -sha384 -binary FILE | openssl base64 -A`.
 
 **Fix:** Add a simple in-memory rate limiter for the image upload endpoint, or document that `--host 0.0.0.0` is unsafe for untrusted networks.
 
-#### 6\. `_status_for_read_error` uses string matching
+#### 2\. `_status_for_read_error` uses string matching
 
 **What:** `server.py:699` determines HTTP status codes by checking if `"does not exist"` appears in the error message string:
 
@@ -100,7 +53,7 @@ class FileIOError(FileReadError):
 
 ```
 
-#### 7\. WebSocketHub broadcast sends sequentially
+#### 3\. WebSocketHub broadcast sends sequentially
 
 **What:** `server.py:94-98` sends to each client sequentially in a loop. If one client has a slow connection, all subsequent clients wait.
 
@@ -127,13 +80,13 @@ results = await asyncio.gather(
 
 ### YELLOW -- Nice to have
 
-#### 8\. No CONTRIBUTING.md or development setup guide
+#### 4\. No CONTRIBUTING.md or development setup guide
 
 **What:** The README covers installation and usage for end users, but there's no contributor guide. CLAUDE.md contains good development info but is an AI-assistant config file, not contributor documentation.
 
 **Fix:** Create a CONTRIBUTING.md covering: how to set up the dev environment, how to run tests, code style expectations, and PR process. Much of the content can be adapted from CLAUDE.md.
 
-#### 9\. `document.execCommand` is deprecated
+#### 5\. `document.execCommand` is deprecated
 
 **What:** `wysiwyg.js` uses `document.execCommand` extensively (lines 220, 958, 1021, 1029, etc.) for text formatting. This API is deprecated and may be removed from browsers.
 
@@ -141,26 +94,13 @@ results = await asyncio.gather(
 
 **Fix:** Long-term, migrate to the [Input Events Level 2](https://www.w3.org/TR/input-events-2/) API or use `Selection`/`Range` APIs directly for formatting operations. No immediate action needed.
 
-#### 10\. `navigator.platform` is deprecated
+#### 6\. `navigator.platform` is deprecated
 
 **What:** `wysiwyg-toolbar.js:151` and `search.js:335` use `navigator.platform.toUpperCase().includes("MAC")` for platform detection. This API is deprecated.
 
 **Fix:** Replace with `navigator.userAgentData?.platform` or simply check `navigator.platform` with a graceful fallback (it still works and will for a long time).
 
-#### 11\. Mermaid version pinned too broadly
-
-**What:** `index.html:52` pins Mermaid to `@10` (major version only):
-
-```html
-<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
-
-```
-
-**Why it matters:** Mermaid 10.x had significant breaking changes between minor versions. A more specific pin (e.g., `@10.9.3`) would prevent unexpected rendering changes.
-
-**Fix:** Pin to a specific minor version.
-
-#### 12\. Magic number in TOC scroll offset
+#### 7\. Magic number in TOC scroll offset
 
 **What:** `toc.js:80` uses a hardcoded `100` for heading activation offset:
 
@@ -171,7 +111,7 @@ const scrollPosition = container.scrollTop + 100;
 
 **Fix:** Extract to a named constant: `const HEADING_ACTIVATION_OFFSET_PX = 100;`
 
-#### 13\. Large monolithic `executeCommand` function
+#### 8\. Large monolithic `executeCommand` function
 
 **What:** `wysiwyg.js` lines 1013-1211 contains a ~200-line function handling 14 different commands via sequential if-blocks.
 
@@ -186,7 +126,7 @@ const commands = {
 
 ```
 
-#### 14\. `vercel.json` and `site/` directory add confusion
+#### 9\. `vercel.json` and `site/` directory add confusion
 
 **What:** The repo contains a Vercel deployment config and a `site/` directory with a landing page (~80KB HTML file with screenshots). This is the project website, not part of the editor tool.
 
@@ -194,7 +134,7 @@ const commands = {
 
 **Fix:** Consider moving the website to a separate `gh-pages` branch or a `docs/` directory. At minimum, add a comment in the README noting that `site/` is the project website, not part of the package.
 
-#### 15\. `example.md` tracked but also gitignored
+#### 10\. `example.md` tracked but also gitignored
 
 **What:** `.gitignore` has `/example.md` to ignore generated examples, but `example.md` is tracked in git (it's the demo file at the project root).
 
@@ -202,7 +142,7 @@ const commands = {
 
 **Fix:** Either rename the tracked example to something more specific (like `demo.md`) or remove it from tracking if it's meant to be generated.
 
-#### 16\. No `py.typed` marker file
+#### 11\. No `py.typed` marker file
 
 **What:** The project declares `Typing :: Typed` in its classifiers but doesn't include a `py.typed` marker file in the package. PEP 561 requires this for type checkers to recognize the package as typed.
 
@@ -229,7 +169,7 @@ const commands = {
     
 2.  **Error paths in server routes:** `FileWriteError` during save, `FileReadError` during metadata, concurrent access failures -- none tested.
     
-3.  **Concurrent file locking:** The `fcntl` locking in `FileHandler` exists specifically for concurrency safety but is never tested under concurrent conditions.
+3.  **Concurrent file locking:** The `portalocker` locking in `FileHandler` exists specifically for concurrency safety but is never tested under concurrent conditions.
     
 4.  **Frontend behavioral testing:** The 6,397 lines of JavaScript have no functional tests. The "frontend tests" are static string searches against source code.
     
@@ -265,7 +205,7 @@ const commands = {
 ### Concerns
 
 -   **Frontend architecture will not scale.** The IIFE-per-file pattern with `window.MarkdownOS` namespacing works now but makes dependency management implicit. Module bundling (even a simple concatenation build step) would help.
--   **No abstraction between rendering modes.** `wysiwyg.js` and `markdown.js` are two parallel implementations of the same rendering pipeline. This is the biggest architectural debt.
+-   **Large monolithic WYSIWYG module.** `wysiwyg.js` (~2000 lines) handles rendering, editing, shortcuts, and block interactions in a single file. Splitting into focused modules (rendering, editing, shortcuts) would improve maintainability.
 -   **Watchdog threading model.** The `loop.call_soon_threadsafe` -> `asyncio.create_task` bridge between watchdog threads and the async event loop is correct but not tested. A bug here would be subtle and hard to reproduce.
 
 ---
@@ -298,18 +238,15 @@ const commands = {
 
 ### Soon after public (1-2 weeks):
 
-1.  Add SRI hashes to CDN resources (finding #1)
-2.  Extract shared rendering code (finding #2)
-3.  Extract duplicated utility functions (findings #3, #4)
-4.  Add WebSocket and watchdog tests (testing gaps)
-5.  Add CONTRIBUTING.md (finding #8)
-6.  Fix string-based error classification (finding #6)
-7.  Add parallel WebSocket broadcast (finding #7)
+1.  Add WebSocket and watchdog tests (testing gaps)
+2.  Add CONTRIBUTING.md (finding #4)
+3.  Fix string-based error classification (finding #2)
+4.  Add parallel WebSocket broadcast (finding #3)
 
 ### When convenient:
 
-8.  Pin Mermaid to specific minor version (finding #11)
-9.  Add `py.typed` marker (finding #16)
-10.  Consider moving site/ to gh-pages branch (finding #14)
-11.  Add linting/formatting to CI
-12.  Add `mypy` type checking to CI
+5.  Add rate limiting for network-exposed mode (finding #1)
+6.  Add `py.typed` marker (finding #11)
+7.  Consider moving site/ to gh-pages branch (finding #9)
+8.  Add linting/formatting to CI
+9.  Add `mypy` type checking to CI

@@ -1,15 +1,5 @@
 (() => {
-  function focusWithoutScroll(element) {
-    if (!element || typeof element.focus !== "function") {
-      return;
-    }
-
-    try {
-      element.focus({ preventScroll: true });
-    } catch (_error) {
-      element.focus();
-    }
-  }
+  const { focusWithoutScroll } = window.sharedUtils;
 
   function captureEditorScrollTop() {
     const editorContainer = document.getElementById("editor-container");

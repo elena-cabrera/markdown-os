@@ -1,5 +1,5 @@
 (() => {
-  const AUTOSAVE_DELAY_MS = 1000;
+  const { AUTOSAVE_DELAY_MS, setSaveStatus, setContentLoadingState } = window.sharedUtils;
 
   const editorState = {
     saveTimeout: null,
@@ -15,24 +15,6 @@
 
   function getDisplayName(metadata) {
     return metadata?.relative_path || (metadata?.path ? metadata.path.replace(/^.*[/\\]/, "") : "");
-  }
-
-  function setSaveStatus(message, variant = "neutral") {
-    const saveStatus = document.getElementById("save-status");
-    if (!saveStatus) {
-      return;
-    }
-
-    saveStatus.textContent = message;
-    saveStatus.classList.remove("is-saving", "is-saved", "is-error");
-
-    if (variant === "saving") {
-      saveStatus.classList.add("is-saving");
-    } else if (variant === "saved") {
-      saveStatus.classList.add("is-saved");
-    } else if (variant === "error") {
-      saveStatus.classList.add("is-error");
-    }
   }
 
   function setPageTitle(metadata) {
@@ -70,22 +52,6 @@
 
     loading.classList.add("hidden");
     container.classList.remove("hidden");
-  }
-
-  function setContentLoadingState(isLoading) {
-    const overlay = document.getElementById("content-loading");
-    if (!overlay) {
-      return;
-    }
-
-    if (isLoading) {
-      overlay.classList.remove("hidden");
-      overlay.setAttribute("aria-hidden", "false");
-      return;
-    }
-
-    overlay.classList.add("hidden");
-    overlay.setAttribute("aria-hidden", "true");
   }
 
   async function detectMode() {
@@ -230,17 +196,7 @@
       const previousScrollTop = window.wysiwyg?.getScrollTop?.() ?? null;
       let choiceMade = false;
 
-      const focusWithoutScroll = (element) => {
-        if (!element || typeof element.focus !== "function") {
-          return;
-        }
-
-        try {
-          element.focus({ preventScroll: true });
-        } catch (_error) {
-          element.focus();
-        }
-      };
+      const { focusWithoutScroll } = window.sharedUtils;
 
       const cleanup = () => {
         document.removeEventListener("keydown", onEscape);

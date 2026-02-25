@@ -1,5 +1,5 @@
 (() => {
-  const AUTOSAVE_DELAY_MS = 1000;
+  const { AUTOSAVE_DELAY_MS, setSaveStatus, setContentLoadingState } = window.sharedUtils;
   const MAX_OPEN_TABS = 15;
 
   const tabsState = {
@@ -9,23 +9,6 @@
     enabled: false,
     scrollBound: false,
   };
-
-  function setSaveStatus(message, variant = "neutral") {
-    const saveStatus = document.getElementById("save-status");
-    if (!saveStatus) {
-      return;
-    }
-
-    saveStatus.textContent = message;
-    saveStatus.classList.remove("is-saving", "is-saved", "is-error");
-    if (variant === "saving") {
-      saveStatus.classList.add("is-saving");
-    } else if (variant === "saved") {
-      saveStatus.classList.add("is-saved");
-    } else if (variant === "error") {
-      saveStatus.classList.add("is-error");
-    }
-  }
 
   function setPageTitle(filePath) {
     const currentFileText = document.getElementById("current-file-text");
@@ -42,22 +25,6 @@
     }
 
     document.title = filePath || "Markdown-OS";
-  }
-
-  function setContentLoadingState(isLoading) {
-    const overlay = document.getElementById("content-loading");
-    if (!overlay) {
-      return;
-    }
-
-    if (isLoading) {
-      overlay.classList.remove("hidden");
-      overlay.setAttribute("aria-hidden", "false");
-      return;
-    }
-
-    overlay.classList.add("hidden");
-    overlay.setAttribute("aria-hidden", "true");
   }
 
   function basename(filePath) {
@@ -275,17 +242,7 @@
       const previousScrollTop = window.wysiwyg?.getScrollTop?.() ?? null;
       let choiceMade = false;
 
-      const focusWithoutScroll = (element) => {
-        if (!element || typeof element.focus !== "function") {
-          return;
-        }
-
-        try {
-          element.focus({ preventScroll: true });
-        } catch (_error) {
-          element.focus();
-        }
-      };
+      const { focusWithoutScroll } = window.sharedUtils;
 
       const cleanup = () => {
         document.removeEventListener("keydown", onEscape);
