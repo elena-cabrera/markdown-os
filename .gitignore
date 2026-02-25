@@ -22,6 +22,7 @@ example.md
 # editor/IDE config
 .codex/
 .cursor/
+.claude/
 
 # superseded landing page
 landing.html
