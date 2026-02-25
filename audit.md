@@ -100,18 +100,7 @@ results = await asyncio.gather(
 
 **Fix:** Replace with `navigator.userAgentData?.platform` or simply check `navigator.platform` with a graceful fallback (it still works and will for a long time).
 
-#### 7\. Magic number in TOC scroll offset
-
-**What:** `toc.js:80` uses a hardcoded `100` for heading activation offset:
-
-```javascript
-const scrollPosition = container.scrollTop + 100;
-
-```
-
-**Fix:** Extract to a named constant: `const HEADING_ACTIVATION_OFFSET_PX = 100;`
-
-#### 8\. Large monolithic `executeCommand` function
+#### 7\. Large monolithic `executeCommand` function
 
 **What:** `wysiwyg.js` lines 1013-1211 contains a ~200-line function handling 14 different commands via sequential if-blocks.
 
@@ -126,7 +115,7 @@ const commands = {
 
 ```
 
-#### 9\. `vercel.json` and `site/` directory add confusion
+#### 8\. `vercel.json` and `site/` directory add confusion
 
 **What:** The repo contains a Vercel deployment config and a `site/` directory with a landing page (~80KB HTML file with screenshots). This is the project website, not part of the editor tool.
 
@@ -134,15 +123,7 @@ const commands = {
 
 **Fix:** Consider moving the website to a separate `gh-pages` branch or a `docs/` directory. At minimum, add a comment in the README noting that `site/` is the project website, not part of the package.
 
-#### 10\. `example.md` tracked but also gitignored
-
-**What:** `.gitignore` has `/example.md` to ignore generated examples, but `example.md` is tracked in git (it's the demo file at the project root).
-
-**Why it matters:** Minor confusion. The gitignore rule uses a leading `/` which only matches the root, so it's technically correct. But having a tracked file match a gitignore pattern is unusual.
-
-**Fix:** Either rename the tracked example to something more specific (like `demo.md`) or remove it from tracking if it's meant to be generated.
-
-#### 11\. No `py.typed` marker file
+#### 9\. No `py.typed` marker file
 
 **What:** The project declares `Typing :: Typed` in its classifiers but doesn't include a `py.typed` marker file in the package. PEP 561 requires this for type checkers to recognize the package as typed.
 
@@ -246,7 +227,7 @@ const commands = {
 ### When convenient:
 
 5.  Add rate limiting for network-exposed mode (finding #1)
-6.  Add `py.typed` marker (finding #11)
-7.  Consider moving site/ to gh-pages branch (finding #9)
+6.  Add `py.typed` marker (finding #9)
+7.  Consider moving site/ to gh-pages branch (finding #8)
 8.  Add linting/formatting to CI
 9.  Add `mypy` type checking to CI

@@ -16,7 +16,7 @@ wheels/
 # images directory
 /images
 
-# example file
+# generated example files (from `markdown-os example` command)
 example.md
 
 # editor/IDE config

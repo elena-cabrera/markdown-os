@@ -71,13 +71,15 @@
     });
   }
 
+  const HEADING_ACTIVATION_OFFSET_PX = 100;
+
   function findActiveHeadingIndex() {
     const container = document.getElementById("editor-container");
     if (!container || tocState.headings.length === 0) {
       return 0;
     }
 
-    const scrollPosition = container.scrollTop + 100;
+    const scrollPosition = container.scrollTop + HEADING_ACTIVATION_OFFSET_PX;
     let activeIndex = 0;
     tocState.headings.forEach((heading, index) => {
       if (heading.offsetTop <= scrollPosition) {
