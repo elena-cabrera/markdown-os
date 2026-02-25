@@ -15,8 +15,7 @@ The core architecture is sound. The backend is clean, well-typed, and follows go
 The biggest concerns in order:
 
 1.  **XSS vectors** in markdown rendering (no HTML sanitization)
-2.  **Platform lock-in** (POSIX `fcntl` locks make this Linux/macOS only with no Windows fallback or clear documentation)
-3.  **~500+ lines of duplicated frontend code** between `wysiwyg.js` and `markdown.js`
+2.  **~500+ lines of duplicated frontend code** between `wysiwyg.js` and `markdown.js`
 
 ---
 
@@ -50,22 +49,11 @@ state.root.innerHTML = cleanHtml;
 
 ```
 
-#### 2\. POSIX-only file locking with no fallback or documentation
-
-**What:** `file_handler.py` imports `fcntl` unconditionally at module level (line 2). This module does not exist on Windows, causing an `ImportError` on import.
-
-**Why it matters:** The README and PyPI page say "Developer-focused markdown editor" with no mention of the platform restriction. Windows users will `pip install markdown-os` and get an immediate crash. This will generate negative first impressions and issues.
-
-**Fix (choose one):**
-
--   **Option A (recommended):** Add a cross-platform locking abstraction. Use `msvcrt` on Windows, `fcntl` on Unix. The `portalocker` package does this.
--   **Option B (minimum):** Add `sys_platform != 'win32'` to pyproject.toml classifiers, add a clear "Linux/macOS only" notice to README, and add a runtime check with a helpful error message.
-
 ---
 
 ### ORANGE -- Important (should fix soon)
 
-#### 3\. No CDN Subresource Integrity (SRI) hashes
+#### 2\. No CDN Subresource Integrity (SRI) hashes
 
 **What:** All 8 CDN scripts/stylesheets in `index.html` are loaded without `integrity` attributes. If any CDN (jsdelivr, cdnjs) is compromised, malicious code executes in the editor with full access to the local filesystem via the API.
 
@@ -81,7 +69,7 @@ state.root.innerHTML = cleanHtml;
 
 Generate hashes with `openssl dgst -sha384 -binary FILE | openssl base64 -A`.
 
-#### 4\. ~500+ lines of duplicated code between wysiwyg.js and markdown.js
+#### 3\. ~500+ lines of duplicated code between wysiwyg.js and markdown.js
 
 **What:** These two files share near-identical implementations of:
 
@@ -96,19 +84,19 @@ Generate hashes with `openssl dgst -sha384 -binary FILE | openssl base64 -A`.
 
 **Fix:** Extract shared rendering logic into a `markdown-rendering.js` module that both `wysiwyg.js` and `markdown.js` import from.
 
-#### 5\. `focusWithoutScroll` duplicated in 4 files
+#### 4\. `focusWithoutScroll` duplicated in 4 files
 
 **What:** The identical `focusWithoutScroll()` helper function is copy-pasted in `wysiwyg.js`, `editor.js`, `tabs.js`, and `dialogs.js`.
 
 **Fix:** Move to a shared `utils.js` module loaded before the dependent scripts.
 
-#### 6\. `setSaveStatus` and `setContentLoadingState` duplicated
+#### 5\. `setSaveStatus` and `setContentLoadingState` duplicated
 
 **What:** `setSaveStatus()` is identical in `editor.js:20` and `tabs.js:13`. `setContentLoadingState()` is identical in `editor.js:75` and `tabs.js:47`. `AUTOSAVE_DELAY_MS` is declared in both files.
 
 **Fix:** Extract to shared module or have one file be the authoritative source.
 
-#### 7\. No rate limiting on API endpoints
+#### 6\. No rate limiting on API endpoints
 
 **What:** The `POST /api/save` and `POST /api/images` endpoints have no rate limiting. While this is a local server, the `--host 0.0.0.0` option exposes it to the network.
 
@@ -116,7 +104,7 @@ Generate hashes with `openssl dgst -sha384 -binary FILE | openssl base64 -A`.
 
 **Fix:** Add a simple in-memory rate limiter for the image upload endpoint, or document that `--host 0.0.0.0` is unsafe for untrusted networks.
 
-#### 8\. `_status_for_read_error` uses string matching
+#### 7\. `_status_for_read_error` uses string matching
 
 **What:** `server.py:699` determines HTTP status codes by checking if `"does not exist"` appears in the error message string:
 
@@ -141,7 +129,7 @@ class FileIOError(FileReadError):
 
 ```
 
-#### 9\. WebSocketHub broadcast sends sequentially
+#### 8\. WebSocketHub broadcast sends sequentially
 
 **What:** `server.py:94-98` sends to each client sequentially in a loop. If one client has a slow connection, all subsequent clients wait.
 
@@ -168,13 +156,13 @@ results = await asyncio.gather(
 
 ### YELLOW -- Nice to have
 
-#### 10\. No CONTRIBUTING.md or development setup guide
+#### 9\. No CONTRIBUTING.md or development setup guide
 
 **What:** The README covers installation and usage for end users, but there's no contributor guide. CLAUDE.md contains good development info but is an AI-assistant config file, not contributor documentation.
 
 **Fix:** Create a CONTRIBUTING.md covering: how to set up the dev environment, how to run tests, code style expectations, and PR process. Much of the content can be adapted from CLAUDE.md.
 
-#### 11\. `document.execCommand` is deprecated
+#### 10\. `document.execCommand` is deprecated
 
 **What:** `wysiwyg.js` uses `document.execCommand` extensively (lines 220, 958, 1021, 1029, etc.) for text formatting. This API is deprecated and may be removed from browsers.
 
@@ -182,13 +170,13 @@ results = await asyncio.gather(
 
 **Fix:** Long-term, migrate to the [Input Events Level 2](https://www.w3.org/TR/input-events-2/) API or use `Selection`/`Range` APIs directly for formatting operations. No immediate action needed.
 
-#### 12\. `navigator.platform` is deprecated
+#### 11\. `navigator.platform` is deprecated
 
 **What:** `wysiwyg-toolbar.js:151` and `search.js:335` use `navigator.platform.toUpperCase().includes("MAC")` for platform detection. This API is deprecated.
 
 **Fix:** Replace with `navigator.userAgentData?.platform` or simply check `navigator.platform` with a graceful fallback (it still works and will for a long time).
 
-#### 13\. Mermaid version pinned too broadly
+#### 12\. Mermaid version pinned too broadly
 
 **What:** `index.html:52` pins Mermaid to `@10` (major version only):
 
@@ -201,7 +189,7 @@ results = await asyncio.gather(
 
 **Fix:** Pin to a specific minor version.
 
-#### 14\. Magic number in TOC scroll offset
+#### 13\. Magic number in TOC scroll offset
 
 **What:** `toc.js:80` uses a hardcoded `100` for heading activation offset:
 
@@ -212,7 +200,7 @@ const scrollPosition = container.scrollTop + 100;
 
 **Fix:** Extract to a named constant: `const HEADING_ACTIVATION_OFFSET_PX = 100;`
 
-#### 15\. Large monolithic `executeCommand` function
+#### 14\. Large monolithic `executeCommand` function
 
 **What:** `wysiwyg.js` lines 1013-1211 contains a ~200-line function handling 14 different commands via sequential if-blocks.
 
@@ -227,7 +215,7 @@ const commands = {
 
 ```
 
-#### 16\. `vercel.json` and `site/` directory add confusion
+#### 15\. `vercel.json` and `site/` directory add confusion
 
 **What:** The repo contains a Vercel deployment config and a `site/` directory with a landing page (~80KB HTML file with screenshots). This is the project website, not part of the editor tool.
 
@@ -235,7 +223,7 @@ const commands = {
 
 **Fix:** Consider moving the website to a separate `gh-pages` branch or a `docs/` directory. At minimum, add a comment in the README noting that `site/` is the project website, not part of the package.
 
-#### 17\. `example.md` tracked but also gitignored
+#### 16\. `example.md` tracked but also gitignored
 
 **What:** `.gitignore` has `/example.md` to ignore generated examples, but `example.md` is tracked in git (it's the demo file at the project root).
 
@@ -243,7 +231,7 @@ const commands = {
 
 **Fix:** Either rename the tracked example to something more specific (like `demo.md`) or remove it from tracking if it's meant to be generated.
 
-#### 18\. No `py.typed` marker file
+#### 17\. No `py.typed` marker file
 
 **What:** The project declares `Typing :: Typed` in its classifiers but doesn't include a `py.typed` marker file in the package. PEP 561 requires this for type checkers to recognize the package as typed.
 
@@ -331,32 +319,30 @@ const commands = {
 
 ### Pain Points
 
--   **Windows users will hit an `ImportError` immediately** with no helpful error message (finding #2)
 -   Lock files (`.md.lock`) are left behind on crash (cleanup only runs on graceful shutdown)
 
 ---
 
 ## Summary Action Plan
 
-### Before making public (1-2 days):
+### Before making public:
 
 1.  Add DOMPurify sanitization layer (finding #1)
-2.  Add Windows incompatibility notice or fix (finding #2)
 
 ### Soon after public (1-2 weeks):
 
-3.  Add SRI hashes to CDN resources (finding #3)
-4.  Extract shared rendering code (finding #4)
-5.  Extract duplicated utility functions (findings #5, #6)
-6.  Add WebSocket and watchdog tests (testing gaps)
-7.  Add CONTRIBUTING.md (finding #10)
-8.  Fix string-based error classification (finding #8)
-9.  Add parallel WebSocket broadcast (finding #9)
+2.  Add SRI hashes to CDN resources (finding #2)
+3.  Extract shared rendering code (finding #3)
+4.  Extract duplicated utility functions (findings #4, #5)
+5.  Add WebSocket and watchdog tests (testing gaps)
+6.  Add CONTRIBUTING.md (finding #9)
+7.  Fix string-based error classification (finding #7)
+8.  Add parallel WebSocket broadcast (finding #8)
 
 ### When convenient:
 
-10.  Pin Mermaid to specific minor version (finding #13)
-11.  Add `py.typed` marker (finding #18)
-12.  Consider moving site/ to gh-pages branch (finding #16)
-13.  Add linting/formatting to CI
-14.  Add `mypy` type checking to CI
+9.  Pin Mermaid to specific minor version (finding #12)
+10.  Add `py.typed` marker (finding #17)
+11.  Consider moving site/ to gh-pages branch (finding #15)
+12.  Add linting/formatting to CI
+13.  Add `mypy` type checking to CI
