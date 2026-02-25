@@ -49,6 +49,7 @@ uv run pytest -v
 
 # Run tests with output capture disabled (see print statements)
 uv run pytest -s
+
 ```
 
 ## Architecture Overview
@@ -61,6 +62,7 @@ CLI Command → Typer validates file/directory → FastAPI server starts → Bro
 User edits in WYSIWYG editor → WebSocket connection → Server saves to disk
                                                       ↓
 External file change → Watchdog detects → WebSocket notifies browser
+
 ```
 
 ### Two Operating Modes
@@ -74,7 +76,7 @@ The mode is determined at CLI validation time (`_validate_path` in `cli.py`) and
 
 ### Key Components
 
-#### 1. CLI Layer (`markdown_os/cli.py`)
+#### 1\. CLI Layer (`markdown_os/cli.py`)
 
 -   Entry point: `markdown-os` command defined in `pyproject.toml` → `markdown_os.cli:run`
 -   `_validate_path()` determines mode: returns `(resolved_path, "file")` or `(resolved_path, "folder")`
@@ -82,7 +84,7 @@ The mode is determined at CLI validation time (`_validate_path` in `cli.py`) and
 -   Opens browser automatically after 0.4s delay
 -   `example` subcommand generates a feature showcase file from bundled template
 
-#### 2. FastAPI Server (`markdown_os/server.py`)
+#### 2\. FastAPI Server (`markdown_os/server.py`)
 
 -   `create_app(handler, mode)` factory — accepts either `FileHandler` or `DirectoryHandler`
 -   **Routes:**
@@ -97,16 +99,16 @@ The mode is determined at CLI validation time (`_validate_path` in `cli.py`) and
 -   **WebSocketHub**: Manages active websocket clients and broadcasts messages
 -   **MarkdownPathEventHandler**: Watchdog handler supporting both single-file and recursive directory watching; throttles to max one notification per 0.2s, ignores events within 0.5s of internal writes
 
-#### 3. File Handlers
+#### 3\. File Handlers
 
--   **`FileHandler`** (`markdown_os/file_handler.py`): Safe file I/O with POSIX file locks (fcntl). Shared locks (LOCK_SH) for reads, exclusive locks (LOCK_EX) with atomic replacement (write to temp file → fsync → `os.replace()`) for writes. Lock files at `<filename>.md.lock`.
+-   **`FileHandler`** (`markdown_os/file_handler.py`): Safe file I/O with POSIX file locks (fcntl). Shared locks (LOCK\_SH) for reads, exclusive locks (LOCK\_EX) with atomic replacement (write to temp file → fsync → `os.replace()`) for writes. Lock files at `<filename>.md.lock`.
 -   **`DirectoryHandler`** (`markdown_os/directory_handler.py`): Manages a directory of markdown files. Builds nested file trees, caches `FileHandler` instances per file, validates paths stay within the workspace root (prevents directory traversal).
 
-#### 4. Frontend (`markdown_os/static/`)
+#### 4\. Frontend (`markdown_os/static/`)
 
 The frontend is a vanilla JS SPA with no build step. All modules use IIFEs exposing methods on `window.MarkdownOS`.
 
--   **`js/wysiwyg.js`** (~2000 lines) — Core WYSIWYG editor using `contenteditable` with Marked.js for rendering and Turndown.js for serialization. Handles inline markdown shortcuts (e.g., `**text** ` → bold, `# ` → heading), click-to-edit blocks (code, mermaid, math), interactive links (Cmd/Ctrl+Click to open, click to edit), image paste/drop, undo/redo history.
+-   **`js/wysiwyg.js`** (~2000 lines) — Core WYSIWYG editor using `contenteditable` with Marked.js for rendering and Turndown.js for serialization. Handles inline markdown shortcuts (e.g., `**text**` → bold, `#` → heading), click-to-edit blocks (code, mermaid, math), interactive links (Cmd/Ctrl+Click to open, click to edit), image paste/drop, undo/redo history.
 -   **`js/wysiwyg-toolbar.js`** — Floating formatting toolbar with bold/italic/strikethrough/code/link buttons, heading selector, list toggles, and insert menu (table, image, horizontal rule, mermaid diagram).
 -   **`js/editor.js`** — Orchestrator that initializes the WYSIWYG editor, manages auto-save (1s debounce), conflict detection, file loading, and coordinates between tabs/file-tree/websocket modules.
 -   **`js/tabs.js`** — Multi-file tab bar for folder mode. Tracks dirty state, caches content and scroll positions per tab, smart tab naming when basenames conflict.
@@ -124,10 +126,11 @@ The frontend is a vanilla JS SPA with no build step. All modules use IIFEs expos
 #### WYSIWYG Editing Model
 
 The editor uses `contenteditable` on a container div. Content flows through this pipeline:
-1. **Load**: Server markdown → `marked.parse()` → rendered HTML in contenteditable
-2. **Save**: contenteditable HTML → `TurndownService` → markdown string → `POST /api/save`
-3. **Inline shortcuts**: Detected on `input`/`keydown` events, transform text as the user types
-4. **Block editing**: Code blocks, mermaid diagrams, and math equations use click-to-edit modals that operate on the raw source stored in `data-original-content` attributes
+
+1.  **Load**: Server markdown → `marked.parse()` → rendered HTML in contenteditable
+2.  **Save**: contenteditable HTML → `TurndownService` → markdown string → `POST /api/save`
+3.  **Inline shortcuts**: Detected on `input`/`keydown` events, transform text as the user types
+4.  **Block editing**: Code blocks, mermaid diagrams, and math equations use click-to-edit modals that operate on the raw source stored in `data-original-content` attributes
 
 #### Auto-save, Conflict Detection, and File Sync
 

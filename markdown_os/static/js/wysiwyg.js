@@ -25,17 +25,7 @@
     blockEditPreviousScrollTop: null,
   };
 
-  function focusWithoutScroll(element) {
-    if (!element || typeof element.focus !== "function") {
-      return;
-    }
-
-    try {
-      element.focus({ preventScroll: true });
-    } catch (_error) {
-      element.focus();
-    }
-  }
+  const { focusWithoutScroll } = window.sharedUtils;
 
   function restoreEditorScrollPosition(scrollTop) {
     if (!state.container || !Number.isFinite(scrollTop)) {
@@ -460,7 +450,7 @@
 
     window.mermaid.initialize({
       startOnLoad: false,
-      securityLevel: "loose",
+      securityLevel: "strict",
       theme,
       useMaxWidth: false,
     });
@@ -940,7 +930,10 @@
     }
 
     state.suppressInput = true;
-    state.root.innerHTML = window.marked.parse(markdown || "");
+    const rawHtml = window.marked.parse(markdown || "");
+    state.root.innerHTML = window.DOMPurify
+      ? window.DOMPurify.sanitize(rawHtml, { ADD_ATTR: ["contenteditable"] })
+      : rawHtml;
     await decorateDocument();
     state.suppressInput = false;
 
@@ -986,7 +979,7 @@
   }
 
   async function insertImage(path, alt = "image") {
-    insertHtmlAtSelection(`<p><img src="${path}" alt="${alt}" /></p><p><br></p>`);
+    insertHtmlAtSelection(`<p><img src="${escapeHtmlAttribute(path)}" alt="${escapeHtmlAttribute(alt)}" /></p><p><br></p>`);
     await decorateDocument();
     emitChange();
   }
@@ -1140,7 +1133,7 @@
       if (selectedText) {
         document.execCommand("createLink", false, linkUrl);
       } else {
-        insertHtmlAtSelection(`<a href="${linkUrl}">${linkUrl}</a>`);
+        insertHtmlAtSelection(`<a href="${escapeHtmlAttribute(linkUrl)}">${escapeHtmlAttribute(linkUrl)}</a>`);
       }
       decorateLinks();
       emitChange();

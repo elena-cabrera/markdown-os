@@ -27,6 +27,7 @@ dependencies = [
     "python-multipart>=0.0.22",
     "typer>=0.23.1",
     "uvicorn[standard]>=0.40.0",
+    "portalocker>=3.0.0",
     "watchdog>=6.0.0",
     "websockets>=16.0",
 ]

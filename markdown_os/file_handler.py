@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-import fcntl
 import os
 import tempfile
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator
+
+import portalocker
 
 
 class FileReadError(RuntimeError):
@@ -143,7 +144,7 @@ class FileHandler:
     @contextmanager
     def _acquire_lock(self, exclusive: bool) -> Iterator[None]:
         """
-        Acquire and release a POSIX file lock around an operation.
+        Acquire and release a cross-platform file lock around an operation.
 
         Args:
         - exclusive (bool): True for write locks, False for shared read locks.
@@ -155,15 +156,15 @@ class FileHandler:
         self._lock_path.parent.mkdir(parents=True, exist_ok=True)
         with self._lock_path.open("a+", encoding="utf-8") as lock_file:
             self._lock_created = True
-            lock_mode = fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH
+            lock_flags = portalocker.LOCK_EX if exclusive else portalocker.LOCK_SH
             try:
-                fcntl.flock(lock_file.fileno(), lock_mode)
-            except OSError as exc:
+                portalocker.lock(lock_file, lock_flags)
+            except portalocker.LockException as exc:
                 raise FileWriteError(f"Failed to acquire lock: {self._lock_path}") from exc
             try:
                 yield
             finally:
-                fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+                portalocker.unlock(lock_file)
 
     def _write_temporary_file(self, content: str) -> Path:
         """
