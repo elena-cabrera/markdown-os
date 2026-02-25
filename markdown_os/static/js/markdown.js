@@ -830,7 +830,10 @@
       return;
     }
 
-    preview.innerHTML = window.marked.parse(content ?? "");
+    const rawHtml = window.marked.parse(content ?? "");
+    preview.innerHTML = window.DOMPurify
+      ? window.DOMPurify.sanitize(rawHtml, { ADD_ATTR: ["contenteditable"] })
+      : rawHtml;
     addCodeBlockDecorations();
     renderMathEquations();
     await renderMermaidDiagrams();

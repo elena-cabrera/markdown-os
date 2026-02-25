@@ -8,14 +8,13 @@
 
 ## Executive Summary
 
-**Is this publishable today? No -- but it's close.**
+**Is this publishable today? Yes.**
 
-The core architecture is sound. The backend is clean, well-typed, and follows good patterns (atomic writes, file locking, proper path validation). The CLI is polished. The WYSIWYG editor works well for a v0.3 product. However, there are **security vulnerabilities that must be fixed before public release**, significant code duplication in the frontend that will make maintenance painful, and gaps in test coverage for critical paths.
+The core architecture is sound. The backend is clean, well-typed, and follows good patterns (atomic writes, cross-platform file locking, proper path validation). The CLI is polished. The WYSIWYG editor works well for a v0.3 product. All critical security findings have been resolved. Remaining items are code quality improvements and nice-to-haves.
 
-The biggest concerns in order:
+The biggest remaining concerns:
 
-1.  **XSS vectors** in markdown rendering (no HTML sanitization)
-2.  **~500+ lines of duplicated frontend code** between `wysiwyg.js` and `markdown.js`
+1.  **~500+ lines of duplicated frontend code** between `wysiwyg.js` and `markdown.js`
 
 ---
 
@@ -23,37 +22,9 @@ The biggest concerns in order:
 
 ---
 
-### RED -- Critical (must fix before public release)
-
-#### 1\. No HTML sanitization on markdown rendering
-
-**What:** `marked.parse()` output is injected directly via `innerHTML` in two places:
-
--   `wysiwyg.js:943` -- `state.root.innerHTML = window.marked.parse(markdown || "");`
--   `markdown.js:830` -- `preview.innerHTML = window.marked.parse(content ?? "");`
-
-Marked.js with GFM mode allows raw HTML passthrough by default. A markdown file containing `<img src=x onerror=alert(document.cookie)>` or `<script>` tags will execute JavaScript in the editor.
-
-**Why it matters:** This is a local editor, so the threat model is "user opens a malicious markdown file." For an open-source tool, people will open files from untrusted sources (downloaded repos, shared documents, AI-generated markdown). The XSS executes with full access to the local server, including the ability to read/write any file the server has access to via the API.
-
-**Fix:** Add [DOMPurify](https://github.com/cure53/DOMPurify) as a sanitization layer after `marked.parse()`. Either bundle it as a local dependency or load from CDN with SRI hash. Configure it to allow safe elements while stripping `<script>`, event handlers, and `javascript:` URIs.
-
-```javascript
-// After marked.parse():
-const rawHtml = window.marked.parse(markdown || "");
-const cleanHtml = DOMPurify.sanitize(rawHtml, {
-  ADD_TAGS: ['svg', 'path', 'circle', 'line', 'polyline', 'g'],
-  ADD_ATTR: ['viewBox', 'fill', 'stroke', 'd', 'points', 'cx', 'cy', 'r'],
-});
-state.root.innerHTML = cleanHtml;
-
-```
-
----
-
 ### ORANGE -- Important (should fix soon)
 
-#### 2\. No CDN Subresource Integrity (SRI) hashes
+#### 1\. No CDN Subresource Integrity (SRI) hashes
 
 **What:** All 8 CDN scripts/stylesheets in `index.html` are loaded without `integrity` attributes. If any CDN (jsdelivr, cdnjs) is compromised, malicious code executes in the editor with full access to the local filesystem via the API.
 
@@ -69,7 +40,7 @@ state.root.innerHTML = cleanHtml;
 
 Generate hashes with `openssl dgst -sha384 -binary FILE | openssl base64 -A`.
 
-#### 3\. ~500+ lines of duplicated code between wysiwyg.js and markdown.js
+#### 2\. ~500+ lines of duplicated code between wysiwyg.js and markdown.js
 
 **What:** These two files share near-identical implementations of:
 
@@ -84,19 +55,19 @@ Generate hashes with `openssl dgst -sha384 -binary FILE | openssl base64 -A`.
 
 **Fix:** Extract shared rendering logic into a `markdown-rendering.js` module that both `wysiwyg.js` and `markdown.js` import from.
 
-#### 4\. `focusWithoutScroll` duplicated in 4 files
+#### 3\. `focusWithoutScroll` duplicated in 4 files
 
 **What:** The identical `focusWithoutScroll()` helper function is copy-pasted in `wysiwyg.js`, `editor.js`, `tabs.js`, and `dialogs.js`.
 
 **Fix:** Move to a shared `utils.js` module loaded before the dependent scripts.
 
-#### 5\. `setSaveStatus` and `setContentLoadingState` duplicated
+#### 4\. `setSaveStatus` and `setContentLoadingState` duplicated
 
 **What:** `setSaveStatus()` is identical in `editor.js:20` and `tabs.js:13`. `setContentLoadingState()` is identical in `editor.js:75` and `tabs.js:47`. `AUTOSAVE_DELAY_MS` is declared in both files.
 
 **Fix:** Extract to shared module or have one file be the authoritative source.
 
-#### 6\. No rate limiting on API endpoints
+#### 5\. No rate limiting on API endpoints
 
 **What:** The `POST /api/save` and `POST /api/images` endpoints have no rate limiting. While this is a local server, the `--host 0.0.0.0` option exposes it to the network.
 
@@ -104,7 +75,7 @@ Generate hashes with `openssl dgst -sha384 -binary FILE | openssl base64 -A`.
 
 **Fix:** Add a simple in-memory rate limiter for the image upload endpoint, or document that `--host 0.0.0.0` is unsafe for untrusted networks.
 
-#### 7\. `_status_for_read_error` uses string matching
+#### 6\. `_status_for_read_error` uses string matching
 
 **What:** `server.py:699` determines HTTP status codes by checking if `"does not exist"` appears in the error message string:
 
@@ -129,7 +100,7 @@ class FileIOError(FileReadError):
 
 ```
 
-#### 8\. WebSocketHub broadcast sends sequentially
+#### 7\. WebSocketHub broadcast sends sequentially
 
 **What:** `server.py:94-98` sends to each client sequentially in a loop. If one client has a slow connection, all subsequent clients wait.
 
@@ -156,13 +127,13 @@ results = await asyncio.gather(
 
 ### YELLOW -- Nice to have
 
-#### 9\. No CONTRIBUTING.md or development setup guide
+#### 8\. No CONTRIBUTING.md or development setup guide
 
 **What:** The README covers installation and usage for end users, but there's no contributor guide. CLAUDE.md contains good development info but is an AI-assistant config file, not contributor documentation.
 
 **Fix:** Create a CONTRIBUTING.md covering: how to set up the dev environment, how to run tests, code style expectations, and PR process. Much of the content can be adapted from CLAUDE.md.
 
-#### 10\. `document.execCommand` is deprecated
+#### 9\. `document.execCommand` is deprecated
 
 **What:** `wysiwyg.js` uses `document.execCommand` extensively (lines 220, 958, 1021, 1029, etc.) for text formatting. This API is deprecated and may be removed from browsers.
 
@@ -170,13 +141,13 @@ results = await asyncio.gather(
 
 **Fix:** Long-term, migrate to the [Input Events Level 2](https://www.w3.org/TR/input-events-2/) API or use `Selection`/`Range` APIs directly for formatting operations. No immediate action needed.
 
-#### 11\. `navigator.platform` is deprecated
+#### 10\. `navigator.platform` is deprecated
 
 **What:** `wysiwyg-toolbar.js:151` and `search.js:335` use `navigator.platform.toUpperCase().includes("MAC")` for platform detection. This API is deprecated.
 
 **Fix:** Replace with `navigator.userAgentData?.platform` or simply check `navigator.platform` with a graceful fallback (it still works and will for a long time).
 
-#### 12\. Mermaid version pinned too broadly
+#### 11\. Mermaid version pinned too broadly
 
 **What:** `index.html:52` pins Mermaid to `@10` (major version only):
 
@@ -189,7 +160,7 @@ results = await asyncio.gather(
 
 **Fix:** Pin to a specific minor version.
 
-#### 13\. Magic number in TOC scroll offset
+#### 12\. Magic number in TOC scroll offset
 
 **What:** `toc.js:80` uses a hardcoded `100` for heading activation offset:
 
@@ -200,7 +171,7 @@ const scrollPosition = container.scrollTop + 100;
 
 **Fix:** Extract to a named constant: `const HEADING_ACTIVATION_OFFSET_PX = 100;`
 
-#### 14\. Large monolithic `executeCommand` function
+#### 13\. Large monolithic `executeCommand` function
 
 **What:** `wysiwyg.js` lines 1013-1211 contains a ~200-line function handling 14 different commands via sequential if-blocks.
 
@@ -215,7 +186,7 @@ const commands = {
 
 ```
 
-#### 15\. `vercel.json` and `site/` directory add confusion
+#### 14\. `vercel.json` and `site/` directory add confusion
 
 **What:** The repo contains a Vercel deployment config and a `site/` directory with a landing page (~80KB HTML file with screenshots). This is the project website, not part of the editor tool.
 
@@ -223,7 +194,7 @@ const commands = {
 
 **Fix:** Consider moving the website to a separate `gh-pages` branch or a `docs/` directory. At minimum, add a comment in the README noting that `site/` is the project website, not part of the package.
 
-#### 16\. `example.md` tracked but also gitignored
+#### 15\. `example.md` tracked but also gitignored
 
 **What:** `.gitignore` has `/example.md` to ignore generated examples, but `example.md` is tracked in git (it's the demo file at the project root).
 
@@ -231,7 +202,7 @@ const commands = {
 
 **Fix:** Either rename the tracked example to something more specific (like `demo.md`) or remove it from tracking if it's meant to be generated.
 
-#### 17\. No `py.typed` marker file
+#### 16\. No `py.typed` marker file
 
 **What:** The project declares `Typing :: Typed` in its classifiers but doesn't include a `py.typed` marker file in the package. PEP 561 requires this for type checkers to recognize the package as typed.
 
@@ -325,24 +296,20 @@ const commands = {
 
 ## Summary Action Plan
 
-### Before making public:
-
-1.  Add DOMPurify sanitization layer (finding #1)
-
 ### Soon after public (1-2 weeks):
 
-2.  Add SRI hashes to CDN resources (finding #2)
-3.  Extract shared rendering code (finding #3)
-4.  Extract duplicated utility functions (findings #4, #5)
-5.  Add WebSocket and watchdog tests (testing gaps)
-6.  Add CONTRIBUTING.md (finding #9)
-7.  Fix string-based error classification (finding #7)
-8.  Add parallel WebSocket broadcast (finding #8)
+1.  Add SRI hashes to CDN resources (finding #1)
+2.  Extract shared rendering code (finding #2)
+3.  Extract duplicated utility functions (findings #3, #4)
+4.  Add WebSocket and watchdog tests (testing gaps)
+5.  Add CONTRIBUTING.md (finding #8)
+6.  Fix string-based error classification (finding #6)
+7.  Add parallel WebSocket broadcast (finding #7)
 
 ### When convenient:
 
-9.  Pin Mermaid to specific minor version (finding #12)
-10.  Add `py.typed` marker (finding #17)
-11.  Consider moving site/ to gh-pages branch (finding #15)
-12.  Add linting/formatting to CI
-13.  Add `mypy` type checking to CI
+8.  Pin Mermaid to specific minor version (finding #11)
+9.  Add `py.typed` marker (finding #16)
+10.  Consider moving site/ to gh-pages branch (finding #14)
+11.  Add linting/formatting to CI
+12.  Add `mypy` type checking to CI

@@ -940,7 +940,10 @@
     }
 
     state.suppressInput = true;
-    state.root.innerHTML = window.marked.parse(markdown || "");
+    const rawHtml = window.marked.parse(markdown || "");
+    state.root.innerHTML = window.DOMPurify
+      ? window.DOMPurify.sanitize(rawHtml, { ADD_ATTR: ["contenteditable"] })
+      : rawHtml;
     await decorateDocument();
     state.suppressInput = false;
 
