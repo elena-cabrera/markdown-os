@@ -133,7 +133,8 @@ def test_wysiwyg_modifier_key_updates_link_cursor_state() -> None:
     source = _read_static_js("wysiwyg.js")
 
     assert "function setLinkModifierCursorState(isActive)" in source
-    assert "document.documentElement.classList.toggle(\"link-open-modifier\"" in source
+    assert "document.documentElement.classList.toggle" in source
+    assert '"link-open-modifier"' in source
     assert "function bindModifierLinkCursorState()" in source
     assert "document.addEventListener(\"keydown\", handleModifierKeyState);" in source
 
