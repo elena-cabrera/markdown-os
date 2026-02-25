@@ -986,7 +986,7 @@
   }
 
   async function insertImage(path, alt = "image") {
-    insertHtmlAtSelection(`<p><img src="${path}" alt="${alt}" /></p><p><br></p>`);
+    insertHtmlAtSelection(`<p><img src="${escapeHtmlAttribute(path)}" alt="${escapeHtmlAttribute(alt)}" /></p><p><br></p>`);
     await decorateDocument();
     emitChange();
   }
@@ -1140,7 +1140,7 @@
       if (selectedText) {
         document.execCommand("createLink", false, linkUrl);
       } else {
-        insertHtmlAtSelection(`<a href="${linkUrl}">${linkUrl}</a>`);
+        insertHtmlAtSelection(`<a href="${escapeHtmlAttribute(linkUrl)}">${escapeHtmlAttribute(linkUrl)}</a>`);
       }
       decorateLinks();
       emitChange();

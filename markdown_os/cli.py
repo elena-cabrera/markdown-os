@@ -247,6 +247,13 @@ def open_markdown_file(
     selected_port = find_available_port(host=host, start_port=port)
     editor_url = f"http://{host}:{selected_port}"
 
+    if host not in ("127.0.0.1", "localhost"):
+        typer.secho(
+            "WARNING: Binding to non-loopback address exposes your files "
+            "to the network without authentication.",
+            fg=typer.colors.YELLOW,
+        )
+
     target_label = "file" if mode == "file" else "folder"
     typer.echo(f"Opening {target_label} {resolved_path} at {editor_url}")
     _open_browser(editor_url)
