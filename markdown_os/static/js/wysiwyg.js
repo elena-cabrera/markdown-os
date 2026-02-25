@@ -58,10 +58,12 @@
     const usedIds = new Map();
 
     headings.forEach((heading) => {
-      const base = slugifyHeading(heading.textContent || "section") || "section";
+      const base =
+        slugifyHeading(heading.textContent || "section") || "section";
       const duplicateCount = usedIds.get(base) || 0;
       usedIds.set(base, duplicateCount + 1);
-      heading.id = duplicateCount === 0 ? base : `${base}-${duplicateCount + 1}`;
+      heading.id =
+        duplicateCount === 0 ? base : `${base}-${duplicateCount + 1}`;
     });
   }
 
@@ -244,7 +246,10 @@
     const originalIcon = button.innerHTML;
     const originalTitle = button.getAttribute("title") || "";
     const originalLabel = button.getAttribute("aria-label") || "";
-    const previousTimerId = Number.parseInt(button.dataset.copyTimerId || "", 10);
+    const previousTimerId = Number.parseInt(
+      button.dataset.copyTimerId || "",
+      10,
+    );
     if (Number.isFinite(previousTimerId)) {
       window.clearTimeout(previousTimerId);
     }
@@ -375,7 +380,8 @@
     }
 
     state.root.querySelectorAll(".math-inline").forEach((element) => {
-      const source = element.getAttribute("data-math-source") || element.textContent || "";
+      const source =
+        element.getAttribute("data-math-source") || element.textContent || "";
       try {
         window.katex.render(source, element, {
           throwOnError: false,
@@ -389,7 +395,8 @@
     });
 
     state.root.querySelectorAll(".math-display").forEach((element) => {
-      const source = element.getAttribute("data-math-source") || element.textContent || "";
+      const source =
+        element.getAttribute("data-math-source") || element.textContent || "";
       try {
         window.katex.render(source, element, {
           throwOnError: false,
@@ -520,9 +527,14 @@
       toolbar.appendChild(editButton);
     }
 
-    const existingFullscreenButton = toolbar.querySelector(".mermaid-fullscreen-trigger");
+    const existingFullscreenButton = toolbar.querySelector(
+      ".mermaid-fullscreen-trigger",
+    );
     if (!existingFullscreenButton) {
-      const fullscreenButton = createActionButton("fullscreen", "View diagram fullscreen");
+      const fullscreenButton = createActionButton(
+        "fullscreen",
+        "View diagram fullscreen",
+      );
       fullscreenButton.classList.add("mermaid-fullscreen-trigger");
       fullscreenButton.addEventListener("click", (event) => {
         event.preventDefault();
@@ -583,35 +595,71 @@
     }
   }
 
+  /**
+   * Parses a CSS length (e.g. "420px") to a number in pixels.
+   * @param {string} value - Value from getComputedStyle (e.g. "420px").
+   * @returns {number} - Numeric pixels, or 420 as fallback.
+   */
+  function parseMermaidMaxHeight(value) {
+    if (!value || value === "none") {
+      return 420;
+    }
+    const parsed = parseFloat(value, 10);
+    return Number.isFinite(parsed) ? parsed : 420;
+  }
+
   function fixMermaidSvgDimensions() {
     if (!state.root) {
       return;
     }
 
-    state.root.querySelectorAll(".mermaid-container .mermaid-canvas svg").forEach((svg) => {
-      const canvas = svg.closest(".mermaid-canvas");
-      if (!canvas) {
-        return;
-      }
-
-      svg.style.maxWidth = "";
-      svg.style.width = "100%";
-
-      try {
-        const bbox = svg.getBBox();
-        if (bbox.width <= 0) {
+    state.root
+      .querySelectorAll(".mermaid-container .mermaid-canvas svg")
+      .forEach((svg) => {
+        const canvas = svg.closest(".mermaid-canvas");
+        if (!canvas) {
           return;
         }
-        const containerWidth = canvas.clientWidth || canvas.offsetWidth;
-        if (!containerWidth) {
-          return;
+
+        svg.style.maxWidth = "";
+        svg.style.width = "";
+        svg.style.height = "";
+        svg.style.marginLeft = "";
+        svg.style.marginRight = "";
+
+        try {
+          const bbox = svg.getBBox();
+          if (bbox.width <= 0) {
+            return;
+          }
+          const containerWidth = canvas.clientWidth || canvas.offsetWidth;
+          if (!containerWidth) {
+            return;
+          }
+          const maxHeightValue = getComputedStyle(canvas).getPropertyValue(
+            "--mermaid-max-height",
+          ).trim();
+          const maxHeightPx = parseMermaidMaxHeight(maxHeightValue);
+          const padding = 20;
+          const availableHeight = Math.max(0, maxHeightPx - padding);
+          const naturalHeight = containerWidth * (bbox.height / bbox.width);
+
+          if (naturalHeight <= availableHeight) {
+            svg.style.width = "100%";
+            svg.style.height = `${Math.ceil(naturalHeight)}px`;
+          } else {
+            const scale = availableHeight / naturalHeight;
+            const fitWidth = Math.ceil(containerWidth * scale);
+            const fitHeight = Math.ceil(availableHeight);
+            svg.style.width = `${fitWidth}px`;
+            svg.style.height = `${fitHeight}px`;
+            svg.style.marginLeft = "auto";
+            svg.style.marginRight = "auto";
+          }
+        } catch (_error) {
+          // Ignore detached or invalid SVG bounds failures.
         }
-        const naturalHeight = containerWidth * (bbox.height / bbox.width);
-        svg.style.height = `${Math.ceil(naturalHeight)}px`;
-      } catch (_error) {
-        // Ignore detached or invalid SVG bounds failures.
-      }
-    });
+      });
   }
 
   function applyZoomToDiagrams() {
@@ -619,25 +667,27 @@
       return;
     }
 
-    state.root.querySelectorAll(".mermaid-container .mermaid-canvas svg").forEach((svgElement) => {
-      if (svgElement.getAttribute(panZoomKey) === "true") {
-        return;
-      }
+    state.root
+      .querySelectorAll(".mermaid-container .mermaid-canvas svg")
+      .forEach((svgElement) => {
+        if (svgElement.getAttribute(panZoomKey) === "true") {
+          return;
+        }
 
-      const container = svgElement.closest(".mermaid-container");
-      const instance = window.svgPanZoom(svgElement, {
-        controlIconsEnabled: false,
-        zoomScaleSensitivity: 0.4,
-        minZoom: 0.5,
-        maxZoom: 20,
-        fit: true,
-        center: true,
+        const container = svgElement.closest(".mermaid-container");
+        const instance = window.svgPanZoom(svgElement, {
+          controlIconsEnabled: false,
+          zoomScaleSensitivity: 0.03,
+          minZoom: 0.5,
+          maxZoom: 20,
+          fit: true,
+          center: true,
+        });
+        svgElement.setAttribute(panZoomKey, "true");
+        if (container) {
+          container._panZoomInstance = instance;
+        }
       });
-      svgElement.setAttribute(panZoomKey, "true");
-      if (container) {
-        container._panZoomInstance = instance;
-      }
-    });
   }
 
   async function renderMermaidDiagrams() {
@@ -673,7 +723,9 @@
     });
 
     const mermaidNodes = Array.from(
-      state.root.querySelectorAll(".mermaid-container .mermaid-canvas .mermaid"),
+      state.root.querySelectorAll(
+        ".mermaid-container .mermaid-canvas .mermaid",
+      ),
     );
 
     if (mermaidNodes.length === 0) {
@@ -746,7 +798,9 @@
 
     const trimmedHref = (result.first || "").trim();
     if (!trimmedHref) {
-      const textNode = document.createTextNode(currentLabel || currentHref || "");
+      const textNode = document.createTextNode(
+        currentLabel || currentHref || "",
+      );
       linkElement.replaceWith(textNode);
       emitChange();
       return;
@@ -763,16 +817,18 @@
       return;
     }
 
-    state.root.querySelectorAll('li > input[type="checkbox"]').forEach((checkbox) => {
-      checkbox.removeAttribute("disabled");
-      checkbox.setAttribute("contenteditable", "false");
-      setTaskCheckboxClasses(checkbox);
+    state.root
+      .querySelectorAll('li > input[type="checkbox"]')
+      .forEach((checkbox) => {
+        checkbox.removeAttribute("disabled");
+        checkbox.setAttribute("contenteditable", "false");
+        setTaskCheckboxClasses(checkbox);
 
-      const parentList = checkbox.closest("ul, ol");
-      if (parentList) {
-        parentList.classList.add("task-list");
-      }
-    });
+        const parentList = checkbox.closest("ul, ol");
+        if (parentList) {
+          parentList.classList.add("task-list");
+        }
+      });
   }
 
   function decorateLinks() {
@@ -857,7 +913,9 @@
         const languageClass = Array.from(codeNode.classList).find((className) =>
           className.startsWith("language-"),
         );
-        const language = languageClass ? languageClass.replace("language-", "") : "";
+        const language = languageClass
+          ? languageClass.replace("language-", "")
+          : "";
 
         return `\n\n\`\`\`${language}\n${codeText}\n\`\`\`\n\n`;
       },
@@ -867,15 +925,26 @@
   }
 
   function cleanupForSerialization(cloneRoot) {
-    cloneRoot.querySelectorAll(".copy-button, .block-edit-trigger, .mermaid-fullscreen-trigger").forEach((node) => {
-      node.remove();
-    });
-    cloneRoot.querySelectorAll(".mermaid-zoom-controls, .mermaid-inline-toolbar, .code-line-numbers").forEach((node) => {
-      node.remove();
-    });
+    cloneRoot
+      .querySelectorAll(
+        ".copy-button, .block-edit-trigger, .mermaid-fullscreen-trigger",
+      )
+      .forEach((node) => {
+        node.remove();
+      });
+    cloneRoot
+      .querySelectorAll(
+        ".mermaid-zoom-controls, .mermaid-inline-toolbar, .code-line-numbers",
+      )
+      .forEach((node) => {
+        node.remove();
+      });
 
     cloneRoot.querySelectorAll(".code-block").forEach((wrapper) => {
-      const source = wrapper.dataset.rawSource || wrapper.querySelector("pre code")?.textContent || "";
+      const source =
+        wrapper.dataset.rawSource ||
+        wrapper.querySelector("pre code")?.textContent ||
+        "";
       const language = wrapper.dataset.language || "";
       const pre = document.createElement("pre");
       const code = document.createElement("code");
@@ -897,13 +966,15 @@
       container.replaceWith(pre);
     });
 
-    cloneRoot.querySelectorAll('li > input[type="checkbox"]').forEach((checkbox) => {
-      if (checkbox.checked) {
-        checkbox.setAttribute("checked", "checked");
-      } else {
-        checkbox.removeAttribute("checked");
-      }
-    });
+    cloneRoot
+      .querySelectorAll('li > input[type="checkbox"]')
+      .forEach((checkbox) => {
+        if (checkbox.checked) {
+          checkbox.setAttribute("checked", "checked");
+        } else {
+          checkbox.removeAttribute("checked");
+        }
+      });
   }
 
   function getMarkdown() {
@@ -919,7 +990,10 @@
       return state.root.textContent || "";
     }
 
-    const markdown = turndownService.turndown(cloneRoot).replace(/\n{3,}/g, "\n\n").trim();
+    const markdown = turndownService
+      .turndown(cloneRoot)
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
     return markdown;
   }
 
@@ -956,7 +1030,8 @@
       return null;
     }
 
-    const startNode = node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+    const startNode =
+      node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
     if (!startNode) {
       return null;
     }
@@ -979,7 +1054,9 @@
   }
 
   async function insertImage(path, alt = "image") {
-    insertHtmlAtSelection(`<p><img src="${escapeHtmlAttribute(path)}" alt="${escapeHtmlAttribute(alt)}" /></p><p><br></p>`);
+    insertHtmlAtSelection(
+      `<p><img src="${escapeHtmlAttribute(path)}" alt="${escapeHtmlAttribute(alt)}" /></p><p><br></p>`,
+    );
     await decorateDocument();
     emitChange();
   }
@@ -1133,7 +1210,9 @@
       if (selectedText) {
         document.execCommand("createLink", false, linkUrl);
       } else {
-        insertHtmlAtSelection(`<a href="${escapeHtmlAttribute(linkUrl)}">${escapeHtmlAttribute(linkUrl)}</a>`);
+        insertHtmlAtSelection(
+          `<a href="${escapeHtmlAttribute(linkUrl)}">${escapeHtmlAttribute(linkUrl)}</a>`,
+        );
       }
       decorateLinks();
       emitChange();
@@ -1165,7 +1244,9 @@
     }
 
     if (command === "codeBlock") {
-      insertHtmlAtSelection('<pre><code class="language-text">// code</code></pre><p><br></p>');
+      insertHtmlAtSelection(
+        '<pre><code class="language-text">// code</code></pre><p><br></p>',
+      );
       decorateCodeBlocks();
       emitChange();
       return;
@@ -1197,7 +1278,9 @@
     }
 
     if (command === "mermaid") {
-      insertHtmlAtSelection('<pre><code class="language-mermaid">graph TD\n  A[Start] --> B[End]</code></pre><p><br></p>');
+      insertHtmlAtSelection(
+        '<pre><code class="language-mermaid">graph TD\n  A[Start] --> B[End]</code></pre><p><br></p>',
+      );
       await renderMermaidDiagrams();
       emitChange();
     }
@@ -1287,7 +1370,9 @@
       code.textContent = source;
       pre.appendChild(code);
 
-      const content = state.blockEditTarget.querySelector(".code-block-content");
+      const content = state.blockEditTarget.querySelector(
+        ".code-block-content",
+      );
       if (content) {
         content.innerHTML = "";
         content.appendChild(createLineNumberGutter(countCodeLines(source)));
@@ -1317,7 +1402,10 @@
       return;
     }
 
-    if (state.blockEditType === "math-display" || state.blockEditType === "math-inline") {
+    if (
+      state.blockEditType === "math-display" ||
+      state.blockEditType === "math-inline"
+    ) {
       state.blockEditTarget.setAttribute("data-math-source", source);
       state.blockEditTarget.textContent = source;
       renderMathEquations();
@@ -1334,7 +1422,14 @@
     const languageInput = document.getElementById("block-edit-language");
     const languageLabel = document.getElementById("block-edit-language-label");
 
-    if (!overlay || !modal || !title || !sourceInput || !languageInput || !languageLabel) {
+    if (
+      !overlay ||
+      !modal ||
+      !title ||
+      !sourceInput ||
+      !languageInput ||
+      !languageLabel
+    ) {
       return;
     }
 
@@ -1388,9 +1483,12 @@
     state.fullscreenPreviousScrollTop = state.container?.scrollTop ?? null;
 
     state.fullscreenPreviousFocus =
-      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
 
-    content.innerHTML = '<div class="mermaid-fullscreen-loading"><div class="content-loading-spinner"></div></div>';
+    content.innerHTML =
+      '<div class="mermaid-fullscreen-loading"><div class="content-loading-spinner"></div></div>';
     overlay.classList.remove("hidden");
     modal.classList.remove("hidden");
     focusWithoutScroll(document.getElementById("mermaid-fullscreen-close"));
@@ -1402,7 +1500,10 @@
         ensureMermaidInitialized();
         const fullscreenId = `mermaid-fullscreen-${Date.now()}`;
         const result = await window.mermaid.render(fullscreenId, mermaidSource);
-        if (renderToken !== state.fullscreenRenderToken || modal.classList.contains("hidden")) {
+        if (
+          renderToken !== state.fullscreenRenderToken ||
+          modal.classList.contains("hidden")
+        ) {
           return;
         }
         content.innerHTML = result.svg;
@@ -1424,7 +1525,8 @@
 
     if (!svgElement) {
       if (renderToken === state.fullscreenRenderToken) {
-        content.innerHTML = '<div class="math-error-block">Unable to render diagram in fullscreen view.</div>';
+        content.innerHTML =
+          '<div class="math-error-block">Unable to render diagram in fullscreen view.</div>';
       }
       return;
     }
@@ -1438,7 +1540,7 @@
     if (window.svgPanZoom) {
       state.fullscreenPanZoom = window.svgPanZoom(svgElement, {
         controlIconsEnabled: false,
-        zoomScaleSensitivity: 0.4,
+        zoomScaleSensitivity: 0.03,
         minZoom: 0.2,
         maxZoom: 40,
         fit: true,
@@ -1483,14 +1585,13 @@
       return null;
     }
 
-    const startNode = node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+    const startNode =
+      node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
     if (!startNode || !state.root.contains(startNode)) {
       return null;
     }
 
-    return startNode.closest(
-      "p, div, li, blockquote, h1, h2, h3, h4, h5, h6",
-    );
+    return startNode.closest("p, div, li, blockquote, h1, h2, h3, h4, h5, h6");
   }
 
   function placeCaretAtStart(node) {
@@ -1564,11 +1665,17 @@
     paragraph.appendChild(fragment);
 
     if (paragraph.firstChild?.nodeType === Node.TEXT_NODE) {
-      paragraph.firstChild.textContent = paragraph.firstChild.textContent.replace(/^\s+/, "");
+      paragraph.firstChild.textContent =
+        paragraph.firstChild.textContent.replace(/^\s+/, "");
     }
 
-    const normalizedText = (paragraph.textContent || "").replace(/\u00a0/g, " ").trim();
-    if (!normalizedText && !paragraph.querySelector("img, code, a, strong, em, del, span, math")) {
+    const normalizedText = (paragraph.textContent || "")
+      .replace(/\u00a0/g, " ")
+      .trim();
+    if (
+      !normalizedText &&
+      !paragraph.querySelector("img, code, a, strong, em, del, span, math")
+    ) {
       paragraph.innerHTML = "<br>";
     }
 
@@ -1587,7 +1694,9 @@
       return null;
     }
 
-    const listItems = Array.from(list.children).filter((node) => node.nodeName === "LI");
+    const listItems = Array.from(list.children).filter(
+      (node) => node.nodeName === "LI",
+    );
     const itemIndex = listItems.indexOf(listItem);
     const isOnlyItem = listItems.length === 1;
 
@@ -1684,7 +1793,11 @@
     }
 
     const anchorNode = selection.anchorNode;
-    if (!anchorNode || anchorNode.nodeType !== Node.TEXT_NODE || isWithinNonEditable(anchorNode)) {
+    if (
+      !anchorNode ||
+      anchorNode.nodeType !== Node.TEXT_NODE ||
+      isWithinNonEditable(anchorNode)
+    ) {
       return false;
     }
     if (closestCodeElement(anchorNode)) {
@@ -1826,7 +1939,12 @@
     }
 
     const isSpaceKey = event.key === " " || event.key === "Spacebar";
-    const shouldCheckInline = isSpaceKey || event.key === "*" || event.key === "_" || event.key === "`" || event.key === "~";
+    const shouldCheckInline =
+      isSpaceKey ||
+      event.key === "*" ||
+      event.key === "_" ||
+      event.key === "`" ||
+      event.key === "~";
     if (!isSpaceKey && !shouldCheckInline) {
       return;
     }
@@ -1862,8 +1980,11 @@
       return;
     }
 
-    const listItem =
-      (anchorNode.nodeType === Node.TEXT_NODE ? anchorNode.parentElement : anchorNode)?.closest("li");
+    const listItem = (
+      anchorNode.nodeType === Node.TEXT_NODE
+        ? anchorNode.parentElement
+        : anchorNode
+    )?.closest("li");
     if (!listItem || !state.root?.contains(listItem)) {
       return;
     }
@@ -1916,7 +2037,9 @@
       return;
     }
 
-    const block = event.target.closest(".code-block, .mermaid-container, .math-display, .math-inline");
+    const block = event.target.closest(
+      ".code-block, .mermaid-container, .math-display, .math-inline",
+    );
     if (!block || event.target.closest("button, input")) {
       return;
     }
@@ -1931,7 +2054,10 @@
   }
 
   function setLinkModifierCursorState(isActive) {
-    document.documentElement.classList.toggle("link-open-modifier", Boolean(isActive));
+    document.documentElement.classList.toggle(
+      "link-open-modifier",
+      Boolean(isActive),
+    );
   }
 
   function handleModifierKeyState(event) {
@@ -1975,7 +2101,9 @@
 
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape") {
-        const fullscreenModal = document.getElementById("mermaid-fullscreen-modal");
+        const fullscreenModal = document.getElementById(
+          "mermaid-fullscreen-modal",
+        );
         if (fullscreenModal && !fullscreenModal.classList.contains("hidden")) {
           closeMermaidFullscreen();
           return;

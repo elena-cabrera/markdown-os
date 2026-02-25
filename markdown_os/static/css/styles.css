@@ -37,6 +37,7 @@
   --code-line-number-bg: #eef2ff;
   --code-line-number-text: #64748b;
   --mermaid-bg: #ffffff;
+  --mermaid-max-height: 420px;
   --mermaid-error-border: #fecaca;
   --mermaid-error-bg: #fef2f2;
   --mermaid-error-text: #991b1b;
@@ -1286,6 +1287,7 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   position: relative;
   padding: 10px;
   min-height: 0;
+  max-height: var(--mermaid-max-height);
   overflow: hidden;
 }
 
