@@ -460,7 +460,7 @@
 
     window.mermaid.initialize({
       startOnLoad: false,
-      securityLevel: "loose",
+      securityLevel: "strict",
       theme,
       useMaxWidth: false,
     });

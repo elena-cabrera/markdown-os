@@ -13,10 +13,9 @@
 The core architecture is sound. The backend is clean, well-typed, and follows good patterns (atomic writes, file locking, proper path validation). The CLI is polished. The WYSIWYG editor works well for a v0.3 product. However, there are **security vulnerabilities that must be fixed before public release**, significant code duplication in the frontend that will make maintenance painful, and gaps in test coverage for critical paths.
 
 The biggest concerns in order:
-1. **XSS vectors** in markdown rendering (no HTML sanitization, Mermaid `securityLevel: "loose"`)
-2. **Unpinned CDN dependency** (marked.js loaded without version lock)
-3. **Platform lock-in** (POSIX `fcntl` locks make this Linux/macOS only with no Windows fallback or clear documentation)
-4. **~500+ lines of duplicated frontend code** between `wysiwyg.js` and `markdown.js`
+1. **XSS vectors** in markdown rendering (no HTML sanitization, unescaped user input in HTML construction)
+2. **Platform lock-in** (POSIX `fcntl` locks make this Linux/macOS only with no Windows fallback or clear documentation)
+3. **~500+ lines of duplicated frontend code** between `wysiwyg.js` and `markdown.js`
 
 ---
 
@@ -48,41 +47,7 @@ const cleanHtml = DOMPurify.sanitize(rawHtml, {
 state.root.innerHTML = cleanHtml;
 ```
 
-#### 2. Mermaid configured with `securityLevel: "loose"`
-
-**What:** Both `wysiwyg.js:463` and `markdown.js:314` initialize Mermaid with `securityLevel: "loose"`, which allows click events and interactive elements in rendered SVG diagrams. Combined with `innerHTML` injection of the SVG output (`wysiwyg.js:1415`, `markdown.js:576`), this enables XSS through crafted Mermaid diagram syntax.
-
-**Why it matters:** Mermaid's loose mode was designed for trusted environments. An open-source markdown editor that opens arbitrary files is not a trusted environment.
-
-**Fix:** Change to `securityLevel: "strict"` in both locations. If interactive diagrams are needed, use `"sandbox"` mode which renders in an iframe.
-
-#### 3. XSS in Mermaid error rendering
-
-**What:** `markdown.js:330` directly interpolates user-authored Mermaid source content into `innerHTML`:
-```javascript
-container.innerHTML = `<div class="mermaid-error">Invalid mermaid syntax:\n${
-  mermaidElement.getAttribute("data-original-content") || mermaidElement.textContent || ""
-}</div>`;
-```
-
-If the Mermaid source contains `<img src=x onerror=alert(1)>`, it executes.
-
-**Fix:** Use `textContent` instead of `innerHTML`, or escape the content before interpolation.
-
-#### 4. Unpinned marked.js CDN dependency
-
-**What:** `index.html:49` loads marked.js without a version pin:
-```html
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-```
-
-Every other CDN dependency is version-pinned (turndown@7.2.0, mermaid@10, katex@0.16.21, etc.), but the most security-critical one -- the markdown parser -- is not.
-
-**Why it matters:** jsdelivr serves the latest version by default. A breaking change or compromised release of marked.js would silently affect all users. This also means the editor behavior is non-deterministic across installations.
-
-**Fix:** Pin to a specific version: `https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js` (or whatever the current version is).
-
-#### 5. Unescaped user input in HTML construction
+#### 2. Unescaped user input in HTML construction
 
 **What:** Several places in `wysiwyg.js` construct HTML strings with unescaped user input:
 - Line 1143: `insertHtmlAtSelection(\`<a href="${linkUrl}">${linkUrl}</a>\`)` -- `linkUrl` comes from user prompt
@@ -95,7 +60,7 @@ A URL containing `" onclick="alert(1)` breaks out of the attribute.
 function escAttr(str) { return str.replace(/["&<>]/g, c => ({'\"':'&quot;','&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
 ```
 
-#### 6. POSIX-only file locking with no fallback or documentation
+#### 3. POSIX-only file locking with no fallback or documentation
 
 **What:** `file_handler.py` imports `fcntl` unconditionally at module level (line 2). This module does not exist on Windows, causing an `ImportError` on import.
 
@@ -109,7 +74,7 @@ function escAttr(str) { return str.replace(/["&<>]/g, c => ({'\"':'&quot;','&':'
 
 ### ORANGE -- Important (should fix soon)
 
-#### 7. No CDN Subresource Integrity (SRI) hashes
+#### 4. No CDN Subresource Integrity (SRI) hashes
 
 **What:** All 8 CDN scripts/stylesheets in `index.html` are loaded without `integrity` attributes. If any CDN (jsdelivr, cdnjs) is compromised, malicious code executes in the editor with full access to the local filesystem via the API.
 
@@ -123,7 +88,7 @@ function escAttr(str) { return str.replace(/["&<>]/g, c => ({'\"':'&quot;','&':'
 
 Generate hashes with `openssl dgst -sha384 -binary FILE | openssl base64 -A`.
 
-#### 8. ~500+ lines of duplicated code between wysiwyg.js and markdown.js
+#### 5. ~500+ lines of duplicated code between wysiwyg.js and markdown.js
 
 **What:** These two files share near-identical implementations of:
 - Math extension configuration and rendering (~80 lines)
@@ -133,23 +98,23 @@ Generate hashes with `openssl dgst -sha384 -binary FILE | openssl base64 -A`.
 - `escapeHtmlAttribute()`, `inferLanguageLabel()`, `countCodeLines()`, `createLineNumberGutter()`, `copyToClipboard()` (~80 lines)
 - Mermaid theme mapping constant (~10 lines)
 
-**Why it matters:** Any bug fix or feature change needs to be applied in two places. This is how subtle bugs and security inconsistencies creep in. The Mermaid error rendering XSS (finding #3) exists in `markdown.js` but NOT in `wysiwyg.js` -- demonstrating exactly this risk.
+**Why it matters:** Any bug fix or feature change needs to be applied in two places. This is how subtle bugs and security inconsistencies creep in.
 
 **Fix:** Extract shared rendering logic into a `markdown-rendering.js` module that both `wysiwyg.js` and `markdown.js` import from.
 
-#### 9. `focusWithoutScroll` duplicated in 4 files
+#### 6. `focusWithoutScroll` duplicated in 4 files
 
 **What:** The identical `focusWithoutScroll()` helper function is copy-pasted in `wysiwyg.js`, `editor.js`, `tabs.js`, and `dialogs.js`.
 
 **Fix:** Move to a shared `utils.js` module loaded before the dependent scripts.
 
-#### 10. `setSaveStatus` and `setContentLoadingState` duplicated
+#### 7. `setSaveStatus` and `setContentLoadingState` duplicated
 
 **What:** `setSaveStatus()` is identical in `editor.js:20` and `tabs.js:13`. `setContentLoadingState()` is identical in `editor.js:75` and `tabs.js:47`. `AUTOSAVE_DELAY_MS` is declared in both files.
 
 **Fix:** Extract to shared module or have one file be the authoritative source.
 
-#### 11. No rate limiting on API endpoints
+#### 8. No rate limiting on API endpoints
 
 **What:** The `POST /api/save` and `POST /api/images` endpoints have no rate limiting. While this is a local server, the `--host 0.0.0.0` option exposes it to the network.
 
@@ -157,7 +122,7 @@ Generate hashes with `openssl dgst -sha384 -binary FILE | openssl base64 -A`.
 
 **Fix:** Add a simple in-memory rate limiter for the image upload endpoint, or document that `--host 0.0.0.0` is unsafe for untrusted networks.
 
-#### 12. No authentication or access control
+#### 9. No authentication or access control
 
 **What:** The server has no authentication mechanism. Anyone who can reach the server's port can read files, write files, and upload images. The WebSocket endpoint is also unauthenticated.
 
@@ -172,7 +137,7 @@ if host != "127.0.0.1" and host != "localhost":
     )
 ```
 
-#### 13. `_status_for_read_error` uses string matching
+#### 10. `_status_for_read_error` uses string matching
 
 **What:** `server.py:699` determines HTTP status codes by checking if `"does not exist"` appears in the error message string:
 ```python
@@ -193,7 +158,7 @@ class FileIOError(FileReadError):
     pass
 ```
 
-#### 14. WebSocketHub broadcast sends sequentially
+#### 11. WebSocketHub broadcast sends sequentially
 
 **What:** `server.py:94-98` sends to each client sequentially in a loop. If one client has a slow connection, all subsequent clients wait.
 
@@ -217,13 +182,13 @@ results = await asyncio.gather(
 
 ### YELLOW -- Nice to have
 
-#### 15. No CONTRIBUTING.md or development setup guide
+#### 12. No CONTRIBUTING.md or development setup guide
 
 **What:** The README covers installation and usage for end users, but there's no contributor guide. CLAUDE.md contains good development info but is an AI-assistant config file, not contributor documentation.
 
 **Fix:** Create a CONTRIBUTING.md covering: how to set up the dev environment, how to run tests, code style expectations, and PR process. Much of the content can be adapted from CLAUDE.md.
 
-#### 16. `document.execCommand` is deprecated
+#### 13. `document.execCommand` is deprecated
 
 **What:** `wysiwyg.js` uses `document.execCommand` extensively (lines 220, 958, 1021, 1029, etc.) for text formatting. This API is deprecated and may be removed from browsers.
 
@@ -231,13 +196,13 @@ results = await asyncio.gather(
 
 **Fix:** Long-term, migrate to the [Input Events Level 2](https://www.w3.org/TR/input-events-2/) API or use `Selection`/`Range` APIs directly for formatting operations. No immediate action needed.
 
-#### 17. `navigator.platform` is deprecated
+#### 14. `navigator.platform` is deprecated
 
 **What:** `wysiwyg-toolbar.js:151` and `search.js:335` use `navigator.platform.toUpperCase().includes("MAC")` for platform detection. This API is deprecated.
 
 **Fix:** Replace with `navigator.userAgentData?.platform` or simply check `navigator.platform` with a graceful fallback (it still works and will for a long time).
 
-#### 18. Mermaid version pinned too broadly
+#### 15. Mermaid version pinned too broadly
 
 **What:** `index.html:52` pins Mermaid to `@10` (major version only):
 ```html
@@ -248,7 +213,7 @@ results = await asyncio.gather(
 
 **Fix:** Pin to a specific minor version.
 
-#### 19. Magic number in TOC scroll offset
+#### 16. Magic number in TOC scroll offset
 
 **What:** `toc.js:80` uses a hardcoded `100` for heading activation offset:
 ```javascript
@@ -257,7 +222,7 @@ const scrollPosition = container.scrollTop + 100;
 
 **Fix:** Extract to a named constant: `const HEADING_ACTIVATION_OFFSET_PX = 100;`
 
-#### 20. Large monolithic `executeCommand` function
+#### 17. Large monolithic `executeCommand` function
 
 **What:** `wysiwyg.js` lines 1013-1211 contains a ~200-line function handling 14 different commands via sequential if-blocks.
 
@@ -270,7 +235,7 @@ const commands = {
 };
 ```
 
-#### 21. `vercel.json` and `site/` directory add confusion
+#### 18. `vercel.json` and `site/` directory add confusion
 
 **What:** The repo contains a Vercel deployment config and a `site/` directory with a landing page (~80KB HTML file with screenshots). This is the project website, not part of the editor tool.
 
@@ -278,7 +243,7 @@ const commands = {
 
 **Fix:** Consider moving the website to a separate `gh-pages` branch or a `docs/` directory. At minimum, add a comment in the README noting that `site/` is the project website, not part of the package.
 
-#### 22. `example.md` tracked but also gitignored
+#### 19. `example.md` tracked but also gitignored
 
 **What:** `.gitignore` has `/example.md` to ignore generated examples, but `example.md` is tracked in git (it's the demo file at the project root).
 
@@ -286,7 +251,7 @@ const commands = {
 
 **Fix:** Either rename the tracked example to something more specific (like `demo.md`) or remove it from tracking if it's meant to be generated.
 
-#### 23. No `py.typed` marker file
+#### 20. No `py.typed` marker file
 
 **What:** The project declares `Typing :: Typed` in its classifiers but doesn't include a `py.typed` marker file in the package. PEP 561 requires this for type checkers to recognize the package as typed.
 
@@ -366,17 +331,15 @@ const commands = {
 
 - No CONTRIBUTING.md
 - CLAUDE.md has the best development documentation but isn't discoverable for human contributors
-- `.codex/` and `.cursor/` configs suggest tool-specific workflows that others won't share
 - No linting/formatting configuration (no ruff, black, or eslint config)
 - No pre-commit hooks
 - No type checking in CI (no mypy or pyright)
 
 ### Pain Points
 
-- **Windows users will hit an `ImportError` immediately** with no helpful error message (finding #6)
-- The `--host 0.0.0.0` option silently exposes files to the network (finding #14)
+- **Windows users will hit an `ImportError` immediately** with no helpful error message (finding #3)
+- The `--host 0.0.0.0` option silently exposes files to the network (finding #9)
 - Lock files (`.md.lock`) are left behind on crash (cleanup only runs on graceful shutdown)
-- The roadmap listing implemented features is confusing for new users (finding #8)
 
 ---
 
@@ -384,25 +347,22 @@ const commands = {
 
 ### Before making public (1-2 days):
 1. Add DOMPurify sanitization layer (finding #1)
-2. Change Mermaid to `securityLevel: "strict"` (finding #2)
-3. Fix Mermaid error XSS (finding #3)
-4. Pin marked.js version (finding #4)
-5. Escape HTML attributes in user-provided content (finding #5)
-6. Add Windows incompatibility notice or fix (finding #6)
-7. Add warning for non-loopback `--host` (finding #12)
+2. Escape HTML attributes in user-provided content (finding #2)
+3. Add Windows incompatibility notice or fix (finding #3)
+4. Add warning for non-loopback `--host` (finding #9)
 
 ### Soon after public (1-2 weeks):
-8. Add SRI hashes to CDN resources (finding #7)
-9. Extract shared rendering code (finding #8)
-10. Extract duplicated utility functions (findings #9, #10)
-11. Add WebSocket and watchdog tests (testing gaps)
-12. Add CONTRIBUTING.md (finding #15)
-13. Fix string-based error classification (finding #13)
-14. Add parallel WebSocket broadcast (finding #14)
+5. Add SRI hashes to CDN resources (finding #4)
+6. Extract shared rendering code (finding #5)
+7. Extract duplicated utility functions (findings #6, #7)
+8. Add WebSocket and watchdog tests (testing gaps)
+9. Add CONTRIBUTING.md (finding #12)
+10. Fix string-based error classification (finding #10)
+11. Add parallel WebSocket broadcast (finding #11)
 
 ### When convenient:
-15. Pin Mermaid to specific minor version (finding #18)
-16. Add `py.typed` marker (finding #23)
-17. Consider moving site/ to gh-pages branch (finding #21)
-18. Add linting/formatting to CI
-19. Add `mypy` type checking to CI
+12. Pin Mermaid to specific minor version (finding #15)
+13. Add `py.typed` marker (finding #20)
+14. Consider moving site/ to gh-pages branch (finding #18)
+15. Add linting/formatting to CI
+16. Add `mypy` type checking to CI

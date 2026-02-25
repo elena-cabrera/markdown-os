@@ -311,7 +311,7 @@
 
     window.mermaid.initialize({
       startOnLoad: false,
-      securityLevel: "loose",
+      securityLevel: "strict",
       theme,
       useMaxWidth: false,
     });
@@ -327,7 +327,10 @@
         if (!container) {
           return;
         }
-        container.innerHTML = `<div class="mermaid-error">Invalid mermaid syntax:\n${mermaidElement.getAttribute("data-original-content") || mermaidElement.textContent || ""}</div>`;
+        const errorBlock = document.createElement("div");
+          errorBlock.className = "mermaid-error";
+          errorBlock.textContent = `Invalid mermaid syntax:\n${mermaidElement.getAttribute("data-original-content") || mermaidElement.textContent || ""}`;
+          container.replaceChildren(errorBlock);
       });
   }
 
