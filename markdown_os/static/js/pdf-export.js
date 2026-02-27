@@ -1,4 +1,12 @@
 (() => {
+  function forceLightThemeInClone(clonedDocument) {
+    if (!clonedDocument?.documentElement) {
+      return;
+    }
+
+    clonedDocument.documentElement.setAttribute("data-theme", "light");
+  }
+
   function derivePdfFilename() {
     const rawTitle = (document.title || "").trim();
     const normalizedTitle = rawTitle.replace(/\.md$/i, "").trim();
@@ -33,7 +41,11 @@
       margin: [10, 12, 10, 12],
       filename: derivePdfFilename(),
       image: { type: "jpeg", quality: 0.95 },
-      html2canvas: { scale: 2, useCORS: true },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        onclone: forceLightThemeInClone,
+      },
       jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
     };
 
