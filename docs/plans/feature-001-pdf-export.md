@@ -12,8 +12,9 @@ Add an "Export to PDF" button to the top-right toolbar that downloads the render
 
 `#save-status` currently lives inside `.tab-controls` (right side of `.tab-nav`). Move it to sit immediately after the `.undo-redo-group` on the left, so it reads:
 
-```
+```text
 [ ↩ ] [ ↪ ]  Saved   ···file.md···   [Theme▾] [Export]
+
 ```
 
 In `index.html`, remove `<span id="save-status">` from `.tab-controls` and place it directly after the closing `</div>` of `.undo-redo-group`, as a sibling element inside `.tab-nav`. Because `.tab-nav` uses a 3-column grid (`auto 1fr auto`), adding a fourth child breaks the grid — wrap undo-redo + save-status together in a new `<div class="nav-left-group">` that takes the first `auto` column.
@@ -25,6 +26,7 @@ In `index.html`, remove `<span id="save-status">` from `.tab-controls` and place
   </div>
   <span id="save-status" aria-live="polite">Idle</span>
 </div>
+
 ```
 
 Update `.tab-nav` grid to remain `grid-template-columns: auto 1fr auto`. `.nav-left-group` uses `display: inline-flex; align-items: center; gap: 10px;`.
@@ -48,6 +50,7 @@ Add a button to `.tab-controls`, to the left of the theme dropdown:
     </g>
   </svg>
 </button>
+
 ```
 
 The button reuses `.history-button` class exactly (32 × 32 px, `var(--border)`, `border-radius: 8px`, hover accent) — no new CSS needed for the button itself.
@@ -65,26 +68,28 @@ Add to `index.html` `<head>`:
   src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.2/dist/html2pdf.bundle.min.js"
   crossorigin="anonymous"
 ></script>
+
 ```
 
 ### New file: `markdown_os/static/js/pdf-export.js`
 
-```
+```text
 window.MarkdownOS = window.MarkdownOS || {};
 window.MarkdownOS.pdfExport = { exportToPdf };
+
 ```
 
 Core logic in `exportToPdf()`:
 
-1. Grab `document.getElementById('wysiwyg-wrapper')` as the source element.
-2. Derive a filename from `document.title` (strip `.md` extension, append `.pdf`), falling back to `document-export.pdf`.
-3. Call `html2pdf()` with options:
-   - `margin: [10, 12, 10, 12]` (mm)
-   - `filename`: derived above
-   - `image: { type: 'jpeg', quality: 0.95 }`
-   - `html2canvas: { scale: 2, useCORS: true }`
-   - `jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }`
-4. Chain `.from(element).save()` — this triggers a direct browser download with no print dialog.
+1.  Grab `document.getElementById('wysiwyg-wrapper')` as the source element.
+2.  Derive a filename from `document.title` (strip `.md` extension, append `.pdf`), falling back to `document-export.pdf`.
+3.  Call `html2pdf()` with options:
+    -   `margin: [10, 12, 10, 12]` (mm)
+    -   `filename`: derived above
+    -   `image: { type: 'jpeg', quality: 0.95 }`
+    -   `html2canvas: { scale: 2, useCORS: true }`
+    -   `jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }`
+4.  Chain `.from(element).save()` — this triggers a direct browser download with no print dialog.
 
 Add `<script src="/static/js/pdf-export.js"></script>` in `index.html` after the other module scripts.
 
@@ -95,6 +100,7 @@ In `initEditor()` (or a `DOMContentLoaded` listener), attach:
 ```js
 document.getElementById('export-pdf-button')
   ?.addEventListener('click', () => window.MarkdownOS.pdfExport.exportToPdf());
+
 ```
 
 ---
@@ -102,7 +108,7 @@ document.getElementById('export-pdf-button')
 ## Files to Change
 
 | File | Change |
-|------|--------|
+| --- | --- |
 | `markdown_os/static/index.html` | Wrap undo-redo + save-status in `.nav-left-group`; add export button to `.tab-controls`; add html2pdf CDN script; add `pdf-export.js` script tag |
 | `markdown_os/static/css/styles.css` | Add `.nav-left-group` flex styles (mirrors `.undo-redo-group`); no changes to `.history-button` |
 | `markdown_os/static/js/pdf-export.js` | New file — `exportToPdf()` implementation |
@@ -112,7 +118,7 @@ document.getElementById('export-pdf-button')
 
 ## Out of Scope
 
-- Server-side PDF rendering (Puppeteer, WeasyPrint)
-- Custom page headers/footers
-- Print stylesheet (`@media print`)
-- Export of multiple files at once
+-   Server-side PDF rendering (Puppeteer, WeasyPrint)
+-   Custom page headers/footers
+-   Print stylesheet (`@media print`)
+-   Export of multiple files at once

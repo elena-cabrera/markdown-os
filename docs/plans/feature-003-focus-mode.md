@@ -9,14 +9,14 @@ A keyboard-only toggle (no button) that enters real browser fullscreen, hides al
 ## Behavior
 
 | State | What's visible |
-|-------|---------------|
+| --- | --- |
 | Normal | Sidebar, tab-nav, file-tabs bar, content, floating toolbar |
 | Focus mode | Content area only, floating toolbar |
 
-- **Enter**: `F11` (or `Ctrl+Shift+F` as fallback — see note below)
-- **Exit**: `ESC` (native fullscreen ESC) or pressing the shortcut again
-- Focus mode == browser fullscreen — triggered via `document.documentElement.requestFullscreen()` and exited via `document.exitFullscreen()`
-- If the browser denies the fullscreen request (permissions policy), fall back to a CSS-only "simulated fullscreen" that stretches the container to `100vw × 100vh` with `position: fixed`
+-   **Enter**: `F11` (or `Ctrl+Shift+F` as fallback — see note below)
+-   **Exit**: `ESC` (native fullscreen ESC) or pressing the shortcut again
+-   Focus mode == browser fullscreen — triggered via `document.documentElement.requestFullscreen()` and exited via `document.exitFullscreen()`
+-   If the browser denies the fullscreen request (permissions policy), fall back to a CSS-only "simulated fullscreen" that stretches the container to `100vw × 100vh` with `position: fixed`
 
 > **Note on F11:** Browsers intercept `F11` natively (Chrome/Edge toggle fullscreen, Firefox too). The shortcut should therefore be **`Ctrl+Shift+F`** to avoid conflict, with `F11` as a best-effort secondary that may or may not work depending on the browser/OS.
 
@@ -28,7 +28,7 @@ A keyboard-only toggle (no button) that enters real browser fullscreen, hides al
 
 Encapsulated as a module IIFE, exposing `window.MarkdownOS.focusMode = { toggle, isActive }`.
 
-```
+```text
 State:
   isFocusMode = false
 
@@ -45,6 +45,7 @@ exit():
   if document.fullscreenElement → exitFullscreen()
   document.body.classList.remove('focus-mode')
   isFocusMode = false
+
 ```
 
 Listen on `document` for `fullscreenchange` — if the browser exits fullscreen natively (via ESC or clicking away), call `exit()` to sync state and remove the CSS class.
@@ -78,6 +79,7 @@ body.focus-mode-css-fallback {
   z-index: 10000;
   overflow: hidden;
 }
+
 ```
 
 The floating toolbar (`#floating-toolbar`) remains visible because it is inside `.view-area`, which is not hidden.
@@ -99,12 +101,14 @@ document.addEventListener('keydown', (e) => {
     window.MarkdownOS.focusMode.toggle();
   }
 });
+
 ```
 
 ### Add script tag — `index.html`
 
 ```html
 <script src="/static/js/focus-mode.js"></script>
+
 ```
 
 Place it before `editor.js`.
@@ -114,7 +118,7 @@ Place it before `editor.js`.
 ## Files to Change
 
 | File | Change |
-|------|--------|
+| --- | --- |
 | `markdown_os/static/js/focus-mode.js` | New file — `toggle()`, `enter()`, `exit()`, fullscreen API + CSS fallback |
 | `markdown_os/static/css/styles.css` | Add `body.focus-mode` rules to hide sidebar / tab-nav / tabs |
 | `markdown_os/static/js/editor.js` | Register `keydown` listener for `Ctrl+Shift+F` and `F11` |
@@ -124,7 +128,7 @@ Place it before `editor.js`.
 
 ## Out of Scope
 
-- A visible button or indicator showing focus mode is active
-- Saving focus mode state across page reloads
-- Per-file focus mode (always applies to the active document)
-- Custom shortcut configuration
+-   A visible button or indicator showing focus mode is active
+-   Saving focus mode state across page reloads
+-   Per-file focus mode (always applies to the active document)
+-   Custom shortcut configuration
