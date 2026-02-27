@@ -621,13 +621,14 @@
     return true;
   }
 
-  async function closeTab(filePath) {
+  async function closeTab(filePath, options = {}) {
+    const { skipDirtyCheck = false } = options;
     const tabData = getTabData(filePath);
     if (!tabData) {
       return false;
     }
 
-    if (tabData.isDirty) {
+    if (!skipDirtyCheck && tabData.isDirty) {
       const choice = await showCloseDirtyTabDialog(basename(filePath));
       if (choice === "save") {
         const saved = await saveTabContent(filePath);
@@ -755,6 +756,26 @@
     tabsState.scrollBound = true;
   }
 
+
+  function renameTab(oldRelativePath, newRelativePath) {
+    if (!oldRelativePath || !newRelativePath || oldRelativePath === newRelativePath) {
+      return false;
+    }
+
+    const tabData = tabsState.tabs.get(oldRelativePath);
+    if (!tabData) {
+      return false;
+    }
+
+    replaceTabPath(oldRelativePath, newRelativePath);
+    if (tabsState.activeTabPath === newRelativePath) {
+      setPageTitle(newRelativePath);
+      window.fileTree?.setCurrentFile?.(newRelativePath);
+    }
+    renderTabBar();
+    return true;
+  }
+
   function init(mode) {
     tabsState.enabled = mode === "folder";
     if (!tabsState.enabled) {
@@ -773,6 +794,7 @@
     openTab,
     switchTab,
     closeTab,
+    renameTab,
     isEnabled: () => tabsState.enabled,
     getActiveTabPath: () => tabsState.activeTabPath,
     getTabData,
