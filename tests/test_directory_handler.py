@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from markdown_os.directory_handler import DirectoryHandler
+from markdown_os.file_handler import FileReadError, FileWriteError
 
 
 def test_list_files_recursive_returns_relative_markdown_paths(tmp_path: Path) -> None:
@@ -124,3 +125,58 @@ def test_get_file_handler_raises_for_non_markdown_files(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError):
         handler.get_file_handler("notes.txt")
+
+def test_create_file_creates_empty_file(tmp_path: Path) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir(parents=True, exist_ok=True)
+    handler = DirectoryHandler(workspace)
+
+    created = handler.create_file("docs/new.md")
+
+    assert created == (workspace / "docs" / "new.md").resolve()
+    assert created.read_text(encoding="utf-8") == ""
+
+
+def test_rename_path_renames_file(tmp_path: Path) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir(parents=True, exist_ok=True)
+    original = workspace / "notes.md"
+    original.write_text("text", encoding="utf-8")
+    handler = DirectoryHandler(workspace)
+
+    renamed = handler.rename_path("notes.md", "renamed.md")
+
+    assert renamed == (workspace / "renamed.md").resolve()
+    assert not original.exists()
+    assert renamed.exists()
+
+
+def test_delete_file_removes_file(tmp_path: Path) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir(parents=True, exist_ok=True)
+    target = workspace / "notes.md"
+    target.write_text("text", encoding="utf-8")
+    handler = DirectoryHandler(workspace)
+
+    handler.delete_file("notes.md")
+
+    assert not target.exists()
+
+
+def test_delete_file_raises_for_missing_path(tmp_path: Path) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir(parents=True, exist_ok=True)
+    handler = DirectoryHandler(workspace)
+
+    with pytest.raises(FileReadError):
+        handler.delete_file("missing.md")
+
+
+def test_create_file_raises_when_file_exists(tmp_path: Path) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir(parents=True, exist_ok=True)
+    (workspace / "notes.md").write_text("text", encoding="utf-8")
+    handler = DirectoryHandler(workspace)
+
+    with pytest.raises(FileWriteError):
+        handler.create_file("notes.md")
