@@ -583,6 +583,10 @@
   function bindEvents() {
     bindImageEvents();
 
+    document.getElementById("export-pdf-button")?.addEventListener("click", () => {
+      window.MarkdownOS?.pdfExport?.exportToPdf?.();
+    });
+
     if (window.wysiwyg?.onChange) {
       window.wysiwyg.onChange(onEditorInput);
     }

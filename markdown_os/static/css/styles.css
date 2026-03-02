@@ -446,6 +446,12 @@ body {
   background: var(--tab-nav-bg);
 }
 
+.nav-left-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .undo-redo-group {
   display: inline-flex;
   align-items: center;
