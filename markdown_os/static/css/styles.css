@@ -1882,6 +1882,33 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   }
 }
 
+/* ── Focus Mode ── */
+
+body.focus-mode #sidebar,
+body.focus-mode .tab-nav,
+body.focus-mode #file-tabs-bar {
+  display: none !important;
+}
+
+body.focus-mode #main-content {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+}
+
+body.focus-mode .view-area {
+  flex: 1;
+  overflow-y: auto;
+}
+
+body.focus-mode-css-fallback {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  overflow: hidden;
+}
+
 @media (max-width: 980px) {
   .container {
     flex-direction: column;
