@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from markdown_os.file_handler import FileHandler
+from markdown_os.file_handler import FileReadError, FileWriteError
 
 MARKDOWN_EXTENSIONS = {".md", ".markdown"}
 
@@ -165,6 +166,62 @@ class DirectoryHandler:
         for file_handler in self._file_handlers.values():
             file_handler.cleanup()
 
+    def create_file(self, relative_path: str) -> Path:
+        """Create an empty file in the workspace and return its absolute path."""
+
+        _, absolute_path = self._resolve_workspace_path(relative_path)
+        if absolute_path.exists():
+            raise FileWriteError(f"File already exists: {absolute_path}")
+
+        absolute_path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            absolute_path.write_text("", encoding="utf-8")
+        except OSError as exc:
+            raise FileWriteError(f"Failed to create file: {absolute_path}") from exc
+
+        return absolute_path
+
+    def rename_path(self, relative_path: str, new_name: str) -> Path:
+        """Rename a file or folder entry to a new name in the same parent directory."""
+
+        if not new_name or "/" in new_name or "\\" in new_name:
+            raise ValueError("New name must not be empty or contain path separators.")
+
+        normalized_path, source = self._resolve_workspace_path(relative_path)
+        if not source.exists():
+            raise FileReadError(f"Path does not exist: {source}")
+
+        destination = source.parent / new_name
+        destination = destination.resolve()
+        if not destination.is_relative_to(self._directory):
+            raise ValueError("Destination escapes the workspace directory.")
+        if destination.exists():
+            raise FileWriteError(f"Destination already exists: {destination}")
+
+        try:
+            source.rename(destination)
+        except OSError as exc:
+            raise FileWriteError(f"Failed to rename path: {source}") from exc
+
+        self._file_handlers.pop(normalized_path, None)
+        return destination
+
+    def delete_file(self, relative_path: str) -> None:
+        """Delete a file in the workspace."""
+
+        normalized_path, absolute_path = self._resolve_workspace_path(relative_path)
+        if not absolute_path.exists():
+            raise FileReadError(f"File does not exist: {absolute_path}")
+        if absolute_path.is_dir():
+            raise FileWriteError(f"Cannot delete directory: {absolute_path}")
+
+        try:
+            absolute_path.unlink()
+        except OSError as exc:
+            raise FileWriteError(f"Failed to delete file: {absolute_path}") from exc
+
+        self._file_handlers.pop(normalized_path, None)
+
     def _resolve_relative_markdown_path(self, relative_path: str) -> tuple[str, Path]:
         """
         Resolve and validate a directory-relative markdown file path.
@@ -188,6 +245,20 @@ class DirectoryHandler:
             raise ValueError(f"Not a markdown file: {absolute_path}")
         if not absolute_path.exists() or not absolute_path.is_file():
             raise FileNotFoundError(f"File does not exist: {absolute_path}")
+
+        normalized_path = absolute_path.relative_to(self._directory).as_posix()
+        return normalized_path, absolute_path
+
+    def _resolve_workspace_path(self, relative_path: str) -> tuple[str, Path]:
+        """Resolve and validate a directory-relative path within the workspace root."""
+
+        raw_path = Path(relative_path.replace("\\", "/"))
+        if raw_path.is_absolute():
+            raise ValueError("Path must be relative to the workspace directory.")
+
+        absolute_path = (self._directory / raw_path).resolve()
+        if not absolute_path.is_relative_to(self._directory):
+            raise ValueError("Path escapes the workspace directory.")
 
         normalized_path = absolute_path.relative_to(self._directory).as_posix()
         return normalized_path, absolute_path

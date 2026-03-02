@@ -440,3 +440,78 @@ def test_upload_image_uses_workspace_images_directory_in_folder_mode(tmp_path: P
     saved_path = workspace / payload["path"]
     assert saved_path.exists()
     assert saved_path.read_bytes() == b"folder-image"
+
+
+def test_create_file_endpoint_creates_file_in_folder_mode(tmp_path: Path) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir(parents=True, exist_ok=True)
+
+    with _build_folder_client(workspace) as client:
+        response = client.post("/api/files/create", json={"path": "docs/new.md"})
+
+    assert response.status_code == 200
+    assert response.json() == {"path": "docs/new.md"}
+    assert (workspace / "docs" / "new.md").exists()
+
+
+def test_rename_file_endpoint_renames_file_in_folder_mode(tmp_path: Path) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir(parents=True, exist_ok=True)
+    (workspace / "notes.md").write_text("text", encoding="utf-8")
+
+    with _build_folder_client(workspace) as client:
+        response = client.post(
+            "/api/files/rename",
+            json={"path": "notes.md", "new_name": "renamed.md"},
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {"path": "renamed.md"}
+    assert (workspace / "renamed.md").exists()
+    assert not (workspace / "notes.md").exists()
+
+
+def test_delete_file_endpoint_deletes_file_in_folder_mode(tmp_path: Path) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir(parents=True, exist_ok=True)
+    target = workspace / "notes.md"
+    target.write_text("text", encoding="utf-8")
+
+    with _build_folder_client(workspace) as client:
+        response = client.request("DELETE", "/api/files/delete", json={"path": "notes.md"})
+
+    assert response.status_code == 200
+    assert response.json() == {"ok": True}
+    assert not target.exists()
+
+
+def test_file_operation_routes_return_404_in_file_mode(tmp_path: Path) -> None:
+    markdown_path = tmp_path / "notes.md"
+    markdown_path.write_text("hello", encoding="utf-8")
+
+    with _build_client(markdown_path) as client:
+        create_response = client.post("/api/files/create", json={"path": "new.md"})
+        rename_response = client.post(
+            "/api/files/rename",
+            json={"path": "notes.md", "new_name": "renamed.md"},
+        )
+        delete_response = client.request(
+            "DELETE",
+            "/api/files/delete",
+            json={"path": "notes.md"},
+        )
+
+    assert create_response.status_code == 404
+    assert rename_response.status_code == 404
+    assert delete_response.status_code == 404
+
+
+def test_create_file_endpoint_returns_conflict_for_existing_file(tmp_path: Path) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir(parents=True, exist_ok=True)
+    (workspace / "notes.md").write_text("text", encoding="utf-8")
+
+    with _build_folder_client(workspace) as client:
+        response = client.post("/api/files/create", json={"path": "notes.md"})
+
+    assert response.status_code == 409

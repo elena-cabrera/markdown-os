@@ -31,6 +31,25 @@ class SaveRequest(BaseModel):
     file: str | None = None
 
 
+class CreateFileRequest(BaseModel):
+    """Body payload for file creation operations."""
+
+    path: str
+
+
+class RenameFileRequest(BaseModel):
+    """Body payload for file rename operations."""
+
+    path: str
+    new_name: str
+
+
+class DeleteFileRequest(BaseModel):
+    """Body payload for file deletion operations."""
+
+    path: str
+
+
 class WebSocketHub:
     """Manage active websocket clients and fan-out messages."""
 
@@ -481,6 +500,66 @@ def create_app(handler: FileHandler | DirectoryHandler, mode: str = "file") -> F
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
         return {"status": "saved", "metadata": metadata}
+
+
+    @app.post("/api/files/create")
+    async def create_file(payload: CreateFileRequest) -> dict[str, str]:
+        """Create a new file in folder mode."""
+
+        if app.state.mode != "folder":
+            raise HTTPException(status_code=404, detail="Not found.")
+
+        directory_handler = _require_directory_handler(app)
+        try:
+            created_path = directory_handler.create_file(payload.path)
+            relative_path = created_path.relative_to(directory_handler.directory).as_posix()
+            app.state.last_internal_write_at = time.monotonic()
+            return {"path": relative_path}
+        except FileWriteError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        except FileReadError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post("/api/files/rename")
+    async def rename_file(payload: RenameFileRequest) -> dict[str, str]:
+        """Rename a file or folder entry in folder mode."""
+
+        if app.state.mode != "folder":
+            raise HTTPException(status_code=404, detail="Not found.")
+
+        directory_handler = _require_directory_handler(app)
+        try:
+            renamed_path = directory_handler.rename_path(payload.path, payload.new_name)
+            relative_path = renamed_path.relative_to(directory_handler.directory).as_posix()
+            app.state.last_internal_write_at = time.monotonic()
+            return {"path": relative_path}
+        except FileWriteError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        except FileReadError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.delete("/api/files/delete")
+    async def delete_file(payload: DeleteFileRequest) -> dict[str, bool]:
+        """Delete a file in folder mode."""
+
+        if app.state.mode != "folder":
+            raise HTTPException(status_code=404, detail="Not found.")
+
+        directory_handler = _require_directory_handler(app)
+        try:
+            directory_handler.delete_file(payload.path)
+            app.state.last_internal_write_at = time.monotonic()
+            return {"ok": True}
+        except FileWriteError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        except FileReadError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     @app.post("/api/images")
     async def upload_image(file: UploadFile) -> dict[str, str]:

@@ -245,10 +245,14 @@ body {
 
 .sidebar-header {
   margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .file-tree-search {
   width: 100%;
+  min-width: 0;
   padding: 6px 10px;
   font-size: 13px;
   border: 1px solid var(--border);
@@ -266,6 +270,77 @@ body {
 .file-tree-search::placeholder {
   color: var(--text-muted);
 }
+
+
+.sidebar-action-btn {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel-bg);
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.sidebar-action-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.sidebar-action-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.context-menu {
+  position: fixed;
+  z-index: 9999;
+  min-width: 160px;
+  background: var(--modal-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--modal-shadow);
+  padding: 4px 0;
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 14px;
+  font-size: 0.875rem;
+  color: var(--text);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+}
+
+.context-menu-item:hover,
+.context-menu-item:focus {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.context-menu-item svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.context-menu-separator {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}
+
 
 #file-tree {
   max-height: 40vh;
@@ -1811,6 +1886,33 @@ html.link-open-modifier #wysiwyg-editor a[href] {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* ── Focus Mode ── */
+
+body.focus-mode #sidebar,
+body.focus-mode .tab-nav,
+body.focus-mode #file-tabs-bar {
+  display: none !important;
+}
+
+body.focus-mode #main-content {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+}
+
+body.focus-mode .view-area {
+  flex: 1;
+  overflow-y: auto;
+}
+
+body.focus-mode-css-fallback {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  overflow: hidden;
 }
 
 @media (max-width: 980px) {

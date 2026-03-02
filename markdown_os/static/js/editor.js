@@ -608,6 +608,17 @@
   window.showConflictDialog = showConflictDialog;
   window.saveContent = saveContent;
 
+  document.addEventListener("keydown", (e) => {
+    if (e.ctrlKey && e.shiftKey && e.key === "F") {
+      e.preventDefault();
+      window.MarkdownOS?.focusMode?.toggle();
+    }
+    if (e.key === "F11") {
+      e.preventDefault();
+      window.MarkdownOS?.focusMode?.toggle();
+    }
+  });
+
   document.addEventListener("DOMContentLoaded", async () => {
     window.wysiwyg?.init?.();
 
