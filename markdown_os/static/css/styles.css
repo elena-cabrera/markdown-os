@@ -46,6 +46,11 @@
   --math-error-text: #991b1b;
   --math-error-bg: #fef2f2;
   --math-error-border: #fecaca;
+  --frontmatter-bg: #f8fafc;
+  --frontmatter-border: #dbe2ee;
+  --frontmatter-key: #5b6c8d;
+  --frontmatter-chip-bg: #e9eef8;
+  --frontmatter-chip-text: #1f2c47;
   --modal-overlay: rgba(0, 0, 0, 0.5);
   --modal-bg: #ffffff;
   --modal-shadow: 0 10px 34px rgba(2, 6, 23, 0.28);
@@ -1177,6 +1182,103 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 
 #wysiwyg-editor pre {
   margin: 14px 0 20px;
+}
+
+#wysiwyg-editor .frontmatter-properties {
+  margin: 0 0 1.15rem;
+  border: 1px solid var(--frontmatter-border);
+  border-radius: 10px;
+  background: var(--frontmatter-bg);
+  padding: 10px 12px;
+  display: grid;
+  gap: 8px;
+}
+
+#wysiwyg-editor .frontmatter-properties-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+#wysiwyg-editor .frontmatter-properties-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+#wysiwyg-editor .frontmatter-add-property,
+#wysiwyg-editor .frontmatter-edit-property,
+#wysiwyg-editor .frontmatter-delete-property {
+  width: 24px;
+  height: 24px;
+}
+
+#wysiwyg-editor .frontmatter-property-row {
+  display: grid;
+  grid-template-columns: minmax(92px, 180px) minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+}
+
+#wysiwyg-editor .frontmatter-property-key {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--frontmatter-key);
+  text-transform: lowercase;
+  line-height: 1.8;
+}
+
+#wysiwyg-editor .frontmatter-property-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 22px;
+}
+
+#wysiwyg-editor .frontmatter-property-value {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--frontmatter-chip-bg);
+  color: var(--frontmatter-chip-text);
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: normal;
+  word-break: break-word;
+}
+
+#wysiwyg-editor .frontmatter-property-empty {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+#wysiwyg-editor .frontmatter-property-actions {
+  display: inline-flex;
+  gap: 4px;
+}
+
+#wysiwyg-editor .frontmatter-properties-create {
+  margin: 0 0 1.15rem;
+  border: 1px dashed var(--frontmatter-border);
+  border-radius: 10px;
+  background: var(--frontmatter-bg);
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+#wysiwyg-editor .frontmatter-create-hint {
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 #wysiwyg-editor img {
