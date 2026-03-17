@@ -122,13 +122,32 @@
           </button>
           <div id="file-tree-collapsible" class="sidebar-collapsible">
             <div class="sidebar-header">
-              <input
-                type="text"
-                id="file-tree-search"
-                placeholder="Search files..."
-                class="file-tree-search"
-                aria-label="Search files"
-              />
+              <div class="file-tree-search-wrapper">
+                <svg
+                  class="file-tree-search-icon"
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <g
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                  >
+                    <path d="m21 21l-4.34-4.34" />
+                    <circle cx="11" cy="11" r="8" />
+                  </g>
+                </svg>
+                <input
+                  type="text"
+                  id="file-tree-search"
+                  placeholder="Search files..."
+                  class="file-tree-search"
+                  aria-label="Search files"
+                />
+              </div>
               <button
                 id="file-tree-refresh"
                 class="sidebar-action-btn"
