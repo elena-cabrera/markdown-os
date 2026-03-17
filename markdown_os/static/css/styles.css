@@ -244,16 +244,35 @@ body {
 }
 
 .sidebar-header {
+  --sidebar-control-size: 30px;
   margin-bottom: 12px;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: 6px;
+}
+
+.file-tree-search-wrapper {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  color: var(--text-muted);
+}
+
+.file-tree-search-icon {
+  position: absolute;
+  top: 50%;
+  left: 10px;
+  width: 14px;
+  height: 14px;
+  transform: translateY(-50%);
+  pointer-events: none;
 }
 
 .file-tree-search {
   width: 100%;
   min-width: 0;
-  padding: 6px 10px;
+  height: var(--sidebar-control-size);
+  padding: 0 10px 0 30px;
   font-size: 13px;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -267,15 +286,20 @@ body {
   background: var(--editor-bg);
 }
 
+.file-tree-search-wrapper:focus-within .file-tree-search-icon {
+  color: var(--accent);
+}
+
 .file-tree-search::placeholder {
   color: var(--text-muted);
 }
 
 
 .sidebar-action-btn {
-  width: 24px;
-  height: 24px;
+  width: var(--sidebar-control-size);
+  height: var(--sidebar-control-size);
   flex-shrink: 0;
+  padding: 0;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--panel-bg);
@@ -292,9 +316,24 @@ body {
   background: var(--accent-soft);
 }
 
+.sidebar-action-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
 .sidebar-action-btn svg {
   width: 14px;
   height: 14px;
+}
+
+.sidebar-action-btn[aria-busy="true"] svg {
+  animation: sidebar-action-spin 0.8s linear infinite;
+}
+
+@keyframes sidebar-action-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .context-menu {
