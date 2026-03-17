@@ -255,7 +255,35 @@
             }
 
             .hero-cta {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                flex-wrap: wrap;
                 margin-bottom: 16px;
+            }
+
+            .download-secondary {
+                display: block;
+                margin-top: 4px;
+                font-size: 13px;
+                color: var(--color-text-secondary);
+            }
+
+            .download-secondary a {
+                text-decoration: underline;
+                text-underline-offset: 2px;
+            }
+
+            .download-secondary a:hover {
+                color: var(--color-text);
+            }
+
+            .cta-buttons {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                flex-wrap: wrap;
+                justify-content: center;
             }
 
             /* Install widget — white box, gray border, less rounded */
@@ -1626,12 +1654,22 @@
 
                     <div class="hero-cta">
                         <a
-                            href="https://github.com/elena-cabrera/markdown-os"
+                            id="hero-download-btn"
+                            href="downloads.html"
                             class="btn btn-primary"
+                            style="display: none"
+                            >Download Desktop App</a
+                        >
+                        <a
+                            href="https://github.com/elena-cabrera/markdown-os"
+                            class="btn btn-secondary"
                             target="_blank"
                             rel="noopener"
                             >View on GitHub</a
                         >
+                    </div>
+                    <div class="download-secondary" id="hero-download-secondary" style="display: none">
+                        <a href="downloads.html">All platforms &amp; versions</a>
                     </div>
 
                     <div class="install-widget">
@@ -2267,13 +2305,21 @@
                 <div class="reveal">
                     <h2>Start using markdown-os</h2>
                     <p>The new way to work with markdown files</p>
-                    <a
-                        href="https://github.com/elena-cabrera/markdown-os"
-                        class="btn btn-white"
-                        target="_blank"
-                        rel="noopener"
-                        >View on GitHub</a
-                    >
+                    <div class="cta-buttons">
+                        <a
+                            href="downloads.html"
+                            class="btn btn-white"
+                            >Download Desktop App</a
+                        >
+                        <a
+                            href="https://github.com/elena-cabrera/markdown-os"
+                            class="btn btn-white"
+                            target="_blank"
+                            rel="noopener"
+                            style="background: transparent; color: white; border-color: rgba(255,255,255,0.3)"
+                            >View on GitHub</a
+                        >
+                    </div>
                 </div>
             </div>
         </section>
@@ -2286,6 +2332,7 @@
                     &middot; <span id="footer-version">v—</span>
                 </div>
                 <nav class="footer-links">
+                    <a href="downloads.html">Downloads</a>
                     <a
                         href="https://github.com/elena-cabrera/markdown-os"
                         target="_blank"
@@ -2486,6 +2533,33 @@
                 }
                 updateScale();
                 window.addEventListener("resize", updateScale);
+            })();
+
+            // ---- OS-detecting download button ----
+            (() => {
+                const btn = document.getElementById("hero-download-btn");
+                const secondary = document.getElementById("hero-download-secondary");
+                if (!btn) return;
+
+                const ua = navigator.userAgent || "";
+                const platform = navigator.platform || "";
+                const baseUrl = "https://github.com/elena-cabrera/markdown-os/releases/latest/download/";
+                let os = null;
+
+                if (/Mac|iPhone|iPad|iPod/.test(platform) || /Macintosh/.test(ua)) {
+                    os = "macOS";
+                    btn.href = baseUrl + "Markdown-OS-macos.dmg";
+                    btn.textContent = "Download for macOS";
+                } else if (/Win/.test(platform)) {
+                    os = "Windows";
+                    btn.href = baseUrl + "Markdown-OS-windows.zip";
+                    btn.textContent = "Download for Windows";
+                }
+
+                if (os) {
+                    btn.style.display = "";
+                    if (secondary) secondary.style.display = "";
+                }
             })();
 
             // ---- Scroll reveal animations ----
