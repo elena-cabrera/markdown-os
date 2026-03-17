@@ -477,6 +477,22 @@
     }
   }
 
+  async function handleRefreshFileTree() {
+    const refreshButton = document.getElementById("file-tree-refresh");
+    if (!(refreshButton instanceof HTMLButtonElement) || refreshButton.disabled) {
+      return;
+    }
+
+    refreshButton.disabled = true;
+    refreshButton.setAttribute("aria-busy", "true");
+    try {
+      await loadFileTree();
+    } finally {
+      refreshButton.disabled = false;
+      refreshButton.removeAttribute("aria-busy");
+    }
+  }
+
   function bindSearch() {
     const searchInput = document.getElementById("file-tree-search");
     if (!searchInput) {
@@ -495,6 +511,10 @@
     document
       .getElementById("file-tree-toggle")
       ?.addEventListener("click", toggleFileTreeCollapse);
+
+    document.getElementById("file-tree-refresh")?.addEventListener("click", async () => {
+      await handleRefreshFileTree();
+    });
 
     document.getElementById("file-tree-new-file")?.addEventListener("click", async () => {
       await handleNewFile();
