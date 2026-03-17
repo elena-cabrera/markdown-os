@@ -14,6 +14,7 @@
     container: null,
     changeListeners: new Set(),
     suppressInput: false,
+    frontmatterBlock: "",
     mermaidInitialized: false,
     mermaidTheme: null,
     fullscreenPanZoom: null,
@@ -75,6 +76,172 @@
         console.error("WYSIWYG change listener failed.", error);
       }
     });
+  }
+
+  function splitFrontmatter(markdown) {
+    const source = typeof markdown === "string" ? markdown : "";
+    const match = source.match(
+      /^(\uFEFF?---[ \t]*\r?\n[\s\S]*?\r?\n(?:---|\.\.\.)[ \t]*)(\r?\n)?/,
+    );
+    if (!match) {
+      return {
+        frontmatterBlock: "",
+        bodyMarkdown: source,
+      };
+    }
+
+    return {
+      frontmatterBlock: match[1].replace(/^\uFEFF/, ""),
+      bodyMarkdown: source.slice(match[0].length),
+    };
+  }
+
+  function normalizeFrontmatterToken(value) {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return "";
+    }
+
+    if (
+      (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+      (trimmed.startsWith("'") && trimmed.endsWith("'"))
+    ) {
+      return trimmed.slice(1, -1);
+    }
+
+    return trimmed;
+  }
+
+  function parseInlineYamlArray(value) {
+    const trimmed = value.trim();
+    if (!trimmed.startsWith("[") || !trimmed.endsWith("]")) {
+      return null;
+    }
+
+    const inner = trimmed.slice(1, -1).trim();
+    if (!inner) {
+      return [];
+    }
+
+    return inner
+      .split(",")
+      .map((item) => normalizeFrontmatterToken(item))
+      .filter(Boolean);
+  }
+
+  function parseFrontmatterRows(frontmatterBlock) {
+    if (!frontmatterBlock) {
+      return [];
+    }
+
+    const lines = frontmatterBlock.split(/\r?\n/);
+    if (lines.length < 3) {
+      return [];
+    }
+
+    const contentLines = lines.slice(1, -1);
+    const rows = [];
+    let currentRow = null;
+
+    const commitCurrentRow = () => {
+      if (!currentRow) {
+        return;
+      }
+      rows.push(currentRow);
+      currentRow = null;
+    };
+
+    contentLines.forEach((line) => {
+      if (!line.trim()) {
+        return;
+      }
+
+      const keyMatch = line.match(/^([A-Za-z0-9_-]+)\s*:\s*(.*)$/);
+      if (keyMatch) {
+        commitCurrentRow();
+        const [, key, rawValue] = keyMatch;
+        currentRow = { key, values: [] };
+
+        const trimmedValue = rawValue.trim();
+        if (trimmedValue) {
+          const inlineValues = parseInlineYamlArray(trimmedValue);
+          if (inlineValues) {
+            currentRow.values.push(...inlineValues);
+          } else {
+            currentRow.values.push(normalizeFrontmatterToken(trimmedValue));
+          }
+        }
+        return;
+      }
+
+      if (!currentRow) {
+        return;
+      }
+
+      const listMatch = line.match(/^\s*-\s+(.*)$/);
+      if (listMatch) {
+        const listValue = normalizeFrontmatterToken(listMatch[1]);
+        if (listValue) {
+          currentRow.values.push(listValue);
+        }
+        return;
+      }
+
+      const continuedValue = normalizeFrontmatterToken(line);
+      if (continuedValue) {
+        currentRow.values.push(continuedValue);
+      }
+    });
+
+    commitCurrentRow();
+    return rows;
+  }
+
+  function createFrontmatterPropertyValue(value) {
+    const chip = document.createElement("span");
+    chip.className = "frontmatter-property-value";
+    chip.textContent = value;
+    return chip;
+  }
+
+  function renderFrontmatterBlock(frontmatterBlock) {
+    const rows = parseFrontmatterRows(frontmatterBlock);
+    if (rows.length === 0) {
+      return null;
+    }
+
+    const block = document.createElement("section");
+    block.className = "frontmatter-properties";
+    block.setAttribute("contenteditable", "false");
+    block.setAttribute("aria-label", "YAML frontmatter properties");
+
+    rows.forEach((row) => {
+      const property = document.createElement("div");
+      property.className = "frontmatter-property-row";
+
+      const key = document.createElement("span");
+      key.className = "frontmatter-property-key";
+      key.textContent = row.key;
+
+      const values = document.createElement("div");
+      values.className = "frontmatter-property-values";
+      if (row.values.length > 0) {
+        row.values.forEach((value) => {
+          values.appendChild(createFrontmatterPropertyValue(value));
+        });
+      } else {
+        const emptyValue = document.createElement("span");
+        emptyValue.className = "frontmatter-property-empty";
+        emptyValue.textContent = "—";
+        values.appendChild(emptyValue);
+      }
+
+      property.appendChild(key);
+      property.appendChild(values);
+      block.appendChild(property);
+    });
+
+    return block;
   }
 
   function onChange(listener) {
@@ -925,6 +1092,9 @@
   }
 
   function cleanupForSerialization(cloneRoot) {
+    cloneRoot.querySelectorAll(".frontmatter-properties").forEach((node) => {
+      node.remove();
+    });
     cloneRoot
       .querySelectorAll(
         ".copy-button, .block-edit-trigger, .mermaid-fullscreen-trigger",
@@ -994,7 +1164,14 @@
       .turndown(cloneRoot)
       .replace(/\n{3,}/g, "\n\n")
       .trim();
-    return markdown;
+
+    if (!state.frontmatterBlock) {
+      return markdown;
+    }
+    if (!markdown) {
+      return `${state.frontmatterBlock}\n`;
+    }
+    return `${state.frontmatterBlock}\n\n${markdown}`;
   }
 
   async function setMarkdown(markdown, options = {}) {
@@ -1004,10 +1181,16 @@
     }
 
     state.suppressInput = true;
-    const rawHtml = window.marked.parse(markdown || "");
+    const { frontmatterBlock, bodyMarkdown } = splitFrontmatter(markdown || "");
+    state.frontmatterBlock = frontmatterBlock;
+    const rawHtml = window.marked.parse(bodyMarkdown || "");
     state.root.innerHTML = window.DOMPurify
       ? window.DOMPurify.sanitize(rawHtml, { ADD_ATTR: ["contenteditable"] })
       : rawHtml;
+    const renderedFrontmatter = renderFrontmatterBlock(frontmatterBlock);
+    if (renderedFrontmatter) {
+      state.root.prepend(renderedFrontmatter);
+    }
     await decorateDocument();
     state.suppressInput = false;
 
