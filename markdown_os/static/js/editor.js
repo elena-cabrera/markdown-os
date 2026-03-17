@@ -619,10 +619,76 @@
     }
   });
 
+  async function detectDesktopMode() {
+    try {
+      const response = await fetch("/api/desktop");
+      if (!response.ok) return false;
+      const payload = await response.json();
+      return payload.desktop === true;
+    } catch {
+      return false;
+    }
+  }
+
+  function initDesktopOpenButton() {
+    const group = document.getElementById("desktop-open-group");
+    const btn = document.getElementById("desktop-open-btn");
+    const menu = document.getElementById("desktop-open-menu");
+    const openFileBtn = document.getElementById("desktop-open-file");
+    const openFolderBtn = document.getElementById("desktop-open-folder");
+
+    if (!group || !btn || !menu) return;
+    group.classList.remove("hidden");
+
+    btn.addEventListener("click", () => {
+      const isOpen = !menu.classList.contains("hidden");
+      menu.classList.toggle("hidden", isOpen);
+      btn.setAttribute("aria-expanded", String(!isOpen));
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!group.contains(e.target)) {
+        menu.classList.add("hidden");
+        btn.setAttribute("aria-expanded", "false");
+      }
+    });
+
+    async function openViaDialog(dialogFn) {
+      menu.classList.add("hidden");
+      btn.setAttribute("aria-expanded", "false");
+      if (!window.pywebview?.api?.[dialogFn]) return;
+      try {
+        const path = await window.pywebview.api[dialogFn]();
+        if (!path) return;
+        const result = await window.pywebview.api.open_path(path);
+        if (result.error) {
+          console.error("Desktop open error:", result.error);
+          return;
+        }
+        if (result.url) window.location.href = result.url;
+      } catch (err) {
+        console.error("Desktop open failed:", err);
+      }
+    }
+
+    if (openFileBtn) {
+      openFileBtn.addEventListener("click", () => openViaDialog("open_file_dialog"));
+    }
+    if (openFolderBtn) {
+      openFolderBtn.addEventListener("click", () => openViaDialog("open_folder_dialog"));
+    }
+  }
+
   document.addEventListener("DOMContentLoaded", async () => {
     window.wysiwyg?.init?.();
 
     editorState.mode = await detectMode();
+
+    const isDesktop = await detectDesktopMode();
+    if (isDesktop) {
+      initDesktopOpenButton();
+    }
+
     bindEvents();
 
     if (editorState.mode === "file") {

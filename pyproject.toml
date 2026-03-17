@@ -32,6 +32,11 @@ dependencies = [
     "websockets>=16.0",
 ]
 
+[project.optional-dependencies]
+desktop = [
+    "pywebview>=5.0",
+]
+
 [dependency-groups]
 dev = [
     "httpx>=0.28.1",
@@ -41,6 +46,7 @@ dev = [
 
 [project.scripts]
 markdown-os = "markdown_os.cli:run"
+markdown-os-desktop = "markdown_os.desktop:main"
 
 [project.urls]
 Homepage = "https://github.com/elena-cabrera/markdown-os"
