@@ -152,8 +152,25 @@
         </div>
 
         <div id="toc-container">
-          <h3>Contents</h3>
-          <nav id="toc" role="navigation"></nav>
+          <button id="toc-toggle" class="sidebar-section-toggle" type="button" aria-expanded="true">
+            <svg
+              class="toggle-chevron"
+              width="12"
+              height="12"
+              viewBox="0 0 12 12"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polyline points="4 2 8 6 4 10"></polyline>
+            </svg>
+            <span>Contents</span>
+          </button>
+          <div id="toc-collapsible" class="sidebar-collapsible">
+            <nav id="toc" role="navigation"></nav>
+          </div>
         </div>
       </aside>
 

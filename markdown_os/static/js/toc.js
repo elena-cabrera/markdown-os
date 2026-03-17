@@ -1,8 +1,72 @@
 (() => {
+  const COLLAPSE_KEY = "markdown-os-toc-collapsed";
+
   const tocState = {
     headings: [],
     scrollBound: false,
   };
+
+  function collapseTOC() {
+    const toggle = document.getElementById("toc-toggle");
+    const collapsible = document.getElementById("toc-collapsible");
+    const container = document.getElementById("toc-container");
+    if (!toggle || !collapsible || !container) {
+      return;
+    }
+
+    toggle.setAttribute("aria-expanded", "false");
+    collapsible.classList.add("collapsed");
+    container.classList.add("collapsed");
+  }
+
+  function expandTOC() {
+    const toggle = document.getElementById("toc-toggle");
+    const collapsible = document.getElementById("toc-collapsible");
+    const container = document.getElementById("toc-container");
+    if (!toggle || !collapsible || !container) {
+      return;
+    }
+
+    toggle.setAttribute("aria-expanded", "true");
+    collapsible.classList.remove("collapsed");
+    container.classList.remove("collapsed");
+  }
+
+  function restoreTOCCollapseState() {
+    let collapsed = false;
+
+    try {
+      collapsed = window.localStorage.getItem(COLLAPSE_KEY) === "true";
+    } catch (_error) {
+      collapsed = false;
+    }
+
+    if (collapsed) {
+      collapseTOC();
+    } else {
+      expandTOC();
+    }
+  }
+
+  function toggleTOCCollapse() {
+    const toggle = document.getElementById("toc-toggle");
+    if (!toggle) {
+      return;
+    }
+
+    const isExpanded = toggle.getAttribute("aria-expanded") === "true";
+    if (isExpanded) {
+      collapseTOC();
+    } else {
+      expandTOC();
+    }
+
+    try {
+      window.localStorage.setItem(COLLAPSE_KEY, String(isExpanded));
+    } catch (_error) {
+      // Ignore storage errors.
+    }
+  }
 
   function getHeadingLevel(heading) {
     return Number(heading.tagName?.replace("H", "")) || 1;
@@ -141,7 +205,14 @@
     updateActiveTOCItem();
   }
 
+  function initTOC() {
+    document.getElementById("toc-toggle")?.addEventListener("click", toggleTOCCollapse);
+    restoreTOCCollapseState();
+  }
+
   window.generateTOC = generateTOC;
   window.findActiveHeadingIndex = findActiveHeadingIndex;
   window.updateActiveTOCItem = updateActiveTOCItem;
+
+  document.addEventListener("DOMContentLoaded", initTOC);
 })();
