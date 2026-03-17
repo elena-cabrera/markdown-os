@@ -15,6 +15,7 @@
     changeListeners: new Set(),
     suppressInput: false,
     frontmatterBlock: "",
+    frontmatterRows: [],
     mermaidInitialized: false,
     mermaidTheme: null,
     fullscreenPanZoom: null,
@@ -197,6 +198,94 @@
     return rows;
   }
 
+  function parseFrontmatterValueInput(value) {
+    const trimmed = (value || "").trim();
+    if (!trimmed) {
+      return [];
+    }
+
+    const inlineValues = parseInlineYamlArray(trimmed);
+    if (inlineValues) {
+      return inlineValues;
+    }
+
+    if (trimmed.includes(",")) {
+      return trimmed
+        .split(",")
+        .map((item) => normalizeFrontmatterToken(item))
+        .filter(Boolean);
+    }
+
+    return [normalizeFrontmatterToken(trimmed)];
+  }
+
+  function sanitizeFrontmatterKey(value) {
+    return (value || "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9_-]/g, "");
+  }
+
+  function needsYamlQuoting(value) {
+    if (value === "") {
+      return true;
+    }
+    if (/^\s|\s$/.test(value)) {
+      return true;
+    }
+    if (/[:{}\[\],&*#?|<>=!%@`]/.test(value)) {
+      return true;
+    }
+    return false;
+  }
+
+  function toYamlScalar(value) {
+    if (!needsYamlQuoting(value)) {
+      return value;
+    }
+
+    const escaped = value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+    return `"${escaped}"`;
+  }
+
+  function serializeFrontmatterRows(rows) {
+    if (!rows || rows.length === 0) {
+      return "";
+    }
+
+    const lines = ["---"];
+    rows.forEach((row) => {
+      const key = sanitizeFrontmatterKey(row.key);
+      if (!key) {
+        return;
+      }
+
+      const values = Array.isArray(row.values) ? row.values : [];
+      if (values.length === 0) {
+        lines.push(`${key}:`);
+        return;
+      }
+
+      if (values.length === 1) {
+        lines.push(`${key}: ${toYamlScalar(values[0])}`);
+        return;
+      }
+
+      lines.push(`${key}:`);
+      values.forEach((value) => {
+        lines.push(`  - ${toYamlScalar(value)}`);
+      });
+    });
+    lines.push("---");
+
+    return lines.join("\n");
+  }
+
+  function syncFrontmatterBlockFromRows() {
+    state.frontmatterBlock = serializeFrontmatterRows(state.frontmatterRows);
+  }
+
   function createFrontmatterPropertyValue(value) {
     const chip = document.createElement("span");
     chip.className = "frontmatter-property-value";
@@ -204,20 +293,32 @@
     return chip;
   }
 
-  function renderFrontmatterBlock(frontmatterBlock) {
-    const rows = parseFrontmatterRows(frontmatterBlock);
-    if (rows.length === 0) {
-      return null;
-    }
+  function renderFrontmatterAddButton() {
+    const addButton = createActionButton("add", "Add property");
+    addButton.classList.add("frontmatter-add-property");
+    addButton.setAttribute("aria-label", "Add frontmatter property");
+    return addButton;
+  }
 
+  function renderFrontmatterBlock(rows) {
     const block = document.createElement("section");
     block.className = "frontmatter-properties";
     block.setAttribute("contenteditable", "false");
     block.setAttribute("aria-label", "YAML frontmatter properties");
 
-    rows.forEach((row) => {
+    const header = document.createElement("div");
+    header.className = "frontmatter-properties-header";
+    const title = document.createElement("span");
+    title.className = "frontmatter-properties-title";
+    title.textContent = "Properties";
+    header.appendChild(title);
+    header.appendChild(renderFrontmatterAddButton());
+    block.appendChild(header);
+
+    rows.forEach((row, index) => {
       const property = document.createElement("div");
       property.className = "frontmatter-property-row";
+      property.dataset.frontmatterIndex = String(index);
 
       const key = document.createElement("span");
       key.className = "frontmatter-property-key";
@@ -236,12 +337,138 @@
         values.appendChild(emptyValue);
       }
 
+      const actions = document.createElement("div");
+      actions.className = "frontmatter-property-actions";
+      const editButton = createActionButton("edit", "Edit property");
+      editButton.classList.add("frontmatter-edit-property");
+      editButton.dataset.frontmatterIndex = String(index);
+      const deleteButton = createActionButton("delete", "Remove property");
+      deleteButton.classList.add("frontmatter-delete-property");
+      deleteButton.dataset.frontmatterIndex = String(index);
+      actions.appendChild(editButton);
+      actions.appendChild(deleteButton);
+
       property.appendChild(key);
       property.appendChild(values);
+      property.appendChild(actions);
       block.appendChild(property);
     });
 
     return block;
+  }
+
+  function renderFrontmatterCreatePrompt() {
+    const prompt = document.createElement("section");
+    prompt.className = "frontmatter-properties-create";
+    prompt.setAttribute("contenteditable", "false");
+    prompt.setAttribute("aria-label", "Create YAML frontmatter");
+
+    const hint = document.createElement("span");
+    hint.className = "frontmatter-create-hint";
+    hint.textContent = "No properties";
+    prompt.appendChild(hint);
+    prompt.appendChild(renderFrontmatterAddButton());
+
+    return prompt;
+  }
+
+  function renderFrontmatterPanel() {
+    if (state.frontmatterRows.length === 0) {
+      return renderFrontmatterCreatePrompt();
+    }
+    return renderFrontmatterBlock(state.frontmatterRows);
+  }
+
+  function refreshFrontmatterPanel() {
+    if (!state.root) {
+      return;
+    }
+
+    state.root
+      .querySelectorAll(".frontmatter-properties, .frontmatter-properties-create")
+      .forEach((node) => node.remove());
+    state.root.prepend(renderFrontmatterPanel());
+  }
+
+  async function promptFrontmatterProperty(initial = null) {
+    const result = await window.markdownDialogs?.promptPair?.({
+      title: initial ? "Edit property" : "Add property",
+      first: {
+        label: "Key",
+        value: initial?.key || "",
+        placeholder: "e.g. tags",
+      },
+      second: {
+        label: "Value",
+        value: initial?.value || "",
+        placeholder: "single value or comma-separated values",
+      },
+      confirmText: initial ? "Save" : "Add",
+      cancelText: "Cancel",
+    });
+
+    if (!result) {
+      return null;
+    }
+
+    const key = sanitizeFrontmatterKey(result.first || "");
+    if (!key) {
+      return null;
+    }
+
+    const values = parseFrontmatterValueInput(result.second || "");
+    return { key, values };
+  }
+
+  async function addFrontmatterProperty() {
+    const property = await promptFrontmatterProperty();
+    if (!property) {
+      return;
+    }
+
+    const existingIndex = state.frontmatterRows.findIndex(
+      (row) => row.key === property.key,
+    );
+    if (existingIndex >= 0) {
+      state.frontmatterRows[existingIndex] = property;
+    } else {
+      state.frontmatterRows.push(property);
+    }
+
+    syncFrontmatterBlockFromRows();
+    refreshFrontmatterPanel();
+    emitChange();
+  }
+
+  async function editFrontmatterPropertyByIndex(index) {
+    if (!Number.isInteger(index) || index < 0 || index >= state.frontmatterRows.length) {
+      return;
+    }
+
+    const current = state.frontmatterRows[index];
+    const property = await promptFrontmatterProperty({
+      key: current.key,
+      value: current.values.join(", "),
+    });
+    if (!property) {
+      return;
+    }
+
+    state.frontmatterRows[index] = property;
+    syncFrontmatterBlockFromRows();
+    refreshFrontmatterPanel();
+    emitChange();
+  }
+
+  function deleteFrontmatterPropertyByIndex(index) {
+    if (!Number.isInteger(index) || index < 0 || index >= state.frontmatterRows.length) {
+      return;
+    }
+
+    state.frontmatterRows.splice(index, 1);
+    syncFrontmatterBlockFromRows();
+    refreshFrontmatterPanel();
+    emitChange();
   }
 
   function onChange(listener) {
@@ -381,6 +608,9 @@
   }
 
   function actionIconSvg(kind) {
+    if (kind === "add") {
+      return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>';
+    }
     if (kind === "copy") {
       return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15V6a2 2 0 0 1 2-2h9"></path></svg>';
     }
@@ -392,6 +622,9 @@
     }
     if (kind === "check") {
       return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7L9 18l-5-5"></path></svg>';
+    }
+    if (kind === "delete") {
+      return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"></path><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path><path d="M7 7l1 12a1 1 0 0 0 1 .9h6a1 1 0 0 0 1-.9l1-12"></path><path d="M10 11v6M14 11v6"></path></svg>';
     }
     if (kind === "reset") {
       return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 21l-6-6M3.268 12.043A7.02 7.02 0 0 0 9.902 17a7.01 7.01 0 0 0 7.043-6.131a7 7 0 0 0-5.314-7.672A7.02 7.02 0 0 0 3.39 7.6"></path><path d="M3 4v4h4"></path></svg>';
@@ -1095,6 +1328,9 @@
     cloneRoot.querySelectorAll(".frontmatter-properties").forEach((node) => {
       node.remove();
     });
+    cloneRoot.querySelectorAll(".frontmatter-properties-create").forEach((node) => {
+      node.remove();
+    });
     cloneRoot
       .querySelectorAll(
         ".copy-button, .block-edit-trigger, .mermaid-fullscreen-trigger",
@@ -1182,15 +1418,13 @@
 
     state.suppressInput = true;
     const { frontmatterBlock, bodyMarkdown } = splitFrontmatter(markdown || "");
-    state.frontmatterBlock = frontmatterBlock;
+    state.frontmatterRows = parseFrontmatterRows(frontmatterBlock);
+    state.frontmatterBlock = frontmatterBlock || serializeFrontmatterRows(state.frontmatterRows);
     const rawHtml = window.marked.parse(bodyMarkdown || "");
     state.root.innerHTML = window.DOMPurify
       ? window.DOMPurify.sanitize(rawHtml, { ADD_ATTR: ["contenteditable"] })
       : rawHtml;
-    const renderedFrontmatter = renderFrontmatterBlock(frontmatterBlock);
-    if (renderedFrontmatter) {
-      state.root.prepend(renderedFrontmatter);
-    }
+    refreshFrontmatterPanel();
     await decorateDocument();
     state.suppressInput = false;
 
@@ -2208,6 +2442,53 @@
   }
 
   async function handleRootClick(event) {
+    const frontmatterAddButton = event.target.closest(".frontmatter-add-property");
+    if (frontmatterAddButton && state.root?.contains(frontmatterAddButton)) {
+      event.preventDefault();
+      event.stopPropagation();
+      await addFrontmatterProperty();
+      return;
+    }
+
+    const frontmatterEditButton = event.target.closest(".frontmatter-edit-property");
+    if (frontmatterEditButton && state.root?.contains(frontmatterEditButton)) {
+      event.preventDefault();
+      event.stopPropagation();
+      const index = Number.parseInt(
+        frontmatterEditButton.dataset.frontmatterIndex || "",
+        10,
+      );
+      await editFrontmatterPropertyByIndex(index);
+      return;
+    }
+
+    const frontmatterDeleteButton = event.target.closest(
+      ".frontmatter-delete-property",
+    );
+    if (frontmatterDeleteButton && state.root?.contains(frontmatterDeleteButton)) {
+      event.preventDefault();
+      event.stopPropagation();
+      const index = Number.parseInt(
+        frontmatterDeleteButton.dataset.frontmatterIndex || "",
+        10,
+      );
+      deleteFrontmatterPropertyByIndex(index);
+      return;
+    }
+
+    const frontmatterRow = event.target.closest(".frontmatter-property-row");
+    if (
+      frontmatterRow &&
+      state.root?.contains(frontmatterRow) &&
+      !event.target.closest("button")
+    ) {
+      event.preventDefault();
+      event.stopPropagation();
+      const index = Number.parseInt(frontmatterRow.dataset.frontmatterIndex || "", 10);
+      await editFrontmatterPropertyByIndex(index);
+      return;
+    }
+
     const link = event.target.closest("a[href]");
     if (link && state.root?.contains(link)) {
       event.preventDefault();

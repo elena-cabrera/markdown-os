@@ -1144,9 +1144,31 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   gap: 8px;
 }
 
+#wysiwyg-editor .frontmatter-properties-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+#wysiwyg-editor .frontmatter-properties-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+#wysiwyg-editor .frontmatter-add-property,
+#wysiwyg-editor .frontmatter-edit-property,
+#wysiwyg-editor .frontmatter-delete-property {
+  width: 24px;
+  height: 24px;
+}
+
 #wysiwyg-editor .frontmatter-property-row {
   display: grid;
-  grid-template-columns: minmax(92px, 180px) minmax(0, 1fr);
+  grid-template-columns: minmax(92px, 180px) minmax(0, 1fr) auto;
   gap: 10px;
   align-items: start;
 }
@@ -1185,6 +1207,28 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   color: var(--text-muted);
   font-size: 12px;
   line-height: 1.8;
+}
+
+#wysiwyg-editor .frontmatter-property-actions {
+  display: inline-flex;
+  gap: 4px;
+}
+
+#wysiwyg-editor .frontmatter-properties-create {
+  margin: 0 0 1.15rem;
+  border: 1px dashed var(--frontmatter-border);
+  border-radius: 10px;
+  background: var(--frontmatter-bg);
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+#wysiwyg-editor .frontmatter-create-hint {
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 #wysiwyg-editor img {
