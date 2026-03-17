@@ -149,7 +149,18 @@ body {
   flex: 1;
 }
 
+#toc-container.collapsed {
+  flex: 0 0 auto;
+}
+
+#toc-collapsible {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
 #toc {
+  flex: 1;
+  min-height: 0;
   overflow: auto;
   overscroll-behavior: contain;
 }
