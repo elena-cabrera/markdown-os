@@ -220,3 +220,15 @@ def test_desktop_api_open_path_empty_folder(tmp_path: Path) -> None:
     result = api.open_path(str(tmp_path))
     assert "error" in result
     assert "no markdown" in result["error"].lower()
+
+
+def test_windows_desktop_spec_collects_pythonnet_runtime() -> None:
+    """Windows PyInstaller spec includes pythonnet/webview runtime assets."""
+    spec_text = Path("markdown_os.spec").read_text(encoding="utf-8")
+
+    assert 'collect_dynamic_libs("pythonnet")' in spec_text
+    assert 'collect_data_files("pythonnet", include_py_files=False)' in spec_text
+    assert '"clr"' in spec_text
+    assert '"webview.platforms.winforms"' in spec_text
+    assert 'upx_enabled = False' in spec_text
+    assert '"Python.Runtime.dll"' in spec_text
