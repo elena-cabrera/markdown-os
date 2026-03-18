@@ -250,7 +250,6 @@ dependencies = [
 [package.optional-dependencies]
 desktop = [
     { name = "pywebview" },
-    { name = "pywebview", extra = ["gtk"], marker = "sys_platform == 'linux'" },
 ]
 
 [package.dev-dependencies]
@@ -265,8 +264,7 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.129.0" },
     { name = "portalocker", specifier = ">=3.0.0" },
     { name = "python-multipart", specifier = ">=0.0.22" },
-    { name = "pywebview", marker = "sys_platform != 'linux' and extra == 'desktop'", specifier = ">=5.0" },
-    { name = "pywebview", extras = ["gtk"], marker = "sys_platform == 'linux' and extra == 'desktop'", specifier = ">=5.0" },
+    { name = "pywebview", marker = "extra == 'desktop'", specifier = ">=5.0" },
     { name = "typer", specifier = ">=0.23.1" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.40.0" },
     { name = "watchdog", specifier = ">=6.0.0" },
@@ -325,12 +323,6 @@ name = "proxy-tools"
 version = "0.1.0"
 source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/f2/cf/77d3e19b7fabd03895caca7857ef51e4c409e0ca6b37ee6e9f7daa50b642/proxy_tools-0.1.0.tar.gz", hash = "sha256:ccb3751f529c047e2d8a58440d86b205303cf0fe8146f784d1cbcd94f0a28010", size = 2978, upload-time = "2014-05-05T21:02:24.606Z" }
-
-[[package]]
-name = "pycairo"
-version = "1.29.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/22/d9/1728840a22a4ef8a8f479b9156aa2943cd98c3907accd3849fb0d5f82bfd/pycairo-1.29.0.tar.gz", hash = "sha256:f3f7fde97325cae80224c09f12564ef58d0d0f655da0e3b040f5807bd5bd3142", size = 665871, upload-time = "2025-11-11T19:13:01.584Z" }
 
 [[package]]
 name = "pycparser"
@@ -461,24 +453,6 @@ sdist = { url = "https://files.pythonhosted.org/packages/b0/77/a5b8c569bf593b014
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c7/21/705964c7812476f378728bdf590ca4b771ec72385c533964653c68e86bdc/pygments-2.19.2-py3-none-any.whl", hash = "sha256:86540386c03d588bb81d44bc3928634ff26449851e99741617ecb9037ee5ec0b", size = 1225217, upload-time = "2025-06-21T13:39:07.939Z" },
 ]
-
-[[package]]
-name = "pygobject"
-version = "3.50.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pycairo", marker = "sys_platform == 'linux'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/2b/58/d34e67a79631177e3c08e7d02b5165147f590171f2cae6769502af5f7f7e/pygobject-3.50.0.tar.gz", hash = "sha256:4500ad3dbf331773d8dedf7212544c999a76fc96b63a91b3dcac1e5925a1d103", size = 1080367, upload-time = "2024-09-12T12:05:22.579Z" }
-
-[[package]]
-name = "pygobject-stubs"
-version = "2.16.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "typing-extensions", marker = "sys_platform == 'linux'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/2d/1c/317ccaaa6a3ddce270652781cf09d3b1d5d343b1a1dabca304fe5c218474/pygobject_stubs-2.16.0.tar.gz", hash = "sha256:a97574616e92ef458605f9520d8d9db4c2a131affcd12fdd51db0b42395291e9", size = 934833, upload-time = "2025-12-08T20:33:33.876Z" }
 
 [[package]]
 name = "pyobjc-core"
@@ -657,12 +631,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/64/09/75cf92c4db19350ddb084d841e352ce30e89668815d0494d1dd595c85469/pywebview-6.1.tar.gz", hash = "sha256:f0b95047860caf3d921581f9e16b4edb1a125b23e2ce691c4da2968f8b160ff2", size = 496270, upload-time = "2025-10-21T18:02:44.323Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/74/12/ce9006cdcc1834378826b5c0d4b554d899cd25ac9c665569d060f220b0e1/pywebview-6.1-py3-none-any.whl", hash = "sha256:2b552a340557e76a740b045a25937f72dae751e0985d5f5d9556f697ba622ec5", size = 511255, upload-time = "2025-10-21T18:02:42.377Z" },
-]
-
-[package.optional-dependencies]
-gtk = [
-    { name = "pygobject", marker = "sys_platform == 'linux'" },
-    { name = "pygobject-stubs", marker = "sys_platform == 'linux'" },
 ]
 
 [[package]]

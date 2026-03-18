@@ -34,8 +34,7 @@ dependencies = [
 
 [project.optional-dependencies]
 desktop = [
-    "pywebview[gtk]>=5.0; sys_platform == 'linux'",
-    "pywebview>=5.0; sys_platform != 'linux'",
+    "pywebview>=5.0",
 ]
 
 [dependency-groups]
