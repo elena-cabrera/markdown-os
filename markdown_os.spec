@@ -12,6 +12,8 @@ Usage:
 import sys
 from pathlib import Path
 
+from PyInstaller.utils.hooks import collect_data_files, collect_dynamic_libs
+
 block_cipher = None
 
 # Paths
@@ -20,38 +22,72 @@ PACKAGE_DIR = ROOT / "markdown_os"
 STATIC_DIR = PACKAGE_DIR / "static"
 TEMPLATES_DIR = PACKAGE_DIR / "templates"
 
+hiddenimports = [
+    "markdown_os",
+    "markdown_os.cli",
+    "markdown_os.server",
+    "markdown_os.file_handler",
+    "markdown_os.directory_handler",
+    "fastapi",
+    "uvicorn",
+    "uvicorn.logging",
+    "uvicorn.loops",
+    "uvicorn.loops.auto",
+    "uvicorn.protocols",
+    "uvicorn.protocols.http",
+    "uvicorn.protocols.http.auto",
+    "uvicorn.protocols.websockets",
+    "uvicorn.protocols.websockets.auto",
+    "uvicorn.lifespan",
+    "uvicorn.lifespan.on",
+    "watchdog",
+    "watchdog.observers",
+    "portalocker",
+    "webview",
+    "pydantic",
+]
+
+binaries = []
+datas = [
+    (str(STATIC_DIR), "markdown_os/static"),
+    (str(TEMPLATES_DIR), "markdown_os/templates"),
+]
+upx_enabled = True
+upx_exclude = []
+
+if sys.platform == "win32":
+    # pywebview's Windows backend imports pythonnet/clr_loader dynamically and
+    # ships extra .NET / WebView2 DLLs that need to be collected explicitly.
+    hiddenimports += [
+        "clr",
+        "pythonnet",
+        "clr_loader",
+        "webview.platforms.winforms",
+    ]
+    binaries += collect_dynamic_libs("pythonnet")
+    binaries += collect_dynamic_libs("clr_loader")
+    binaries += collect_dynamic_libs("webview")
+    datas += collect_data_files("pythonnet", include_py_files=False)
+    datas += collect_data_files("clr_loader", include_py_files=False)
+    datas += collect_data_files("webview", include_py_files=False)
+
+    # UPX can corrupt pythonnet / WebView2 managed assemblies in the frozen
+    # Windows app, which then triggers runtime loader failures.
+    upx_enabled = False
+    upx_exclude = [
+        "Python.Runtime.dll",
+        "Microsoft.Web.WebView2.Core.dll",
+        "Microsoft.Web.WebView2.WinForms.dll",
+        "WebBrowserInterop.x64.dll",
+        "WebBrowserInterop.x86.dll",
+    ]
+
 a = Analysis(
     [str(PACKAGE_DIR / "desktop.py")],
     pathex=[str(ROOT)],
-    binaries=[],
-    datas=[
-        (str(STATIC_DIR), "markdown_os/static"),
-        (str(TEMPLATES_DIR), "markdown_os/templates"),
-    ],
-    hiddenimports=[
-        "markdown_os",
-        "markdown_os.cli",
-        "markdown_os.server",
-        "markdown_os.file_handler",
-        "markdown_os.directory_handler",
-        "fastapi",
-        "uvicorn",
-        "uvicorn.logging",
-        "uvicorn.loops",
-        "uvicorn.loops.auto",
-        "uvicorn.protocols",
-        "uvicorn.protocols.http",
-        "uvicorn.protocols.http.auto",
-        "uvicorn.protocols.websockets",
-        "uvicorn.protocols.websockets.auto",
-        "uvicorn.lifespan",
-        "uvicorn.lifespan.on",
-        "watchdog",
-        "watchdog.observers",
-        "portalocker",
-        "webview",
-        "pydantic",
-    ],
+    binaries=binaries,
+    datas=datas,
+    hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -73,7 +109,7 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
+    upx=upx_enabled,
     console=False,
     icon=None,  # Set to .ico (Windows) or .icns (macOS) path when available
 )
@@ -84,8 +120,8 @@ coll = COLLECT(
     a.zipfiles,
     a.datas,
     strip=False,
-    upx=True,
-    upx_exclude=[],
+    upx=upx_enabled,
+    upx_exclude=upx_exclude,
     name="Markdown-OS",
 )
 
