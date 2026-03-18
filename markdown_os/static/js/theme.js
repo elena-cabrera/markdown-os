@@ -41,7 +41,7 @@
       name: "Nord Dark",
       type: "dark",
       dots: ["#2e3440", "#eceff4", "#88c0d0"],
-      highlightTheme: "nord",
+      highlightTheme: "atom-one-dark",
       mermaidTheme: "dark",
     },
     {
