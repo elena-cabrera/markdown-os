@@ -218,6 +218,36 @@
       <main id="main-content">
         <div class="tab-nav">
           <div class="nav-left-group">
+            <div id="desktop-open-group" class="desktop-open-group hidden" aria-label="Open file or folder">
+              <button
+                id="desktop-open-btn"
+                class="history-button desktop-open-btn"
+                type="button"
+                title="Open file or folder"
+                aria-label="Open file or folder"
+                aria-haspopup="menu"
+                aria-expanded="false"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                </svg>
+              </button>
+              <div id="desktop-open-menu" class="desktop-open-menu hidden" role="menu">
+                <button id="desktop-open-file" class="desktop-open-menu-item" type="button" role="menuitem">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                  </svg>
+                  <span>Open File...</span>
+                </button>
+                <button id="desktop-open-folder" class="desktop-open-menu-item" type="button" role="menuitem">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                  </svg>
+                  <span>Open Folder...</span>
+                </button>
+              </div>
+            </div>
             <div class="undo-redo-group" aria-label="Edit history controls">
               <button
                 id="undo-button"

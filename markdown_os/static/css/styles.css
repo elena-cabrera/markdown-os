@@ -513,6 +513,67 @@ body {
   gap: 6px;
 }
 
+.desktop-open-group {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.desktop-open-group.hidden {
+  display: none;
+}
+
+.desktop-open-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.desktop-open-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 100;
+  min-width: 180px;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  padding: 4px;
+}
+
+.desktop-open-menu.hidden {
+  display: none;
+}
+
+.desktop-open-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.desktop-open-menu-item:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.desktop-open-menu-item svg {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.desktop-open-menu-item:hover svg {
+  color: var(--accent);
+}
+
 .history-button {
   width: 32px;
   height: 32px;
