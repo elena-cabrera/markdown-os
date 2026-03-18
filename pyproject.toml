@@ -35,6 +35,9 @@ dependencies = [
 [project.optional-dependencies]
 desktop = [
     "pywebview>=5.0",
+    "PyQtWebEngine>=5.15; sys_platform == 'linux'",
+    "PyQt5>=5.15; sys_platform == 'linux'",
+    "qtpy>=2.0; sys_platform == 'linux'",
 ]
 
 [dependency-groups]
