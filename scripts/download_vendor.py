@@ -83,7 +83,7 @@ ASSETS: list[tuple[str, str, str | None]] = [
     ),
     (
         "css/hljs-dracula.min.css",
-        "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/dracula.min.css",
+        "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/base16/dracula.min.css",
         None,
     ),
     (
