@@ -87,8 +87,13 @@ ASSETS: list[tuple[str, str, str | None]] = [
         None,
     ),
     (
-        "css/hljs-nord.min.css",
-        "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/nord.min.css",
+        "css/hljs-atom-one-dark.min.css",
+        "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css",
+        None,
+    ),
+    (
+        "css/hljs-grayscale.min.css",
+        "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/grayscale.min.css",
         None,
     ),
 ]
