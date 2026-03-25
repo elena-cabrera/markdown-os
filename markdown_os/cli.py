@@ -59,23 +59,6 @@ def _validate_markdown_file(filepath: Path) -> Path:
     return resolved_path
 
 
-def _directory_contains_markdown_files(directory: Path) -> bool:
-    """
-    Check whether a directory contains at least one markdown file recursively.
-
-    Args:
-    - directory (Path): Directory path to scan for markdown files.
-
-    Returns:
-    - bool: True when at least one .md/.markdown file is found.
-    """
-
-    return any(
-        candidate.is_file() and candidate.suffix.lower() in {".md", ".markdown"}
-        for candidate in directory.rglob("*")
-    )
-
-
 def _validate_markdown_directory(directory: Path) -> Path:
     """
     Validate and normalize a directory path from CLI input.
@@ -92,10 +75,6 @@ def _validate_markdown_directory(directory: Path) -> Path:
         raise typer.BadParameter(f"Path does not exist: {resolved_path}")
     if not resolved_path.is_dir():
         raise typer.BadParameter(f"Path is not a directory: {resolved_path}")
-    if not _directory_contains_markdown_files(resolved_path):
-        raise typer.BadParameter(
-            f"Directory contains no markdown files (.md, .markdown): {resolved_path}"
-        )
     return resolved_path
 
 
