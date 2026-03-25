@@ -1,4 +1,12 @@
 (() => {
+  // #region agent log
+  function debugLog(hypothesisId, location, message, data = {}) {
+    try {
+      window.electronDesktop?.debugLog?.({ hypothesisId, location, message, data });
+    } catch (_error) {}
+  }
+  // #endregion
+
   const desktopState = {
     enabled: false,
     snapshot: {
@@ -24,6 +32,14 @@
     }
 
     const payload = await response.json();
+    // #region agent log
+    debugLog("A", "desktop-shell.js:27", "Fetched desktop state", {
+      mode: payload.mode || "empty",
+      hasWorkspacePath: Boolean(payload.workspacePath),
+      hasCurrentFile: Boolean(payload.currentFile),
+      isEmptyWorkspace: Boolean(payload.isEmptyWorkspace),
+    });
+    // #endregion
     desktopState.snapshot = {
       mode: payload.mode || "empty",
       workspacePath: payload.workspacePath || null,
@@ -40,6 +56,14 @@
       currentFile: snapshot?.currentFile || null,
       isEmptyWorkspace: Boolean(snapshot?.isEmptyWorkspace),
     };
+    // #region agent log
+    debugLog("A", "desktop-shell.js:43", "Set desktop snapshot", {
+      mode: desktopState.snapshot.mode,
+      hasWorkspacePath: Boolean(desktopState.snapshot.workspacePath),
+      hasCurrentFile: Boolean(desktopState.snapshot.currentFile),
+      isEmptyWorkspace: desktopState.snapshot.isEmptyWorkspace,
+    });
+    // #endregion
     window.dispatchEvent(
       new CustomEvent("markdown-os:desktop-state", {
         detail: { ...desktopState.snapshot },
@@ -97,6 +121,14 @@
 
   document.addEventListener("DOMContentLoaded", async () => {
     desktopState.enabled = isDesktop();
+    // #region agent log
+    debugLog("D", "desktop-shell.js:99", "Desktop shell DOMContentLoaded", {
+      enabled: desktopState.enabled,
+      hasElectronDesktop: Boolean(window.electronDesktop),
+      hasMarkdownOSDesktop: Boolean(window.markdownOSDesktop),
+      hasMarkdownOSNamespace: Boolean(window.MarkdownOS),
+    });
+    // #endregion
     document.documentElement.classList.toggle("desktop-app", desktopState.enabled);
     if (!desktopState.enabled) {
       return;

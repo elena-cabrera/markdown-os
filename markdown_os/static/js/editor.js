@@ -1,6 +1,14 @@
 (() => {
   const { AUTOSAVE_DELAY_MS, setSaveStatus, setContentLoadingState } = window.sharedUtils;
 
+  // #region agent log
+  function debugLog(hypothesisId, location, message, data = {}) {
+    try {
+      window.electronDesktop?.debugLog?.({ hypothesisId, location, message, data });
+    } catch (_error) {}
+  }
+  // #endregion
+
   const editorState = {
     saveTimeout: null,
     lastSavedContent: "",
@@ -676,6 +684,7 @@
     window.wysiwyg?.init?.();
 
     editorState.mode = await detectMode();
+    const initialMode = editorState.mode;
     bindEvents();
     syncDesktopBodyClass();
 
@@ -683,6 +692,16 @@
       await window.markdownOSDesktop.initialize?.();
       editorState.mode = await detectMode();
     }
+
+    // #region agent log
+    debugLog("D", "editor.js:693", "Editor bootstrap modes", {
+      initialMode,
+      finalMode: editorState.mode,
+      hasMarkdownOSDesktop: Boolean(window.markdownOSDesktop),
+      hasDesktopShellGlobal: Boolean(window.desktopShell),
+      hasDesktopShellNamespace: Boolean(window.MarkdownOS?.desktopShell),
+    });
+    // #endregion
 
     if (editorState.mode === "file") {
       await loadContent();
