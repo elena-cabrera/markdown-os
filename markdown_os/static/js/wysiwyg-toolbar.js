@@ -60,6 +60,14 @@
     toggle.setAttribute("aria-expanded", "false");
   }
 
+  function updateTableToolState(hasTableSelection) {
+    document
+      .querySelectorAll("[data-requires-table-selection]")
+      .forEach((element) => {
+        element.classList.toggle("hidden", !hasTableSelection);
+      });
+  }
+
   function bindFormatMenu() {
     const menu = document.getElementById("format-menu");
     const toggle = document.getElementById("format-menu-toggle");
@@ -116,6 +124,9 @@
 
   function bindToolbarButtons() {
     document.querySelectorAll(".toolbar-button[data-command]").forEach((button) => {
+      button.addEventListener("mousedown", (event) => {
+        event.preventDefault();
+      });
       button.addEventListener("click", async (event) => {
         event.preventDefault();
         const command = button.dataset.command;
@@ -126,6 +137,12 @@
         await window.wysiwyg.exec(command);
         updateInlineButtonState();
       });
+    });
+  }
+
+  function bindTableToolState() {
+    document.addEventListener("markdown-os:table-selection-changed", (event) => {
+      updateTableToolState(Boolean(event.detail?.hasTableSelection));
     });
   }
 
@@ -184,6 +201,8 @@
     bindHistoryButtons();
     bindFormatMenu();
     bindKeyboardShortcuts();
+    bindTableToolState();
+    updateTableToolState(false);
     updateInlineButtonState();
   });
 })();

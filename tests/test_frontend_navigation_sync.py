@@ -119,6 +119,40 @@ def test_wysiwyg_toolbar_exposes_ctrl_e_inline_code_shortcut() -> None:
     assert "await window.wysiwyg.exec(\"inlineCode\")" in source
 
 
+def test_wysiwyg_toolbar_shows_table_tools_for_active_table_selection() -> None:
+    """Verify table-specific toolbar controls react to editor table selection state."""
+
+    html_source = Path(__file__).resolve().parents[1].joinpath(
+        "markdown_os",
+        "static",
+        "index.html",
+    ).read_text(encoding="utf-8")
+    toolbar_source = _read_static_js("wysiwyg-toolbar.js")
+
+    assert 'id="table-tools"' in html_source
+    assert 'data-command="removeTableRow"' in html_source
+    assert 'data-command="removeTableColumn"' in html_source
+    assert 'data-requires-table-selection="true"' in html_source
+    assert "function updateTableToolState(hasTableSelection)" in toolbar_source
+    assert 'document.addEventListener("markdown-os:table-selection-changed"' in toolbar_source
+    assert 'button.addEventListener("mousedown"' in toolbar_source
+
+
+def test_wysiwyg_table_commands_support_row_and_column_removal() -> None:
+    """Verify WYSIWYG exposes row and column removal commands for tables."""
+
+    source = _read_static_js("wysiwyg.js")
+
+    assert "activeTableCell: null" in source
+    assert 'new CustomEvent("markdown-os:table-selection-changed"' in source
+    assert "function removeSelectedTableRow()" in source
+    assert "function removeSelectedTableColumn()" in source
+    assert 'if (command === "removeTableRow") {' in source
+    assert 'if (command === "removeTableColumn") {' in source
+    assert "replaceTableWithParagraph(table);" in source
+    assert "focusTableCell(targetCell);" in source
+
+
 def test_wysiwyg_inline_code_command_toggles_existing_code() -> None:
     """Verify inline-code command unwraps when selection is already in code."""
 

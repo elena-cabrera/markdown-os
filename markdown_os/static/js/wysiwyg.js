@@ -25,6 +25,7 @@
     blockEditTarget: null,
     blockEditType: null,
     blockEditPreviousScrollTop: null,
+    activeTableCell: null,
   };
 
   const { focusWithoutScroll } = window.sharedUtils;
@@ -77,6 +78,262 @@
         console.error("WYSIWYG change listener failed.", error);
       }
     });
+  }
+
+  function closestTableCell(node) {
+    if (!node || !state.root) {
+      return null;
+    }
+
+    const startNode = node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+    if (!(startNode instanceof Element) || !state.root.contains(startNode)) {
+      return null;
+    }
+
+    const cell = startNode.closest("th, td");
+    return cell && state.root.contains(cell) ? cell : null;
+  }
+
+  function getSelectionTableCell() {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) {
+      return null;
+    }
+
+    return closestTableCell(selection.anchorNode);
+  }
+
+  function emitTableSelectionChange(cell) {
+    document.dispatchEvent(
+      new CustomEvent("markdown-os:table-selection-changed", {
+        detail: {
+          hasTableSelection: Boolean(cell),
+        },
+      }),
+    );
+  }
+
+  function setActiveTableCell(cell) {
+    const nextCell =
+      cell instanceof Element && state.root?.contains(cell) ? cell : null;
+    if (state.activeTableCell === nextCell) {
+      return;
+    }
+
+    state.activeTableCell = nextCell;
+    emitTableSelectionChange(nextCell);
+  }
+
+  function refreshActiveTableCell() {
+    setActiveTableCell(getSelectionTableCell());
+  }
+
+  function getActiveTableCell() {
+    const selectionCell = getSelectionTableCell();
+    if (selectionCell) {
+      setActiveTableCell(selectionCell);
+      return selectionCell;
+    }
+
+    if (state.activeTableCell && state.root?.contains(state.activeTableCell)) {
+      return state.activeTableCell;
+    }
+
+    return null;
+  }
+
+  function getTableCells(row) {
+    if (!(row instanceof Element)) {
+      return [];
+    }
+
+    return Array.from(row.children).filter(
+      (cell) => cell instanceof Element && cell.matches("th, td"),
+    );
+  }
+
+  function getTableCellAtIndex(row, index) {
+    const cells = getTableCells(row);
+    if (cells.length === 0) {
+      return null;
+    }
+    if (index >= 0 && index < cells.length) {
+      return cells[index];
+    }
+    return cells[cells.length - 1] || null;
+  }
+
+  function replaceElementTag(element, tagName) {
+    if (!(element instanceof Element)) {
+      return element;
+    }
+    if (element.tagName.toLowerCase() === tagName) {
+      return element;
+    }
+
+    const replacement = document.createElement(tagName);
+    Array.from(element.attributes).forEach((attribute) => {
+      replacement.setAttribute(attribute.name, attribute.value);
+    });
+
+    while (element.firstChild) {
+      replacement.appendChild(element.firstChild);
+    }
+
+    element.replaceWith(replacement);
+    return replacement;
+  }
+
+  function normalizeTableStructure(table) {
+    if (!(table instanceof Element)) {
+      return false;
+    }
+
+    table.querySelectorAll("tr").forEach((row) => {
+      if (getTableCells(row).length === 0) {
+        row.remove();
+      }
+    });
+
+    const headerSection = table.querySelector("thead");
+    if (headerSection && !headerSection.querySelector("tr")) {
+      headerSection.remove();
+    }
+
+    const bodySection = table.querySelector("tbody");
+    if (bodySection && !bodySection.querySelector("tr")) {
+      bodySection.remove();
+    }
+
+    const rows = Array.from(table.querySelectorAll("tr"));
+    if (rows.length === 0) {
+      return false;
+    }
+
+    let nextHeaderSection = table.querySelector("thead");
+    if (!nextHeaderSection) {
+      const firstBodyRow = table.querySelector("tbody tr") || rows[0];
+      if (firstBodyRow) {
+        nextHeaderSection = document.createElement("thead");
+        table.insertBefore(nextHeaderSection, table.firstChild);
+        nextHeaderSection.appendChild(firstBodyRow);
+      }
+    }
+
+    table.querySelectorAll("thead tr").forEach((row) => {
+      getTableCells(row).forEach((cell) => {
+        replaceElementTag(cell, "th");
+      });
+    });
+
+    table.querySelectorAll("tbody tr").forEach((row) => {
+      getTableCells(row).forEach((cell) => {
+        replaceElementTag(cell, "td");
+      });
+    });
+
+    return true;
+  }
+
+  function replaceTableWithParagraph(table) {
+    if (!(table instanceof Element)) {
+      return null;
+    }
+
+    const paragraph = document.createElement("p");
+    paragraph.appendChild(document.createElement("br"));
+    table.replaceWith(paragraph);
+    state.root?.focus();
+    placeCaretAtStart(paragraph);
+    setActiveTableCell(null);
+    return paragraph;
+  }
+
+  function focusTableCell(cell) {
+    if (!(cell instanceof Element)) {
+      setActiveTableCell(null);
+      return;
+    }
+
+    state.root?.focus();
+    placeCaretAtNodeStart(cell);
+    setActiveTableCell(cell);
+  }
+
+  function removeSelectedTableRow() {
+    const cell = getActiveTableCell();
+    const row = cell?.closest("tr");
+    const table = cell?.closest("table");
+    if (!row || !table) {
+      return false;
+    }
+
+    const rows = Array.from(table.querySelectorAll("tr"));
+    if (rows.length <= 1) {
+      replaceTableWithParagraph(table);
+      return true;
+    }
+
+    const rowIndex = rows.indexOf(row);
+    const columnIndex = getTableCells(row).indexOf(cell);
+    row.remove();
+
+    if (!normalizeTableStructure(table)) {
+      replaceTableWithParagraph(table);
+      return true;
+    }
+
+    const remainingRows = Array.from(table.querySelectorAll("tr"));
+    const targetRow =
+      remainingRows[Math.min(rowIndex, remainingRows.length - 1)] ||
+      remainingRows[remainingRows.length - 1];
+    const targetCell = getTableCellAtIndex(targetRow, columnIndex);
+    focusTableCell(targetCell);
+    return true;
+  }
+
+  function removeSelectedTableColumn() {
+    const cell = getActiveTableCell();
+    const row = cell?.closest("tr");
+    const table = cell?.closest("table");
+    if (!row || !table) {
+      return false;
+    }
+
+    const rows = Array.from(table.querySelectorAll("tr"));
+    const columnIndex = getTableCells(row).indexOf(cell);
+    const rowIndex = rows.indexOf(row);
+    if (columnIndex < 0) {
+      return false;
+    }
+
+    const everyRowHasOneColumn = rows.every(
+      (currentRow) => getTableCells(currentRow).length <= 1,
+    );
+    if (everyRowHasOneColumn) {
+      replaceTableWithParagraph(table);
+      return true;
+    }
+
+    rows.forEach((currentRow) => {
+      const cells = getTableCells(currentRow);
+      const targetCell = cells[columnIndex] || cells[cells.length - 1];
+      targetCell?.remove();
+    });
+
+    if (!normalizeTableStructure(table)) {
+      replaceTableWithParagraph(table);
+      return true;
+    }
+
+    const remainingRows = Array.from(table.querySelectorAll("tr"));
+    const targetRow =
+      (row.isConnected ? row : null) ||
+      remainingRows[Math.min(rowIndex, remainingRows.length - 1)] ||
+      remainingRows[remainingRows.length - 1];
+    const targetCell = getTableCellAtIndex(targetRow, columnIndex);
+    focusTableCell(targetCell);
+    return true;
   }
 
   function splitFrontmatter(markdown) {
@@ -1445,6 +1702,7 @@
     state.root.innerHTML = window.DOMPurify
       ? window.DOMPurify.sanitize(rawHtml, { ADD_ATTR: ["contenteditable"] })
       : rawHtml;
+    setActiveTableCell(null);
     refreshFrontmatterPanel();
     ensureEditableBody();
     await decorateDocument();
@@ -1694,6 +1952,20 @@
     if (command === "table") {
       insertHtmlAtSelection(createTableTemplate());
       emitChange();
+      return;
+    }
+
+    if (command === "removeTableRow") {
+      if (removeSelectedTableRow()) {
+        emitChange();
+      }
+      return;
+    }
+
+    if (command === "removeTableColumn") {
+      if (removeSelectedTableColumn()) {
+        emitChange();
+      }
       return;
     }
 
@@ -2450,16 +2722,19 @@
     }
 
     addHeadingIds(state.root);
+    refreshActiveTableCell();
     emitChange();
   }
 
   function handleRootChange(event) {
     const checkbox = event.target.closest('input[type="checkbox"]');
     if (!checkbox) {
+      refreshActiveTableCell();
       return;
     }
 
     setTaskCheckboxClasses(checkbox);
+    refreshActiveTableCell();
     emitChange();
   }
 
@@ -2527,6 +2802,7 @@
       ".code-block, .mermaid-container, .math-display, .math-inline",
     );
     if (!block || event.target.closest("button, input")) {
+      refreshActiveTableCell();
       return;
     }
 
@@ -2537,6 +2813,10 @@
     } else if (block.classList.contains("math-inline")) {
       openBlockEditor("math-inline", block);
     }
+  }
+
+  function handleDocumentSelectionChange() {
+    refreshActiveTableCell();
   }
 
   function setLinkModifierCursorState(isActive) {
@@ -2652,6 +2932,7 @@
 
     configureMarked();
     bindRootEvents();
+    document.addEventListener("selectionchange", handleDocumentSelectionChange);
     bindModifierLinkCursorState();
     bindFullscreenListeners();
     bindBlockEditListeners();
@@ -2672,6 +2953,7 @@
     getScrollTop,
     setScrollTop,
     focus,
+    hasTableSelection: () => Boolean(getActiveTableCell()),
     exec: executeCommand,
     undo,
     redo,
