@@ -5,9 +5,9 @@
     }
 
     clonedDocument.documentElement.setAttribute("data-theme", "light");
-    const wrapper = clonedDocument.getElementById("wysiwyg-wrapper");
-    if (wrapper) {
-      wrapper.style.marginBottom = "0";
+    const editor = clonedDocument.getElementById("wysiwyg-editor");
+    if (editor) {
+      editor.style.paddingBottom = "20px";
     }
   }
 

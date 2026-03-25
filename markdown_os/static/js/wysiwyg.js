@@ -57,9 +57,35 @@
       return;
     }
 
+    const anchorNode = selection.anchorNode;
+    const anchorOffset = selection.anchorOffset;
+    const focusNode = selection.focusNode;
+    const focusOffset = selection.focusOffset;
+
     const range = selection.getRangeAt(0).cloneRange();
     range.collapse(true);
     let rect = range.getBoundingClientRect();
+
+    if (rect.width === 0 && rect.height === 0) {
+      const marker = document.createTextNode("\u200b");
+      try {
+        range.insertNode(marker);
+        const probe = document.createRange();
+        probe.selectNode(marker);
+        rect = probe.getBoundingClientRect();
+        marker.parentNode?.removeChild(marker);
+      } catch {
+        marker.parentNode?.removeChild(marker);
+      }
+      if (anchorNode && focusNode && state.root.contains(anchorNode) && state.root.contains(focusNode)) {
+        selection.removeAllRanges();
+        try {
+          selection.setBaseAndExtent(anchorNode, anchorOffset, focusNode, focusOffset);
+        } catch {
+          /* ignore */
+        }
+      }
+    }
 
     if (rect.width === 0 && rect.height === 0) {
       let node = selection.anchorNode;
@@ -80,7 +106,7 @@
     }
 
     const toolbarRect = toolbar.getBoundingClientRect();
-    const clearance = 12;
+    const clearance = 16;
     const overflow = rect.bottom - (toolbarRect.top - clearance);
     if (overflow <= 0) {
       return;
