@@ -1,0 +1,27 @@
+{
+  "name": "markdown-os-desktop",
+  "version": "0.7.4",
+  "private": true,
+  "description": "Electron shell for Markdown-OS",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "npm run build && electron .",
+    "start": "electron .",
+    "pack": "npm run build && electron-builder --dir",
+    "dist": "npm run build && electron-builder"
+  },
+  "dependencies": {
+    "electron-store": "^10.1.0",
+    "semver": "^7.7.2"
+  },
+  "devDependencies": {
+    "@types/node": "^24.5.2",
+    "electron": "^37.4.0",
+    "electron-builder": "^26.0.12",
+    "typescript": "^5.9.2"
+  },
+  "build": {
+    "extends": "./electron-builder.yml"
+  }
+}

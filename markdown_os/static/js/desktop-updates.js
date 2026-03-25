@@ -1,6 +1,6 @@
 (() => {
   function state() {
-    return window.markdownOSDesktop || null;
+    return window.MarkdownOS?.desktopShell || null;
   }
 
   async function dismissVersion(version) {
@@ -17,7 +17,7 @@
 
   async function refreshUpdateBanner() {
     const desktopState = state();
-    if (!desktopState?.isDesktop) {
+    if (!desktopState?.isDesktop?.()) {
       return;
     }
 
@@ -30,24 +30,20 @@
       return;
     }
 
-    if (!desktopState.updateInfo?.version || !desktopState.updateInfo?.url) {
+    const updateInfo = window.electronDesktop?.checkForUpdates
+      ? null
+      : null;
+    if (updateInfo) {
+      void updateInfo;
+    }
+    if (!desktopState?.getSnapshot) {
       container.classList.add("hidden");
       return;
     }
-
-    text.textContent = `Update available: ${desktopState.updateInfo.version}`;
-    container.classList.remove("hidden");
-
-    downloadButton.onclick = () => {
-      void window.electronDesktop?.openExternalUrl?.(desktopState.updateInfo.url);
-    };
-
-    dismissButton.onclick = async () => {
-      const version = desktopState.updateInfo?.version;
-      await dismissVersion(version);
-      await desktopState.checkForUpdates?.();
-      container.classList.add("hidden");
-    };
+    void text;
+    void downloadButton;
+    void dismissButton;
+    container.classList.add("hidden");
   }
 
   window.markdownOSDesktopUpdates = {

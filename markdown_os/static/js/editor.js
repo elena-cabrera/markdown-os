@@ -1,14 +1,6 @@
 (() => {
   const { AUTOSAVE_DELAY_MS, setSaveStatus, setContentLoadingState } = window.sharedUtils;
 
-  // #region agent log
-  function debugLog(hypothesisId, location, message, data = {}) {
-    try {
-      window.electronDesktop?.debugLog?.({ hypothesisId, location, message, data });
-    } catch (_error) {}
-  }
-  // #endregion
-
   const editorState = {
     saveTimeout: null,
     lastSavedContent: "",
@@ -77,8 +69,12 @@
   }
 
   function setEmptyStateCopy(title, subtitle) {
-    const titleElement = document.getElementById("empty-state-title");
-    const subtitleElement = document.getElementById("empty-state-subtitle");
+    const titleElement =
+      document.getElementById("empty-state-title") ||
+      document.querySelector("#empty-state .empty-state-title");
+    const subtitleElement =
+      document.getElementById("empty-state-subtitle") ||
+      document.querySelector("#empty-state .empty-state-subtitle");
     if (titleElement) {
       titleElement.textContent = title;
     }
@@ -654,7 +650,7 @@
       }
     });
 
-    window.addEventListener("markdown-os:desktop-mode-changed", (event) => {
+    window.addEventListener("markdown-os:desktop-state", (event) => {
       editorState.mode = event.detail?.mode || editorState.mode;
       syncDesktopBodyClass();
       if (editorState.mode === "empty") {
@@ -688,20 +684,10 @@
     bindEvents();
     syncDesktopBodyClass();
 
-    if (window.markdownOSDesktop?.isDesktopMode?.()) {
-      await window.markdownOSDesktop.initialize?.();
+    if (window.MarkdownOS?.desktopShell?.isDesktop?.()) {
+      await window.MarkdownOS.desktopShell.fetchDesktopState?.();
       editorState.mode = await detectMode();
     }
-
-    // #region agent log
-    debugLog("D", "editor.js:693", "Editor bootstrap modes", {
-      initialMode,
-      finalMode: editorState.mode,
-      hasMarkdownOSDesktop: Boolean(window.markdownOSDesktop),
-      hasDesktopShellGlobal: Boolean(window.desktopShell),
-      hasDesktopShellNamespace: Boolean(window.MarkdownOS?.desktopShell),
-    });
-    // #endregion
 
     if (editorState.mode === "file") {
       await loadContent();
@@ -713,6 +699,7 @@
     if (editorState.mode === "folder") {
       setSaveStatus("Select a file");
       window.fileTabs?.setEmptyState?.(true);
+      window.desktopPicker?.setPickerVisibility?.(false);
       return;
     }
 
@@ -722,5 +709,6 @@
     );
     setSaveStatus("Open a file or folder");
     window.fileTabs?.setEmptyState?.(true);
+    window.desktopPicker?.setPickerVisibility?.(true);
   });
 })();

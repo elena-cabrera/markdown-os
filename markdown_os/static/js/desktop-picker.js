@@ -1,20 +1,16 @@
 (() => {
   const PICKER_EMPTY_FILENAME = "Untitled.md";
 
-  // #region agent log
-  function debugLog(hypothesisId, location, message, data = {}) {
-    try {
-      window.electronDesktop?.debugLog?.({ hypothesisId, location, message, data });
-    } catch (_error) {}
+  function desktopShell() {
+    return window.MarkdownOS?.desktopShell || null;
   }
-  // #endregion
 
   function isDesktopMode() {
-    return window.desktopShell?.isDesktop?.() === true;
+    return desktopShell()?.isDesktop?.() === true;
   }
 
   function pickerRoot() {
-    return document.getElementById("desktop-picker");
+    return document.getElementById("desktop-picker-overlay");
   }
 
   function emptyStateRoot() {
@@ -27,13 +23,6 @@
 
   function setPickerVisibility(visible) {
     const root = pickerRoot();
-    // #region agent log
-    debugLog("B", "desktop-picker.js:28", "Set picker visibility", {
-      requestedVisible: Boolean(visible),
-      hasPickerRoot: Boolean(root),
-      pickerRootId: root?.id || null,
-    });
-    // #endregion
     if (!root) {
       return;
     }
@@ -104,17 +93,15 @@
 
   async function refreshPicker() {
     await renderRecents();
-    setPickerVisibility(window.desktopShell?.isPickerVisible?.() === true);
+    const snapshot = desktopShell()?.getSnapshot?.();
+    setPickerVisibility(snapshot?.mode === "empty");
   }
 
   async function openRecent(path, type) {
     if (!path || !type) {
       return false;
     }
-    if (type === "folder") {
-      return window.desktopShell?.openDesktopFolder?.(path);
-    }
-    return window.desktopShell?.openDesktopFile?.(path);
+    return desktopShell()?.openWorkspace?.(path);
   }
 
   async function promptForFirstNote() {
@@ -129,7 +116,7 @@
   }
 
   async function createFirstNote() {
-    const snapshot = window.desktopShell?.snapshot?.();
+    const snapshot = desktopShell()?.getSnapshot?.();
     if (!snapshot || snapshot.mode !== "folder") {
       return false;
     }
@@ -175,12 +162,18 @@
 
   function bindPickerActions() {
     document.getElementById("desktop-open-file")?.addEventListener("click", async () => {
-      await window.desktopShell?.pickAndOpenFile?.();
+      const result = await window.electronDesktop?.pickFile?.();
+      if (!result?.canceled && result?.path) {
+        await desktopShell()?.openWorkspace?.(result.path);
+      }
       await refreshPicker();
     });
 
     document.getElementById("desktop-open-folder")?.addEventListener("click", async () => {
-      await window.desktopShell?.pickAndOpenFolder?.();
+      const result = await window.electronDesktop?.pickFolder?.();
+      if (!result?.canceled && result?.path) {
+        await desktopShell()?.openWorkspace?.(result.path);
+      }
       await refreshPicker();
     });
 
@@ -192,13 +185,6 @@
 
     window.addEventListener("markdown-os:desktop-state", async (event) => {
       const snapshot = event.detail || {};
-      // #region agent log
-      debugLog("A", "desktop-picker.js:186", "Desktop state event received", {
-        mode: snapshot.mode || null,
-        isEmptyWorkspace: snapshot.isEmptyWorkspace === true,
-        hasPickerVisibleApi: typeof window.desktopShell?.isPickerVisible === "function",
-      });
-      // #endregion
       const showPicker = snapshot.mode === "empty";
       setPickerVisibility(showPicker);
       const isEmptyWorkspace = snapshot.mode === "folder" && snapshot.isEmptyWorkspace === true;
@@ -216,15 +202,6 @@
   }
 
   function init() {
-    // #region agent log
-    debugLog("A", "desktop-picker.js:204", "Desktop picker init", {
-      hasEmptyStateRoot: Boolean(emptyStateRoot()),
-      hasPickerRoot: Boolean(pickerRoot()),
-      pickerRootId: pickerRoot()?.id || null,
-      hasDesktopShellGlobal: Boolean(window.desktopShell),
-      hasMarkdownOSDesktop: Boolean(window.markdownOSDesktop),
-    });
-    // #endregion
     if (!emptyStateRoot()) {
       return;
     }

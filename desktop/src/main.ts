@@ -1,5 +1,4 @@
 import { app, BrowserWindow, Menu, dialog, ipcMain } from "electron";
-import fs from "node:fs";
 import path from "node:path";
 
 import {
@@ -26,20 +25,6 @@ let mainWindow: BrowserWindow | null = null;
 let backendHandle: BackendHandle | null = null;
 let pendingOpenPath: string | null = null;
 
-function writeDebugLog(
-  hypothesisId: string,
-  location: string,
-  message: string,
-  data: Record<string, unknown> = {},
-): void {
-  try {
-    fs.appendFileSync(
-      "/opt/cursor/logs/debug.log",
-      JSON.stringify({ hypothesisId, location, message, data, timestamp: Date.now() }) + "\n",
-    );
-  } catch (_error) {}
-}
-
 function getPreloadPath(): string {
   return path.join(__dirname, "preload.js");
 }
@@ -57,31 +42,15 @@ async function sendWorkspaceToRenderer(filePath: string): Promise<void> {
     return;
   }
 
-  const mode = filePath.endsWith(".md") || filePath.endsWith(".markdown") ? "file" : "folder";
-  const endpoint =
-    mode === "file" ? "/api/desktop/open-file" : "/api/desktop/open-folder";
-  const targetUrl = `${backendHandle?.url}${endpoint}`;
-
   await mainWindow.webContents.executeJavaScript(
     `
-      fetch(${JSON.stringify(targetUrl)}, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ path: ${JSON.stringify(filePath)} }),
-      }).then((response) => {
-        if (!response.ok) {
-          throw new Error("Failed to open workspace from desktop shell.");
-        }
-        return response.json();
-      }).then(() => {
-        window.dispatchEvent(new CustomEvent("markdown-os:desktop-workspace-opened"));
-      });
+      window.MarkdownOS?.desktopShell?.openWorkspace?.(${JSON.stringify(filePath)});
     `,
     true,
   );
   addRecent(
     filePath,
-    mode === "file" ? "file" : "folder",
+    filePath.endsWith(".md") || filePath.endsWith(".markdown") ? "file" : "folder",
   );
 }
 
@@ -113,18 +82,9 @@ function buildMenu(): Menu {
         {
           label: "Back to Picker",
           click: async () => {
-            const targetUrl = `${backendHandle?.url}/api/desktop/close-workspace`;
-            // #region agent log
-            writeDebugLog("C", "main.ts:114", "Back to Picker clicked", {
-              hasBackendHandle: Boolean(backendHandle?.url),
-              hasMainWindow: Boolean(mainWindow),
-            });
-            // #endregion
             await currentWindow().webContents.executeJavaScript(
               `
-                fetch(${JSON.stringify(targetUrl)}, { method: "POST" }).then(() => {
-                  window.dispatchEvent(new CustomEvent("markdown-os:desktop-workspace-closed"));
-                });
+                window.MarkdownOS?.desktopShell?.closeWorkspace?.();
               `,
               true,
             );
@@ -168,25 +128,6 @@ async function createMainWindow(): Promise<void> {
 function registerIpcHandlers(): void {
   ipcMain.handle("desktop:pick-file", async () => pickMarkdownFile(currentWindow()));
   ipcMain.handle("desktop:pick-folder", async () => pickWorkspaceFolder(currentWindow()));
-  ipcMain.handle(
-    "desktop:debug-log",
-    async (
-      _event,
-      payload: {
-        hypothesisId?: string;
-        location?: string;
-        message?: string;
-        data?: Record<string, unknown>;
-      },
-    ) => {
-      writeDebugLog(
-        String(payload?.hypothesisId || "unknown"),
-        String(payload?.location || "unknown"),
-        String(payload?.message || "unknown"),
-        payload?.data || {},
-      );
-    },
-  );
   ipcMain.handle("desktop:list-recents", async () => listRecents());
   ipcMain.handle("desktop:open-recent", async (_event, targetPath: string) => {
     await sendWorkspaceToRenderer(targetPath);

@@ -4,14 +4,6 @@ import type { RecentEntry } from "./recents";
 import type { ReleaseInfo } from "./updater";
 
 const desktopBridge = {
-  debugLog: (
-    payload: {
-      hypothesisId?: string;
-      location?: string;
-      message?: string;
-      data?: Record<string, unknown>;
-    },
-  ): Promise<void> => ipcRenderer.invoke("desktop:debug-log", payload),
   pickFile: (): Promise<string | null> => ipcRenderer.invoke("desktop:pick-file"),
   pickFolder: (): Promise<string | null> => ipcRenderer.invoke("desktop:pick-folder"),
   listRecents: (): Promise<RecentEntry[]> => ipcRenderer.invoke("desktop:list-recents"),

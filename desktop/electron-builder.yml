@@ -1,0 +1,32 @@
+appId: com.markdownos.desktop
+productName: Markdown-OS
+directories:
+  output: dist
+  buildResources: build
+files:
+  - build/**
+  - dist-main/**
+  - package.json
+asar: true
+mac:
+  target:
+    - dmg
+  category: public.app-category.developer-tools
+  artifactName: markdown-os-desktop-${version}-macos.${ext}
+  fileAssociations:
+    - ext:
+        - md
+        - markdown
+      name: Markdown document
+win:
+  target:
+    - nsis
+  artifactName: markdown-os-desktop-${version}-windows-setup.${ext}
+fileAssociations:
+  - ext: md
+    name: Markdown document
+  - ext: markdown
+    name: Markdown document
+nsis:
+  oneClick: false
+  perMachine: false
