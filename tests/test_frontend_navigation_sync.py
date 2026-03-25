@@ -50,11 +50,12 @@ def test_folder_mode_sidebar_can_be_collapsed_and_restored() -> None:
     js_source = _read_static_js("file-tree.js")
     css_source = _read_static_css("styles.css")
 
-    assert 'id="sidebar-collapse-button"' in html_source
-    assert 'id="sidebar-expand-button"' in html_source
+    assert 'id="sidebar-toggle-button"' in html_source
     assert 'const SIDEBAR_COLLAPSE_KEY = "markdown-os-sidebar-collapsed";' in js_source
     assert 'appContainer.classList.toggle("sidebar-collapsed", collapsed);' in js_source
-    assert 'document.getElementById("sidebar-expand-button")' in js_source
+    assert 'const toggleButton = document.getElementById("sidebar-toggle-button");' in js_source
+    assert "function sidebarToggleIconSvg(collapsed)" in js_source
+    assert "toggleButton.innerHTML = sidebarToggleIconSvg(collapsed);" in js_source
     assert 'toggleSidebarCollapse' in js_source
     assert ".container.sidebar-collapsed #sidebar {" in css_source
 

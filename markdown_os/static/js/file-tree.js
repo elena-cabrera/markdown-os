@@ -81,29 +81,51 @@
     }
   }
 
+  function sidebarToggleIconSvg(collapsed) {
+    if (collapsed) {
+      return `
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <g stroke="currentColor" stroke-linejoin="round" stroke-width="1.5">
+            <path d="M22 12c0-3.75 0-5.625-.955-6.939a5 5 0 0 0-1.106-1.106C18.625 3 16.749 3 13 3h-2c-3.75 0-5.625 0-6.939.955A5 5 0 0 0 2.955 5.06C2 6.375 2 8.251 2 12s0 5.625.955 6.939a5 5 0 0 0 1.106 1.106C5.375 21 7.251 21 11 21h2c3.75 0 5.625 0 6.939-.955a5 5 0 0 0 1.106-1.106C22 17.625 22 15.749 22 12Zm-7.5-8.5v17"/>
+            <path stroke-linecap="round" d="M19 7h-1.5m1.5 4h-1.5M8 10l1.227 1.057c.515.445.773.667.773.943s-.258.498-.773.943L8 14"/>
+          </g>
+        </svg>
+      `;
+    }
+
+    return `
+      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <g stroke="currentColor" stroke-linejoin="round" stroke-width="1.5">
+          <path d="M2 12c0-3.75 0-5.625.955-6.939A5 5 0 0 1 4.06 3.955C5.375 3 7.251 3 11 3h2c3.75 0 5.625 0 6.939.955a5 5 0 0 1 1.106 1.106C22 6.375 22 8.251 22 12s0 5.625-.955 6.939a5 5 0 0 1-1.106 1.106C18.625 21 16.749 21 13 21h-2c-3.75 0-5.625 0-6.939-.955a5 5 0 0 1-1.106-1.106C2 17.625 2 15.749 2 12Zm7.5-8.5v17"/>
+          <path stroke-linecap="round" d="M5 7h1.5M5 11h1.5M17 10l-1.226 1.057c-.516.445-.774.667-.774.943s.258.498.774.943L17 14"/>
+        </g>
+      </svg>
+    `;
+  }
+
+  function updateSidebarToggleButton(collapsed) {
+    const toggleButton = document.getElementById("sidebar-toggle-button");
+    if (!(toggleButton instanceof HTMLButtonElement)) {
+      return;
+    }
+
+    toggleButton.innerHTML = sidebarToggleIconSvg(collapsed);
+    toggleButton.title = collapsed ? "Show sidebar" : "Hide sidebar";
+    toggleButton.setAttribute("aria-label", collapsed ? "Show sidebar" : "Hide sidebar");
+    toggleButton.setAttribute("aria-expanded", String(!collapsed));
+  }
+
   function setSidebarCollapsedState(collapsed) {
     const appContainer = document.getElementById("app-container");
     const sidebar = document.getElementById("sidebar");
-    const expandButton = document.getElementById("sidebar-expand-button");
-    const collapseButton = document.getElementById("sidebar-collapse-button");
 
-    if (!appContainer || !sidebar || !expandButton || !collapseButton) {
+    if (!appContainer || !sidebar) {
       return;
     }
 
     appContainer.classList.toggle("sidebar-collapsed", collapsed);
     sidebar.setAttribute("aria-hidden", String(collapsed));
-    expandButton.classList.toggle("hidden", !collapsed);
-    expandButton.setAttribute("aria-expanded", String(!collapsed));
-    collapseButton.setAttribute("aria-expanded", String(!collapsed));
-  }
-
-  function collapseSidebar() {
-    setSidebarCollapsedState(true);
-  }
-
-  function expandSidebar() {
-    setSidebarCollapsedState(false);
+    updateSidebarToggleButton(collapsed);
   }
 
   function persistSidebarCollapseState(collapsed) {
@@ -570,10 +592,7 @@
       .getElementById("file-tree-toggle")
       ?.addEventListener("click", toggleFileTreeCollapse);
     document
-      .getElementById("sidebar-collapse-button")
-      ?.addEventListener("click", toggleSidebarCollapse);
-    document
-      .getElementById("sidebar-expand-button")
+      .getElementById("sidebar-toggle-button")
       ?.addEventListener("click", toggleSidebarCollapse);
 
     document.getElementById("file-tree-refresh")?.addEventListener("click", async () => {

@@ -98,26 +98,6 @@
     <div id="app-loading" class="loading-banner">Loading markdown document...</div>
     <div class="container hidden" id="app-container">
       <aside id="sidebar">
-        <div class="sidebar-topbar">
-          <button
-            id="sidebar-collapse-button"
-            class="sidebar-chrome-button"
-            type="button"
-            title="Hide sidebar"
-            aria-label="Hide sidebar"
-            aria-controls="sidebar"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-              <path
-                d="m15 6l-6 6l6 6"
-                stroke="currentColor"
-                stroke-width="1.8"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-          </button>
-        </div>
         <div id="file-tree-container" class="hidden">
           <button
             id="file-tree-toggle"
@@ -239,21 +219,25 @@
         <div class="tab-nav">
           <div class="nav-left-group">
             <button
-              id="sidebar-expand-button"
+              id="sidebar-toggle-button"
               class="history-button hidden"
               type="button"
-              title="Show sidebar"
-              aria-label="Show sidebar"
+              title="Hide sidebar"
+              aria-label="Hide sidebar"
               aria-controls="sidebar"
+              aria-expanded="true"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="m9 6l6 6l-6 6"
-                  stroke="currentColor"
-                  stroke-width="1.8"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
+              <svg
+                id="sidebar-toggle-icon"
+                xmlns="http://www.w3.org/2000/svg"
+                width="32"
+                height="32"
+                viewBox="0 0 24 24"
+              >
+                <g fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.5">
+                  <path d="M2 12c0-3.75 0-5.625.955-6.939A5 5 0 0 1 4.06 3.955C5.375 3 7.251 3 11 3h2c3.75 0 5.625 0 6.939.955a5 5 0 0 1 1.106 1.106C22 6.375 22 8.251 22 12s0 5.625-.955 6.939a5 5 0 0 1-1.106 1.106C18.625 21 16.749 21 13 21h-2c-3.75 0-5.625 0-6.939-.955a5 5 0 0 1-1.106-1.106C2 17.625 2 15.749 2 12Zm7.5-8.5v17" />
+                  <path stroke-linecap="round" d="M5 7h1.5M5 11h1.5M17 10l-1.226 1.057c-.516.445-.774.667-.774.943s.258.498.774.943L17 14" />
+                </g>
               </svg>
             </button>
             <div id="desktop-open-group" class="desktop-open-group hidden" aria-label="Open file or folder">
