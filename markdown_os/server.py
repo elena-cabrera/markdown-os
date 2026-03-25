@@ -249,18 +249,13 @@ class MarkdownPathEventHandler(FileSystemEventHandler):
         return event_path.suffix.lower() in {".md", ".markdown"}
 
 
-def create_app(
-    handler: FileHandler | DirectoryHandler,
-    mode: str = "file",
-    desktop: bool = False,
-) -> FastAPI:
+def create_app(handler: FileHandler | DirectoryHandler, mode: str = "file") -> FastAPI:
     """
     Create the FastAPI application for the markdown editor.
 
     Args:
     - handler (FileHandler | DirectoryHandler): File or folder access service.
     - mode (str): Editor mode, either "file" or "folder".
-    - desktop (bool): Whether the app is running in desktop (pywebview) mode.
 
     Returns:
     - FastAPI: Configured application with routes, static assets, and websocket support.
@@ -341,7 +336,6 @@ def create_app(
 
     app.state.handler = handler
     app.state.mode = mode
-    app.state.desktop = desktop
     app.state.current_file = None
     app.state.websocket_hub = WebSocketHub()
     app.state.last_internal_write_at = 0.0
@@ -378,17 +372,6 @@ def create_app(
         """
 
         return {"mode": app.state.mode}
-
-    @app.get("/api/desktop")
-    async def get_desktop_mode() -> dict[str, bool]:
-        """
-        Return whether the server is running in desktop (pywebview) mode.
-
-        Returns:
-        - dict[str, bool]: Desktop mode flag.
-        """
-
-        return {"desktop": app.state.desktop}
 
     @app.get("/api/file-tree")
     async def get_file_tree() -> dict[str, Any]:
