@@ -390,6 +390,27 @@
     state.root.prepend(renderFrontmatterPanel());
   }
 
+  function ensureEditableBody() {
+    if (!state.root) {
+      return;
+    }
+
+    const hasEditableBodyNode = Array.from(state.root.children).some((node) => {
+      return (
+        !node.matches(".frontmatter-properties, .frontmatter-properties-create") &&
+        node.getAttribute("contenteditable") !== "false"
+      );
+    });
+
+    if (hasEditableBodyNode) {
+      return;
+    }
+
+    const paragraph = document.createElement("p");
+    paragraph.appendChild(document.createElement("br"));
+    state.root.appendChild(paragraph);
+  }
+
   async function promptFrontmatterProperty(initial = null) {
     const result = await window.markdownDialogs?.promptPair?.({
       title: initial ? "Edit property" : "Add property",
@@ -1425,6 +1446,7 @@
       ? window.DOMPurify.sanitize(rawHtml, { ADD_ATTR: ["contenteditable"] })
       : rawHtml;
     refreshFrontmatterPanel();
+    ensureEditableBody();
     await decorateDocument();
     state.suppressInput = false;
 

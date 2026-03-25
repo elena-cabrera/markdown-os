@@ -54,6 +54,17 @@ def test_wysiwyg_supports_markdown_shortcuts_during_typing() -> None:
     assert "event.key === \"`\"" in source
 
 
+def test_wysiwyg_restores_editable_body_for_empty_documents() -> None:
+    """Verify empty documents still render an editable paragraph after frontmatter UI."""
+
+    source = _read_static_js("wysiwyg.js")
+
+    assert "function ensureEditableBody()" in source
+    assert "node.matches(\".frontmatter-properties, .frontmatter-properties-create\")" in source
+    assert "paragraph.appendChild(document.createElement(\"br\"));" in source
+    assert "refreshFrontmatterPanel();\n    ensureEditableBody();" in source
+
+
 def test_wysiwyg_uses_icon_action_buttons_for_edit_and_copy() -> None:
     """Verify edit/copy controls are rendered as shared icon action buttons."""
 
