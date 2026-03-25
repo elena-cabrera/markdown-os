@@ -1,6 +1,6 @@
 [project]
 name = "markdown-os"
-version = "0.7.3"
+version = "0.7.4"
 description = "Developer-focused markdown editor served from a local CLI."
 readme = "README.md"
 license = "Apache-2.0"
@@ -32,14 +32,6 @@ dependencies = [
     "websockets>=16.0",
 ]
 
-[project.optional-dependencies]
-desktop = [
-    "pywebview>=5.0",
-    "PyQtWebEngine>=5.15; sys_platform == 'linux'",
-    "PyQt5>=5.15; sys_platform == 'linux'",
-    "qtpy>=2.0; sys_platform == 'linux'",
-]
-
 [dependency-groups]
 dev = [
     "httpx>=0.28.1",
@@ -49,7 +41,6 @@ dev = [
 
 [project.scripts]
 markdown-os = "markdown_os.cli:run"
-markdown-os-desktop = "markdown_os.desktop:main"
 
 [project.urls]
 Homepage = "https://github.com/elena-cabrera/markdown-os"
