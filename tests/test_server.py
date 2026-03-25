@@ -132,6 +132,32 @@ def test_file_tree_endpoint_returns_nested_structure_in_folder_mode(tmp_path: Pa
     assert any(child["path"] == "README.md" for child in payload["children"])
 
 
+def test_file_tree_endpoint_returns_empty_root_for_empty_folder_mode_workspace(tmp_path: Path) -> None:
+    """
+    Verify folder mode returns an empty root tree for workspaces with no markdown files yet.
+
+    Args:
+    - tmp_path (Path): Pytest-managed temporary directory fixture.
+
+    Returns:
+    - None: Assertions validate empty-workspace tree payload structure.
+    """
+
+    workspace = tmp_path / "workspace"
+    workspace.mkdir(parents=True, exist_ok=True)
+
+    with _build_folder_client(workspace) as client:
+        response = client.get("/api/file-tree")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "type": "folder",
+        "name": "workspace",
+        "path": "",
+        "children": [],
+    }
+
+
 def test_get_content_reads_selected_file_in_folder_mode(tmp_path: Path) -> None:
     """
     Verify folder mode content endpoint reads requested relative file path.
