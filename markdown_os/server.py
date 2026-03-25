@@ -10,15 +10,17 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
+import typer
 from fastapi import FastAPI, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
-from watchdog.observers import Observer
 
+from markdown_os.app_runtime import resolve_target_path
 from markdown_os.directory_handler import DirectoryHandler
 from markdown_os.file_handler import FileHandler, FileReadError, FileWriteError
+from markdown_os.workspace_session import WorkspaceSession
 
 ALLOWED_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp", ".ico"}
 MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024
@@ -46,6 +48,12 @@ class RenameFileRequest(BaseModel):
 
 class DeleteFileRequest(BaseModel):
     """Body payload for file deletion operations."""
+
+    path: str
+
+
+class DesktopOpenRequest(BaseModel):
+    """Body payload for desktop workspace open operations."""
 
     path: str
 
@@ -249,20 +257,29 @@ class MarkdownPathEventHandler(FileSystemEventHandler):
         return event_path.suffix.lower() in {".md", ".markdown"}
 
 
-def create_app(handler: FileHandler | DirectoryHandler, mode: str = "file") -> FastAPI:
+def create_app(
+    handler: FileHandler | DirectoryHandler | None,
+    mode: str = "file",
+    desktop: bool = False,
+) -> FastAPI:
     """
     Create the FastAPI application for the markdown editor.
 
     Args:
-    - handler (FileHandler | DirectoryHandler): File or folder access service.
-    - mode (str): Editor mode, either "file" or "folder".
+    - handler (FileHandler | DirectoryHandler | None): File or folder access service, or ``None`` in empty mode.
+    - mode (str): Editor mode, either "empty", "file", or "folder".
+    - desktop (bool): Whether to enable desktop-only routes and behavior.
 
     Returns:
     - FastAPI: Configured application with routes, static assets, and websocket support.
     """
 
-    if mode not in {"file", "folder"}:
-        raise ValueError("mode must be either 'file' or 'folder'.")
+    if mode not in {"empty", "file", "folder"}:
+        raise ValueError("mode must be either 'empty', 'file', or 'folder'.")
+    if mode == "empty" and handler is not None:
+        raise ValueError("empty mode must not receive an initial handler.")
+    if mode != "empty" and handler is None:
+        raise ValueError("file and folder modes require an initial handler.")
 
     static_dir = Path(__file__).parent / "static"
 
@@ -278,7 +295,6 @@ def create_app(handler: FileHandler | DirectoryHandler, mode: str = "file") -> F
         - None: Context manager yields control while observer is running.
         """
 
-        observer = Observer()
         loop = asyncio.get_running_loop()
 
         def notify_external_change(changed_path: Path) -> None:
@@ -298,38 +314,18 @@ def create_app(handler: FileHandler | DirectoryHandler, mode: str = "file") -> F
                 )
             )
 
-        if app.state.mode == "file":
-            file_handler = _require_file_handler(app)
-            event_handler = MarkdownPathEventHandler(
-                target_file=file_handler.filepath,
-                notify_callback=notify_external_change,
-                should_ignore=lambda: _should_ignore_watcher_event(app),
-            )
-            watch_path = str(file_handler.filepath.parent)
-            recursive = False
-        else:
-            directory_handler = _require_directory_handler(app)
-            event_handler = MarkdownPathEventHandler(
-                root_directory=directory_handler.directory,
-                notify_callback=notify_external_change,
-                should_ignore=lambda: _should_ignore_watcher_event(app),
-            )
-            watch_path = str(directory_handler.directory)
-            recursive = True
-
-        observer.schedule(
-            event_handler,
-            path=watch_path,
-            recursive=recursive,
+        session = WorkspaceSession(
+            app=app,
+            notify_callback=notify_external_change,
+            event_handler_factory=MarkdownPathEventHandler,
         )
-        observer.start()
+        app.state.workspace_session = session
+        await session.initialize(handler=handler, mode=mode)
 
         try:
             yield
         finally:
-            observer.stop()
-            observer.join(timeout=3)
-            handler.cleanup()
+            await session.cleanup()
 
     app = FastAPI(title="Markdown-OS", lifespan=lifespan)
     app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
@@ -339,6 +335,10 @@ def create_app(handler: FileHandler | DirectoryHandler, mode: str = "file") -> F
     app.state.current_file = None
     app.state.websocket_hub = WebSocketHub()
     app.state.last_internal_write_at = 0.0
+    app.state.workspace_path = None
+    app.state.is_empty_workspace = mode == "folder" and isinstance(handler, DirectoryHandler) and len(handler.list_files()) == 0
+    app.state.desktop = desktop
+    app.state.workspace_session = None
 
     @app.get("/favicon.ico")
     async def favicon() -> RedirectResponse:
@@ -368,10 +368,103 @@ def create_app(handler: FileHandler | DirectoryHandler, mode: str = "file") -> F
         - None (None): Route reads mode from app state.
 
         Returns:
-        - dict[str, str]: Mode payload with value "file" or "folder".
+        - dict[str, str]: Mode payload with value "empty", "file", or "folder".
         """
 
         return {"mode": app.state.mode}
+
+    @app.get("/api/health")
+    async def get_health() -> dict[str, object]:
+        """
+        Return service health metadata for local desktop process management.
+
+        Args:
+        - None (None): Route reads current app state only.
+
+        Returns:
+        - dict[str, object]: Health status, current mode, and desktop flag.
+        """
+
+        return {
+            "ok": True,
+            "mode": app.state.mode,
+            "desktop": bool(app.state.desktop),
+        }
+
+    @app.get("/api/desktop/state")
+    async def get_desktop_state() -> dict[str, object]:
+        """
+        Return desktop runtime state for picker-first UI flows.
+
+        Args:
+        - None (None): Route reads current app state only.
+
+        Returns:
+        - dict[str, object]: Current desktop workspace snapshot.
+        """
+
+        _require_desktop_mode(app)
+        session = _require_workspace_session(app)
+        return session.snapshot()
+
+    @app.post("/api/desktop/open-file")
+    async def desktop_open_file(payload: DesktopOpenRequest) -> dict[str, object]:
+        """
+        Open a markdown file as the active desktop workspace target.
+
+        Args:
+        - payload (DesktopOpenRequest): Absolute file path selected via native dialog.
+
+        Returns:
+        - dict[str, object]: Snapshot describing the resulting file-mode state.
+        """
+
+        _require_desktop_mode(app)
+        session = _require_workspace_session(app)
+        try:
+            snapshot = await session.open_file(Path(payload.path))
+        except (typer.BadParameter, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+        return {"ok": True, **snapshot}
+
+    @app.post("/api/desktop/open-folder")
+    async def desktop_open_folder(payload: DesktopOpenRequest) -> dict[str, object]:
+        """
+        Open a folder as the active desktop workspace target.
+
+        Args:
+        - payload (DesktopOpenRequest): Absolute directory path selected via native dialog.
+
+        Returns:
+        - dict[str, object]: Snapshot describing the resulting folder-mode state.
+        """
+
+        _require_desktop_mode(app)
+        session = _require_workspace_session(app)
+        try:
+            snapshot = await session.open_folder(Path(payload.path))
+        except (typer.BadParameter, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+        return {"ok": True, **snapshot}
+
+    @app.post("/api/desktop/close-workspace")
+    async def desktop_close_workspace() -> dict[str, object]:
+        """
+        Close the active desktop workspace and return to empty mode.
+
+        Args:
+        - None (None): Route closes the current desktop workspace.
+
+        Returns:
+        - dict[str, object]: Snapshot describing the resulting empty-mode state.
+        """
+
+        _require_desktop_mode(app)
+        session = _require_workspace_session(app)
+        snapshot = await session.close_workspace()
+        return {"ok": True, **snapshot}
 
     @app.get("/api/file-tree")
     async def get_file_tree() -> dict[str, Any]:
@@ -385,6 +478,8 @@ def create_app(handler: FileHandler | DirectoryHandler, mode: str = "file") -> F
         - dict[str, Any]: Nested folder/file structure.
         """
 
+        if app.state.mode == "empty":
+            raise HTTPException(status_code=409, detail="No workspace loaded.")
         if app.state.mode != "folder":
             raise HTTPException(
                 status_code=400,
@@ -406,6 +501,8 @@ def create_app(handler: FileHandler | DirectoryHandler, mode: str = "file") -> F
         - dict[str, object]: Markdown content plus current file metadata.
         """
 
+        if app.state.mode == "empty":
+            raise HTTPException(status_code=409, detail="No workspace loaded.")
         if app.state.mode == "file":
             file_handler = _require_file_handler(app)
             try:
@@ -444,7 +541,7 @@ def create_app(handler: FileHandler | DirectoryHandler, mode: str = "file") -> F
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-        app.state.current_file = relative_path
+        _require_workspace_session(app).mark_current_file(relative_path)
         return {"content": content, "metadata": metadata}
 
     @app.post("/api/save")
@@ -459,11 +556,13 @@ def create_app(handler: FileHandler | DirectoryHandler, mode: str = "file") -> F
         - dict[str, object]: Save confirmation and updated file metadata.
         """
 
+        if app.state.mode == "empty":
+            raise HTTPException(status_code=409, detail="No workspace loaded.")
         if app.state.mode == "file":
             file_handler = _require_file_handler(app)
             try:
                 file_handler.write(payload.content)
-                app.state.last_internal_write_at = time.monotonic()
+                _require_workspace_session(app).mark_internal_write()
                 metadata = file_handler.get_metadata()
             except FileWriteError as exc:
                 raise HTTPException(status_code=500, detail=str(exc)) from exc
@@ -483,13 +582,14 @@ def create_app(handler: FileHandler | DirectoryHandler, mode: str = "file") -> F
         try:
             file_handler = directory_handler.get_file_handler(file_path)
             file_handler.write(payload.content)
-            app.state.last_internal_write_at = time.monotonic()
+            session = _require_workspace_session(app)
+            session.mark_internal_write()
             metadata = file_handler.get_metadata()
             relative_path = file_handler.filepath.relative_to(
                 directory_handler.directory
             ).as_posix()
             metadata["relative_path"] = relative_path
-            app.state.current_file = relative_path
+            session.mark_current_file(relative_path)
         except FileWriteError as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
         except FileReadError as exc:
@@ -513,7 +613,9 @@ def create_app(handler: FileHandler | DirectoryHandler, mode: str = "file") -> F
         try:
             created_path = directory_handler.create_file(payload.path)
             relative_path = created_path.relative_to(directory_handler.directory).as_posix()
-            app.state.last_internal_write_at = time.monotonic()
+            session = _require_workspace_session(app)
+            session.mark_internal_write()
+            session.refresh_empty_workspace_state()
             return {"path": relative_path}
         except FileWriteError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
@@ -533,7 +635,10 @@ def create_app(handler: FileHandler | DirectoryHandler, mode: str = "file") -> F
         try:
             renamed_path = directory_handler.rename_path(payload.path, payload.new_name)
             relative_path = renamed_path.relative_to(directory_handler.directory).as_posix()
-            app.state.last_internal_write_at = time.monotonic()
+            session = _require_workspace_session(app)
+            session.mark_internal_write()
+            if app.state.current_file == payload.path:
+                session.mark_current_file(relative_path)
             return {"path": relative_path}
         except FileWriteError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
@@ -552,7 +657,11 @@ def create_app(handler: FileHandler | DirectoryHandler, mode: str = "file") -> F
         directory_handler = _require_directory_handler(app)
         try:
             directory_handler.delete_file(payload.path)
-            app.state.last_internal_write_at = time.monotonic()
+            session = _require_workspace_session(app)
+            session.mark_internal_write()
+            session.refresh_empty_workspace_state()
+            if app.state.current_file == payload.path:
+                session.mark_current_file(None)
             return {"ok": True}
         except FileWriteError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
@@ -690,6 +799,38 @@ def _require_directory_handler(app: FastAPI) -> DirectoryHandler:
     return handler
 
 
+def _require_workspace_session(app: FastAPI) -> WorkspaceSession:
+    """
+    Return the active workspace session stored in FastAPI app state.
+
+    Args:
+    - app (FastAPI): Application state container.
+
+    Returns:
+    - WorkspaceSession: Session controller used for dynamic workspace state.
+    """
+
+    session = app.state.workspace_session
+    if not isinstance(session, WorkspaceSession):
+        raise RuntimeError("Workspace session has not been initialized.")
+    return session
+
+
+def _require_desktop_mode(app: FastAPI) -> None:
+    """
+    Ensure the current app instance has desktop-specific routes enabled.
+
+    Args:
+    - app (FastAPI): Application state container.
+
+    Returns:
+    - None: Raises when desktop routes are requested in non-desktop mode.
+    """
+
+    if not bool(app.state.desktop):
+        raise HTTPException(status_code=404, detail="Not found.")
+
+
 def _should_ignore_watcher_event(app: FastAPI) -> bool:
     """
     Decide whether a watcher event should be ignored.
@@ -701,7 +842,7 @@ def _should_ignore_watcher_event(app: FastAPI) -> bool:
     - bool: True when an event is likely caused by the app's own save request.
     """
 
-    return (time.monotonic() - app.state.last_internal_write_at) < 0.5
+    return _require_workspace_session(app).should_ignore_watcher_event()
 
 
 def _get_images_dir(app: FastAPI) -> Path:
@@ -718,6 +859,9 @@ def _get_images_dir(app: FastAPI) -> Path:
     if app.state.mode == "file":
         file_handler = _require_file_handler(app)
         return file_handler.filepath.parent / "images"
+
+    if app.state.mode == "empty":
+        raise HTTPException(status_code=409, detail="No workspace loaded.")
 
     directory_handler = _require_directory_handler(app)
     return directory_handler.directory / "images"

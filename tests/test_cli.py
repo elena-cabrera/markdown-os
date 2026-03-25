@@ -8,7 +8,14 @@ import typer
 from typer.testing import CliRunner
 
 import markdown_os.cli as cli_module
+from markdown_os.app_runtime import (
+    build_handler_for_target,
+    resolve_target_path,
+    validate_markdown_file,
+)
 from markdown_os.cli import _validate_markdown_file, _validate_path, app, find_available_port
+from markdown_os.directory_handler import DirectoryHandler
+from markdown_os.file_handler import FileHandler
 
 
 def test_validate_markdown_file_returns_resolved_path(tmp_path: Path) -> None:
@@ -26,6 +33,27 @@ def test_validate_markdown_file_returns_resolved_path(tmp_path: Path) -> None:
     markdown_path.write_text("text", encoding="utf-8")
 
     validated_path = _validate_markdown_file(markdown_path)
+
+    assert validated_path == markdown_path.resolve()
+
+
+def test_shared_runtime_validate_markdown_file_returns_resolved_path(
+    tmp_path: Path,
+) -> None:
+    """
+    Verify shared runtime validation resolves valid markdown file targets.
+
+    Args:
+    - tmp_path (Path): Pytest-managed temporary directory fixture.
+
+    Returns:
+    - None: Assertions validate shared runtime path normalization.
+    """
+
+    markdown_path = tmp_path / "sample.md"
+    markdown_path.write_text("text", encoding="utf-8")
+
+    validated_path = validate_markdown_file(markdown_path)
 
     assert validated_path == markdown_path.resolve()
 
@@ -69,6 +97,27 @@ def test_validate_path_accepts_markdown_directory(tmp_path: Path) -> None:
     assert mode == "folder"
 
 
+def test_resolve_target_path_accepts_markdown_directory(tmp_path: Path) -> None:
+    """
+    Verify shared runtime path resolution recognizes directory folder mode.
+
+    Args:
+    - tmp_path (Path): Pytest-managed temporary directory fixture.
+
+    Returns:
+    - None: Assertions validate shared runtime folder detection.
+    """
+
+    workspace = tmp_path / "notes"
+    workspace.mkdir(parents=True, exist_ok=True)
+    (workspace / "todo.md").write_text("- [ ] Task", encoding="utf-8")
+
+    resolved_path, mode = resolve_target_path(workspace)
+
+    assert resolved_path == workspace.resolve()
+    assert mode == "folder"
+
+
 def test_validate_path_accepts_empty_directory(tmp_path: Path) -> None:
     """
     Verify directory validation accepts folders with no markdown files.
@@ -88,6 +137,46 @@ def test_validate_path_accepts_empty_directory(tmp_path: Path) -> None:
 
     assert resolved_path == workspace.resolve()
     assert mode == "folder"
+
+
+def test_build_handler_for_target_returns_file_handler(tmp_path: Path) -> None:
+    """
+    Verify shared runtime handler building returns a FileHandler for file mode.
+
+    Args:
+    - tmp_path (Path): Pytest-managed temporary directory fixture.
+
+    Returns:
+    - None: Assertions validate file-mode handler construction.
+    """
+
+    markdown_path = tmp_path / "notes.md"
+    markdown_path.write_text("text", encoding="utf-8")
+
+    handler = build_handler_for_target(markdown_path.resolve(), "file")
+
+    assert isinstance(handler, FileHandler)
+    assert handler.filepath == markdown_path.resolve()
+
+
+def test_build_handler_for_target_returns_directory_handler(tmp_path: Path) -> None:
+    """
+    Verify shared runtime handler building returns a DirectoryHandler for folder mode.
+
+    Args:
+    - tmp_path (Path): Pytest-managed temporary directory fixture.
+
+    Returns:
+    - None: Assertions validate folder-mode handler construction.
+    """
+
+    workspace = tmp_path / "workspace"
+    workspace.mkdir(parents=True, exist_ok=True)
+
+    handler = build_handler_for_target(workspace.resolve(), "folder")
+
+    assert isinstance(handler, DirectoryHandler)
+    assert handler.directory == workspace.resolve()
 
 
 def test_find_available_port_skips_bound_port() -> None:
@@ -228,8 +317,8 @@ def test_open_command_programmatic_call_uses_plain_default_options(
 
     monkeypatch.setattr(cli_module, "find_available_port", _fake_find_available_port)
     monkeypatch.setattr(cli_module, "_open_browser", _fake_open_browser)
-    monkeypatch.setattr(cli_module, "FileHandler", _fake_file_handler)
-    monkeypatch.setattr(cli_module, "create_app", _fake_create_app)
+    monkeypatch.setattr(cli_module, "build_handler_for_target", lambda path, mode: _fake_file_handler(path))
+    monkeypatch.setattr(cli_module, "build_editor_app", lambda **kwargs: _fake_create_app(kwargs["handler"], kwargs["mode"]))
     monkeypatch.setattr(cli_module.uvicorn, "run", _fake_uvicorn_run)
 
     cli_module.open_markdown_file(filepath=markdown_path)
@@ -342,8 +431,16 @@ def test_open_command_folder_mode_uses_directory_handler(
 
     monkeypatch.setattr(cli_module, "find_available_port", _fake_find_available_port)
     monkeypatch.setattr(cli_module, "_open_browser", _fake_open_browser)
-    monkeypatch.setattr(cli_module, "DirectoryHandler", _fake_directory_handler)
-    monkeypatch.setattr(cli_module, "create_app", _fake_create_app)
+    monkeypatch.setattr(
+        cli_module,
+        "build_handler_for_target",
+        lambda path, mode: _fake_directory_handler(path),
+    )
+    monkeypatch.setattr(
+        cli_module,
+        "build_editor_app",
+        lambda **kwargs: _fake_create_app(kwargs["handler"], kwargs["mode"]),
+    )
     monkeypatch.setattr(cli_module.uvicorn, "run", _fake_uvicorn_run)
 
     cli_module.open_markdown_file(filepath=workspace)

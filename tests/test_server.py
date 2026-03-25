@@ -39,6 +39,21 @@ def _build_folder_client(workspace_path: Path) -> TestClient:
     return TestClient(app)
 
 
+def _build_desktop_client() -> TestClient:
+    """
+    Create a TestClient instance bound to desktop empty mode.
+
+    Args:
+    - None (None): Desktop mode starts without an active workspace.
+
+    Returns:
+    - TestClient: FastAPI test client configured for desktop empty mode.
+    """
+
+    app = create_app(None, mode="empty", desktop=True)
+    return TestClient(app)
+
+
 def test_get_content_returns_file_payload(tmp_path: Path) -> None:
     """
     Verify GET /api/content returns markdown and metadata.
@@ -83,6 +98,65 @@ def test_get_mode_returns_file_in_single_file_mode(tmp_path: Path) -> None:
     assert response.json() == {"mode": "file"}
 
 
+def test_get_mode_returns_empty_in_desktop_empty_mode() -> None:
+    """
+    Verify mode endpoint reports empty mode for desktop startup.
+
+    Args:
+    - None (None): Desktop client starts without an active workspace.
+
+    Returns:
+    - None: Assertion validates empty-mode response payload.
+    """
+
+    with _build_desktop_client() as client:
+        response = client.get("/api/mode")
+
+    assert response.status_code == 200
+    assert response.json() == {"mode": "empty"}
+
+
+def test_health_endpoint_reports_desktop_metadata() -> None:
+    """
+    Verify health endpoint exposes desktop runtime metadata.
+
+    Args:
+    - None (None): Desktop client starts without an active workspace.
+
+    Returns:
+    - None: Assertions validate health payload shape and values.
+    """
+
+    with _build_desktop_client() as client:
+        response = client.get("/api/health")
+
+    assert response.status_code == 200
+    assert response.json() == {"ok": True, "mode": "empty", "desktop": True}
+
+
+def test_desktop_state_returns_empty_snapshot() -> None:
+    """
+    Verify desktop state endpoint exposes the initial empty snapshot.
+
+    Args:
+    - None (None): Desktop client starts without an active workspace.
+
+    Returns:
+    - None: Assertions validate empty desktop snapshot fields.
+    """
+
+    with _build_desktop_client() as client:
+        response = client.get("/api/desktop/state")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "mode": "empty",
+        "workspacePath": None,
+        "currentFile": None,
+        "isEmptyWorkspace": False,
+    }
+
+
 def test_save_endpoint_updates_file(tmp_path: Path) -> None:
     """
     Verify POST /api/save writes new content to the markdown file.
@@ -103,6 +177,42 @@ def test_save_endpoint_updates_file(tmp_path: Path) -> None:
     assert response.status_code == 200
     assert response.json()["status"] == "saved"
     assert markdown_path.read_text(encoding="utf-8") == "updated"
+
+
+def test_empty_mode_rejects_content_requests() -> None:
+    """
+    Verify empty mode rejects content requests before a workspace is opened.
+
+    Args:
+    - None (None): Desktop client starts without an active workspace.
+
+    Returns:
+    - None: Assertions validate empty-mode route guarding.
+    """
+
+    with _build_desktop_client() as client:
+        response = client.get("/api/content")
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "No workspace loaded."
+
+
+def test_empty_mode_rejects_save_requests() -> None:
+    """
+    Verify empty mode rejects save requests before a workspace is opened.
+
+    Args:
+    - None (None): Desktop client starts without an active workspace.
+
+    Returns:
+    - None: Assertions validate empty-mode save guarding.
+    """
+
+    with _build_desktop_client() as client:
+        response = client.post("/api/save", json={"content": "updated"})
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "No workspace loaded."
 
 
 def test_file_tree_endpoint_returns_nested_structure_in_folder_mode(tmp_path: Path) -> None:
@@ -156,6 +266,135 @@ def test_file_tree_endpoint_returns_empty_root_for_empty_folder_mode_workspace(t
         "path": "",
         "children": [],
     }
+
+
+def test_desktop_open_folder_switches_to_folder_mode(tmp_path: Path) -> None:
+    """
+    Verify desktop open-folder route switches the app into folder mode.
+
+    Args:
+    - tmp_path (Path): Pytest-managed temporary directory fixture.
+
+    Returns:
+    - None: Assertions validate snapshot response and subsequent folder APIs.
+    """
+
+    workspace = tmp_path / "workspace"
+    workspace.mkdir(parents=True, exist_ok=True)
+    (workspace / "notes.md").write_text("# Notes", encoding="utf-8")
+
+    with _build_desktop_client() as client:
+        response = client.post("/api/desktop/open-folder", json={"path": str(workspace)})
+        tree_response = client.get("/api/file-tree")
+
+    assert response.status_code == 200
+    assert response.json()["ok"] is True
+    assert response.json()["mode"] == "folder"
+    assert response.json()["workspacePath"] == str(workspace.resolve())
+    assert response.json()["isEmptyWorkspace"] is False
+    assert tree_response.status_code == 200
+
+
+def test_desktop_open_empty_folder_marks_empty_workspace(tmp_path: Path) -> None:
+    """
+    Verify desktop open-folder route reports empty workspaces correctly.
+
+    Args:
+    - tmp_path (Path): Pytest-managed temporary directory fixture.
+
+    Returns:
+    - None: Assertions validate empty-workspace snapshot behavior.
+    """
+
+    workspace = tmp_path / "workspace"
+    workspace.mkdir(parents=True, exist_ok=True)
+
+    with _build_desktop_client() as client:
+        response = client.post("/api/desktop/open-folder", json={"path": str(workspace)})
+
+    assert response.status_code == 200
+    assert response.json()["mode"] == "folder"
+    assert response.json()["isEmptyWorkspace"] is True
+
+
+def test_desktop_open_file_switches_to_file_mode(tmp_path: Path) -> None:
+    """
+    Verify desktop open-file route switches the app into file mode.
+
+    Args:
+    - tmp_path (Path): Pytest-managed temporary directory fixture.
+
+    Returns:
+    - None: Assertions validate file-mode snapshot and content access.
+    """
+
+    markdown_path = tmp_path / "notes.md"
+    markdown_path.write_text("# Notes", encoding="utf-8")
+
+    with _build_desktop_client() as client:
+        response = client.post("/api/desktop/open-file", json={"path": str(markdown_path)})
+        content_response = client.get("/api/content")
+
+    assert response.status_code == 200
+    assert response.json()["ok"] is True
+    assert response.json()["mode"] == "file"
+    assert response.json()["workspacePath"] == str(markdown_path.resolve())
+    assert content_response.status_code == 200
+    assert content_response.json()["content"] == "# Notes"
+
+
+def test_desktop_close_workspace_returns_to_empty_mode(tmp_path: Path) -> None:
+    """
+    Verify desktop close-workspace route returns the app to empty mode.
+
+    Args:
+    - tmp_path (Path): Pytest-managed temporary directory fixture.
+
+    Returns:
+    - None: Assertions validate empty-mode snapshot after closing.
+    """
+
+    workspace = tmp_path / "workspace"
+    workspace.mkdir(parents=True, exist_ok=True)
+    (workspace / "notes.md").write_text("# Notes", encoding="utf-8")
+
+    with _build_desktop_client() as client:
+        client.post("/api/desktop/open-folder", json={"path": str(workspace)})
+        response = client.post("/api/desktop/close-workspace")
+        state_response = client.get("/api/desktop/state")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "ok": True,
+        "mode": "empty",
+        "workspacePath": None,
+        "currentFile": None,
+        "isEmptyWorkspace": False,
+    }
+    assert state_response.status_code == 200
+    assert state_response.json()["mode"] == "empty"
+
+
+def test_desktop_routes_are_hidden_in_non_desktop_mode(tmp_path: Path) -> None:
+    """
+    Verify desktop routes are unavailable for normal CLI/browser app instances.
+
+    Args:
+    - tmp_path (Path): Pytest-managed temporary directory fixture.
+
+    Returns:
+    - None: Assertions validate desktop route guarding outside desktop mode.
+    """
+
+    markdown_path = tmp_path / "notes.md"
+    markdown_path.write_text("# Notes", encoding="utf-8")
+
+    with _build_client(markdown_path) as client:
+        state_response = client.get("/api/desktop/state")
+        open_response = client.post("/api/desktop/open-file", json={"path": str(markdown_path)})
+
+    assert state_response.status_code == 404
+    assert open_response.status_code == 404
 
 
 def test_get_content_reads_selected_file_in_folder_mode(tmp_path: Path) -> None:
