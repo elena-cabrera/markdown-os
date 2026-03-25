@@ -1,5 +1,6 @@
 (() => {
-  const COLLAPSE_KEY = "markdown-os-file-tree-collapsed";
+  const FILE_TREE_COLLAPSE_KEY = "markdown-os-file-tree-collapsed";
+  const SIDEBAR_COLLAPSE_KEY = "markdown-os-sidebar-collapsed";
 
   const fileTreeState = {
     mode: "file",
@@ -15,6 +16,7 @@
     document.getElementById("file-tree-container")?.classList.remove("hidden");
     document.getElementById("current-file-path")?.classList.remove("hidden");
     restoreFileTreeCollapseState();
+    restoreSidebarCollapseState();
   }
 
   function collapseFileTree() {
@@ -47,7 +49,7 @@
     let collapsed = false;
 
     try {
-      collapsed = window.localStorage.getItem(COLLAPSE_KEY) === "true";
+      collapsed = window.localStorage.getItem(FILE_TREE_COLLAPSE_KEY) === "true";
     } catch (_error) {
       collapsed = false;
     }
@@ -73,10 +75,66 @@
     }
 
     try {
-      window.localStorage.setItem(COLLAPSE_KEY, String(isExpanded));
+      window.localStorage.setItem(FILE_TREE_COLLAPSE_KEY, String(isExpanded));
     } catch (_error) {
       // Ignore storage errors.
     }
+  }
+
+  function setSidebarCollapsedState(collapsed) {
+    const appContainer = document.getElementById("app-container");
+    const sidebar = document.getElementById("sidebar");
+    const expandButton = document.getElementById("sidebar-expand-button");
+    const collapseButton = document.getElementById("sidebar-collapse-button");
+
+    if (!appContainer || !sidebar || !expandButton || !collapseButton) {
+      return;
+    }
+
+    appContainer.classList.toggle("sidebar-collapsed", collapsed);
+    sidebar.setAttribute("aria-hidden", String(collapsed));
+    expandButton.classList.toggle("hidden", !collapsed);
+    expandButton.setAttribute("aria-expanded", String(!collapsed));
+    collapseButton.setAttribute("aria-expanded", String(!collapsed));
+  }
+
+  function collapseSidebar() {
+    setSidebarCollapsedState(true);
+  }
+
+  function expandSidebar() {
+    setSidebarCollapsedState(false);
+  }
+
+  function persistSidebarCollapseState(collapsed) {
+    try {
+      window.localStorage.setItem(SIDEBAR_COLLAPSE_KEY, String(collapsed));
+    } catch (_error) {
+      // Ignore storage errors.
+    }
+  }
+
+  function restoreSidebarCollapseState() {
+    let collapsed = false;
+
+    try {
+      collapsed = window.localStorage.getItem(SIDEBAR_COLLAPSE_KEY) === "true";
+    } catch (_error) {
+      collapsed = false;
+    }
+
+    setSidebarCollapsedState(collapsed);
+  }
+
+  function toggleSidebarCollapse() {
+    const appContainer = document.getElementById("app-container");
+    if (!appContainer) {
+      return;
+    }
+
+    const willCollapse = !appContainer.classList.contains("sidebar-collapsed");
+    setSidebarCollapsedState(willCollapse);
+    persistSidebarCollapseState(willCollapse);
   }
 
   function updateCurrentFileLabel() {
@@ -511,6 +569,12 @@
     document
       .getElementById("file-tree-toggle")
       ?.addEventListener("click", toggleFileTreeCollapse);
+    document
+      .getElementById("sidebar-collapse-button")
+      ?.addEventListener("click", toggleSidebarCollapse);
+    document
+      .getElementById("sidebar-expand-button")
+      ?.addEventListener("click", toggleSidebarCollapse);
 
     document.getElementById("file-tree-refresh")?.addEventListener("click", async () => {
       await handleRefreshFileTree();

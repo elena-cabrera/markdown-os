@@ -39,6 +39,26 @@ def test_folder_tabs_use_wysiwyg_markdown_and_scroll_state() -> None:
     assert "setActiveMode" not in source
 
 
+def test_folder_mode_sidebar_can_be_collapsed_and_restored() -> None:
+    """Verify folder mode exposes whole-sidebar collapse and restore controls."""
+
+    html_source = Path(__file__).resolve().parents[1].joinpath(
+        "markdown_os",
+        "static",
+        "index.html",
+    ).read_text(encoding="utf-8")
+    js_source = _read_static_js("file-tree.js")
+    css_source = _read_static_css("styles.css")
+
+    assert 'id="sidebar-collapse-button"' in html_source
+    assert 'id="sidebar-expand-button"' in html_source
+    assert 'const SIDEBAR_COLLAPSE_KEY = "markdown-os-sidebar-collapsed";' in js_source
+    assert 'appContainer.classList.toggle("sidebar-collapsed", collapsed);' in js_source
+    assert 'document.getElementById("sidebar-expand-button")' in js_source
+    assert 'toggleSidebarCollapse' in js_source
+    assert ".container.sidebar-collapsed #sidebar {" in css_source
+
+
 def test_wysiwyg_supports_markdown_shortcuts_during_typing() -> None:
     """Verify block and inline markdown markers are transformed while typing."""
 

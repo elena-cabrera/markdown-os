@@ -98,6 +98,26 @@
     <div id="app-loading" class="loading-banner">Loading markdown document...</div>
     <div class="container hidden" id="app-container">
       <aside id="sidebar">
+        <div class="sidebar-topbar">
+          <button
+            id="sidebar-collapse-button"
+            class="sidebar-chrome-button"
+            type="button"
+            title="Hide sidebar"
+            aria-label="Hide sidebar"
+            aria-controls="sidebar"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+              <path
+                d="m15 6l-6 6l6 6"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </button>
+        </div>
         <div id="file-tree-container" class="hidden">
           <button
             id="file-tree-toggle"
@@ -218,6 +238,24 @@
       <main id="main-content">
         <div class="tab-nav">
           <div class="nav-left-group">
+            <button
+              id="sidebar-expand-button"
+              class="history-button hidden"
+              type="button"
+              title="Show sidebar"
+              aria-label="Show sidebar"
+              aria-controls="sidebar"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="m9 6l6 6l-6 6"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </button>
             <div id="desktop-open-group" class="desktop-open-group hidden" aria-label="Open file or folder">
               <button
                 id="desktop-open-btn"
