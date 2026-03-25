@@ -211,15 +211,17 @@ def test_desktop_api_open_path_non_markdown(tmp_path: Path) -> None:
 
 @requires_webview
 def test_desktop_api_open_path_empty_folder(tmp_path: Path) -> None:
-    """DesktopApi.open_path rejects folders with no markdown files."""
+    """DesktopApi.open_path accepts empty folders for new workspace creation."""
     from markdown_os.desktop import DesktopApi
 
     mock_window = MagicMock()
     api = DesktopApi(mock_window)
 
-    result = api.open_path(str(tmp_path))
-    assert "error" in result
-    assert "no markdown" in result["error"].lower()
+    with patch.object(api, "_start_server", return_value="http://127.0.0.1:8002"):
+        result = api.open_path(str(tmp_path))
+
+    assert result == {"url": "http://127.0.0.1:8002"}
+    mock_window.set_title.assert_called_once()
 
 
 def test_windows_desktop_spec_collects_pythonnet_runtime() -> None:

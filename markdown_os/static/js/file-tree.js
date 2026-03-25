@@ -454,7 +454,9 @@
     if (!visibleTree || !Array.isArray(visibleTree.children) || visibleTree.children.length === 0) {
       const emptyState = document.createElement("p");
       emptyState.className = "tree-empty-state";
-      emptyState.textContent = "No matching files";
+      emptyState.textContent = fileTreeState.searchQuery
+        ? "No matching files"
+        : "No markdown files yet. Create one to get started.";
       treeRoot.appendChild(emptyState);
       return;
     }

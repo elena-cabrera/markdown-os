@@ -89,12 +89,6 @@ class DesktopApi:
             mode = "file"
             label = path.name
         elif path.is_dir():
-            has_md = any(
-                p.is_file() and p.suffix.lower() in {".md", ".markdown"}
-                for p in path.rglob("*")
-            )
-            if not has_md:
-                return {"error": "Directory contains no markdown files."}
             handler = DirectoryHandler(path)
             mode = "folder"
             label = path.name

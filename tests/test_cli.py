@@ -69,23 +69,25 @@ def test_validate_path_accepts_markdown_directory(tmp_path: Path) -> None:
     assert mode == "folder"
 
 
-def test_validate_path_rejects_empty_markdown_directory(tmp_path: Path) -> None:
+def test_validate_path_accepts_empty_directory(tmp_path: Path) -> None:
     """
-    Verify directory validation rejects folders with no markdown files.
+    Verify directory validation accepts folders with no markdown files.
 
     Args:
     - tmp_path (Path): Pytest-managed temporary directory fixture.
 
     Returns:
-    - None: Assertion validates directory-mode precondition checks.
+    - None: Assertions validate empty directories still open in folder mode.
     """
 
     workspace = tmp_path / "notes"
     workspace.mkdir(parents=True, exist_ok=True)
     (workspace / "plain.txt").write_text("not markdown", encoding="utf-8")
 
-    with pytest.raises(typer.BadParameter):
-        _validate_path(workspace)
+    resolved_path, mode = _validate_path(workspace)
+
+    assert resolved_path == workspace.resolve()
+    assert mode == "folder"
 
 
 def test_find_available_port_skips_bound_port() -> None:
