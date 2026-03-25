@@ -41,6 +41,80 @@
     });
   }
 
+  /** Nudges `#editor-container` so a collapsed caret stays above `#floating-toolbar`. */
+  function ensureCaretAboveFloatingToolbar() {
+    if (!state.container || !state.root) {
+      return;
+    }
+
+    const toolbar = document.getElementById("floating-toolbar");
+    if (!toolbar || toolbar.classList.contains("hidden")) {
+      return;
+    }
+
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0 || !selection.isCollapsed) {
+      return;
+    }
+
+    const anchorNode = selection.anchorNode;
+    const anchorOffset = selection.anchorOffset;
+    const focusNode = selection.focusNode;
+    const focusOffset = selection.focusOffset;
+
+    const range = selection.getRangeAt(0).cloneRange();
+    range.collapse(true);
+    let rect = range.getBoundingClientRect();
+
+    if (rect.width === 0 && rect.height === 0) {
+      const marker = document.createTextNode("\u200b");
+      try {
+        range.insertNode(marker);
+        const probe = document.createRange();
+        probe.selectNode(marker);
+        rect = probe.getBoundingClientRect();
+        marker.parentNode?.removeChild(marker);
+      } catch {
+        marker.parentNode?.removeChild(marker);
+      }
+      if (anchorNode && focusNode && state.root.contains(anchorNode) && state.root.contains(focusNode)) {
+        selection.removeAllRanges();
+        try {
+          selection.setBaseAndExtent(anchorNode, anchorOffset, focusNode, focusOffset);
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+
+    if (rect.width === 0 && rect.height === 0) {
+      let node = selection.anchorNode;
+      let el =
+        node && node.nodeType === Node.TEXT_NODE ? node.parentElement : (node instanceof Element ? node : null);
+      while (el && el !== state.root && state.root.contains(el)) {
+        const box = el.getBoundingClientRect();
+        if (box.width > 0 || box.height > 0) {
+          rect = box;
+          break;
+        }
+        el = el.parentElement;
+      }
+    }
+
+    if (rect.width === 0 && rect.height === 0) {
+      return;
+    }
+
+    const toolbarRect = toolbar.getBoundingClientRect();
+    const clearance = 16;
+    const overflow = rect.bottom - (toolbarRect.top - clearance);
+    if (overflow <= 0) {
+      return;
+    }
+
+    state.container.scrollTop += overflow;
+  }
+
   function slugifyHeading(text) {
     return text
       .trim()
@@ -2450,6 +2524,7 @@
     }
 
     addHeadingIds(state.root);
+    ensureCaretAboveFloatingToolbar();
     emitChange();
   }
 
@@ -2640,6 +2715,14 @@
     state.root.addEventListener("change", handleRootChange);
     state.root.addEventListener("click", handleRootClick);
     state.root.addEventListener("keyup", handleRootKeyUp);
+    document.addEventListener("selectionchange", () => {
+      if (document.activeElement !== state.root) {
+        return;
+      }
+      window.requestAnimationFrame(() => {
+        ensureCaretAboveFloatingToolbar();
+      });
+    });
   }
 
   function init() {
