@@ -69,7 +69,7 @@ def test_validate_path_accepts_markdown_directory(tmp_path: Path) -> None:
     assert mode == "folder"
 
 
-def test_validate_path_rejects_empty_markdown_directory(tmp_path: Path) -> None:
+def test_validate_path_accepts_empty_directory(tmp_path: Path) -> None:
     """
     Verify directory validation accepts folders with no markdown files.
 
