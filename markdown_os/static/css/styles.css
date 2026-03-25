@@ -72,7 +72,7 @@
   --drag-over-bg: #f0f7ff;
 
   /* Blank space below the last line so content can scroll above the floating toolbar (normal + focus mode). */
-  --editor-end-scroll-padding: 160px;
+  --editor-end-scroll-padding: 80px;
 }
 
 *,
