@@ -71,8 +71,8 @@
   --table-row-hover-bg: #eef2f9;
   --drag-over-bg: #f0f7ff;
 
-  /* Reserved strip under the scrollable editor so the floating toolbar does not cover text. */
-  --floating-toolbar-shim-height: 80px;
+  /* Extra scrollable space below the document so the last line can sit above the floating toolbar. */
+  --editor-end-scroll-padding: 120px;
 }
 
 *,
@@ -918,12 +918,6 @@ body {
   overflow: hidden;
 }
 
-.floating-toolbar-shim {
-  flex-shrink: 0;
-  height: var(--floating-toolbar-shim-height);
-  background: #ffffff;
-}
-
 .floating-toolbar {
   position: absolute;
   left: 50%;
@@ -1190,6 +1184,7 @@ body {
   overflow: auto;
   overscroll-behavior: contain;
   padding: 24px;
+  padding-bottom: calc(24px + var(--editor-end-scroll-padding));
 }
 
 #editor-container.drag-over {
