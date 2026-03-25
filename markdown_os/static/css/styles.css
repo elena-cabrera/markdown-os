@@ -1037,6 +1037,10 @@ body {
   gap: 4px;
 }
 
+.toolbar-group[data-requires-table-selection="true"] {
+  align-items: center;
+}
+
 .toolbar-divider {
   width: 1px;
   height: 22px;
