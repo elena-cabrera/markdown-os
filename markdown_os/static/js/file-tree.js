@@ -611,6 +611,8 @@
     initFileTree,
     loadFileTree,
     setCurrentFile,
+    handleNewFile,
+    setFolderModeUI,
   };
 
   document.addEventListener("DOMContentLoaded", async () => {

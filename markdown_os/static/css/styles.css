@@ -1125,6 +1125,264 @@ body {
   line-height: 1.5;
 }
 
+.empty-state-actions {
+  margin-top: 16px;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.empty-state-action {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-bg);
+  color: var(--text);
+  padding: 9px 14px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.empty-state-action:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.desktop-banner-host {
+  padding: 0 24px 12px;
+}
+
+.desktop-update-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel-bg);
+  padding: 12px 14px;
+  box-shadow: var(--shadow);
+}
+
+.desktop-update-banner.hidden {
+  display: none !important;
+}
+
+.desktop-update-copy {
+  min-width: 0;
+}
+
+.desktop-update-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.desktop-update-subtitle {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.desktop-update-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.desktop-update-button {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  background: var(--panel-bg);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.desktop-update-button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.desktop-update-button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.desktop-update-button.primary:hover {
+  filter: brightness(0.96);
+}
+
+.desktop-picker-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.34);
+  backdrop-filter: blur(14px);
+}
+
+.desktop-picker-overlay.hidden {
+  display: none !important;
+}
+
+.desktop-picker-card {
+  width: min(760px, 100%);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--panel-bg);
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.25);
+  overflow: hidden;
+}
+
+.desktop-picker-header {
+  padding: 24px 24px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.desktop-picker-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 650;
+  color: var(--text);
+}
+
+.desktop-picker-subtitle {
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.desktop-picker-body {
+  padding: 20px 24px 24px;
+  display: grid;
+  gap: 18px;
+}
+
+.desktop-picker-section {
+  display: grid;
+  gap: 10px;
+}
+
+.desktop-picker-section-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.desktop-recents-list {
+  display: grid;
+  gap: 8px;
+}
+
+.desktop-recent-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  padding: 12px 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.desktop-recent-item:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.desktop-recent-main {
+  min-width: 0;
+}
+
+.desktop-recent-name {
+  margin: 0;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.desktop-recent-path {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.desktop-recent-type {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.desktop-recents-empty {
+  margin: 0;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  padding: 16px;
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.desktop-picker-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.desktop-picker-button {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel-bg);
+  color: var(--text);
+  padding: 11px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.desktop-picker-button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.desktop-picker-button.primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.desktop-picker-button.primary:hover {
+  filter: brightness(0.96);
+}
+
 #editor-container {
   flex: 1;
   min-height: 0;

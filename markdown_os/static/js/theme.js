@@ -1,7 +1,6 @@
 (() => {
   const THEME_KEY = "markdown-os-theme";
-  const HIGHLIGHT_THEME_BASE =
-    "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles";
+  const HIGHLIGHT_THEME_BASE = "/static/vendor/highlightjs/styles";
   const DROPDOWN_CLOSE_ANIMATION_MS = 140;
   const THEMES = [
     {

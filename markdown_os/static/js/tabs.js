@@ -592,6 +592,20 @@
     renderTabBar();
   }
 
+  async function resetWorkspace() {
+    for (const tabData of tabsState.tabs.values()) {
+      if (tabData.saveTimeout) {
+        window.clearTimeout(tabData.saveTimeout);
+        tabData.saveTimeout = null;
+      }
+    }
+
+    tabsState.tabs.clear();
+    tabsState.tabOrder = [];
+    tabsState.activeTabPath = null;
+    await clearEditor();
+  }
+
   async function openTab(filePath) {
     if (!tabsState.enabled || !filePath) {
       return false;
@@ -795,6 +809,7 @@
     switchTab,
     closeTab,
     renameTab,
+    resetWorkspace,
     isEnabled: () => tabsState.enabled,
     getActiveTabPath: () => tabsState.activeTabPath,
     getTabData,
