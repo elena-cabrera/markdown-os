@@ -71,8 +71,8 @@
   --table-row-hover-bg: #eef2f9;
   --drag-over-bg: #f0f7ff;
 
-  /* Extra scrollable space below the document so the last line can sit above the floating toolbar. */
-  --editor-end-scroll-padding: 120px;
+  /* Blank space below the document + clearance for the floating toolbar (caret / last line). */
+  --editor-end-scroll-padding: 140px;
 }
 
 *,
@@ -1184,7 +1184,7 @@ body {
   overflow: auto;
   overscroll-behavior: contain;
   padding: 24px;
-  padding-bottom: calc(24px + var(--editor-end-scroll-padding));
+  scroll-padding-bottom: calc(24px + var(--editor-end-scroll-padding));
 }
 
 #editor-container.drag-over {
@@ -1197,6 +1197,7 @@ body {
   width: 100%;
   max-width: 900px;
   margin: 0 auto;
+  margin-bottom: var(--editor-end-scroll-padding);
   min-height: calc(100% - 12px);
 }
 
@@ -2122,7 +2123,9 @@ body.focus-mode #main-content {
 
 body.focus-mode .view-area {
   flex: 1;
-  overflow-y: auto;
+  min-height: 0;
+  /* Keep #editor-container as the scroll root; scrolling here bypasses its padding and hides the caret behind the toolbar. */
+  overflow: hidden;
 }
 
 body.focus-mode-css-fallback {

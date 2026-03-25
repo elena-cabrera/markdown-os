@@ -5,6 +5,10 @@
     }
 
     clonedDocument.documentElement.setAttribute("data-theme", "light");
+    const wrapper = clonedDocument.getElementById("wysiwyg-wrapper");
+    if (wrapper) {
+      wrapper.style.marginBottom = "0";
+    }
   }
 
   function derivePdfFilename() {
