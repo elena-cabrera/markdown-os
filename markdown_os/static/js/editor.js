@@ -681,6 +681,7 @@
 
   document.addEventListener("DOMContentLoaded", async () => {
     window.wysiwyg?.init?.();
+    window.MarkdownOS?.tableControls?.init?.();
 
     editorState.mode = await detectMode();
 

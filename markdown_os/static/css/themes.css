@@ -68,6 +68,7 @@
   --table-header-text: #e2e8f0;
   --table-row-alt-bg: #162032;
   --table-row-hover-bg: #1e3350;
+  --table-control-danger-hover-bg: #3b1a1a;
   --drag-over-bg: #162032;
 }
 
@@ -141,6 +142,7 @@
   --table-header-text: #f8f8f2;
   --table-row-alt-bg: #323547;
   --table-row-hover-bg: #3f4358;
+  --table-control-danger-hover-bg: #3d2431;
   --drag-over-bg: #323547;
 }
 
@@ -287,6 +289,7 @@
   --table-header-text: #eceff4;
   --table-row-alt-bg: #343b4a;
   --table-row-hover-bg: #40495c;
+  --table-control-danger-hover-bg: #4a3238;
   --drag-over-bg: #384254;
 }
 

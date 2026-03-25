@@ -2677,5 +2677,6 @@
     redo,
     insertImage,
     decorateDocument,
+    _emitChange: emitChange,
   };
 })();
