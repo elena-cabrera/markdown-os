@@ -70,6 +70,9 @@
   --table-row-alt-bg: #f7f8fa;
   --table-row-hover-bg: #eef2f9;
   --drag-over-bg: #f0f7ff;
+
+  /* Blank space below the last line so content can scroll above the floating toolbar (normal + focus mode). */
+  --editor-end-scroll-padding: 80px;
 }
 
 *,
@@ -121,6 +124,10 @@ body {
   overflow: hidden;
 }
 
+.container.sidebar-collapsed {
+  gap: 0;
+}
+
 .hidden {
   display: none !important;
 }
@@ -138,6 +145,10 @@ body {
   padding: 14px;
   display: flex;
   flex-direction: column;
+}
+
+.container.sidebar-collapsed #sidebar {
+  display: none;
 }
 
 #sidebar h3 {
@@ -1119,7 +1130,8 @@ body {
   min-height: 0;
   overflow: auto;
   overscroll-behavior: contain;
-  padding: 24px 24px 92px;
+  padding: 24px;
+  scroll-padding-bottom: calc(24px + var(--editor-end-scroll-padding) + 8px);
 }
 
 #editor-container.drag-over {
@@ -1144,7 +1156,8 @@ body {
   color: var(--editor-text);
   line-height: 1.7;
   font-size: 16px;
-  padding-bottom: 20px;
+  /* In-flow space after the last line (padding extends the scrollable box reliably in normal mode). */
+  padding-bottom: calc(20px + var(--editor-end-scroll-padding));
 }
 
 #wysiwyg-editor:focus {
@@ -2057,7 +2070,9 @@ body.focus-mode #main-content {
 
 body.focus-mode .view-area {
   flex: 1;
-  overflow-y: auto;
+  min-height: 0;
+  /* Keep #editor-container as the scroll root; scrolling here bypasses its padding and hides the caret behind the toolbar. */
+  overflow: hidden;
 }
 
 body.focus-mode-css-fallback {
