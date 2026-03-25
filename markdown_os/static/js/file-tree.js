@@ -15,6 +15,7 @@
   function setFolderModeUI() {
     document.getElementById("file-tree-container")?.classList.remove("hidden");
     document.getElementById("current-file-path")?.classList.remove("hidden");
+    document.getElementById("sidebar-toggle-button")?.classList.remove("hidden");
     restoreFileTreeCollapseState();
     restoreSidebarCollapseState();
   }
