@@ -4,7 +4,7 @@ directories:
   output: dist
   buildResources: build
 files:
-  - dist/**
+  - dist/*.js
   - package.json
 extraResources:
   - from: ../markdown_os
