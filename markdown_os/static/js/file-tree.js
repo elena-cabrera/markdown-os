@@ -20,6 +20,11 @@
     restoreSidebarCollapseState();
   }
 
+  function hideFolderModeUI() {
+    document.getElementById("file-tree-container")?.classList.add("hidden");
+    document.getElementById("current-file-path")?.classList.add("hidden");
+  }
+
   function collapseFileTree() {
     const toggle = document.getElementById("file-tree-toggle");
     const collapsible = document.getElementById("file-tree-collapsible");
@@ -588,6 +593,33 @@
     });
   }
 
+  async function handleSidebarOpen() {
+    const isDesktop = Boolean(window.electronDesktop);
+    if (isDesktop) {
+      try {
+        const raw = await window.electronDesktop.pickFileOrFolder?.();
+        const selectedPath =
+          typeof raw === "string" ? raw : raw?.path ?? null;
+        if (selectedPath) {
+          await window.MarkdownOS?.desktopShell?.openWorkspace?.(selectedPath);
+        }
+      } catch (error) {
+        console.error("Failed to open from sidebar.", error);
+      }
+      return;
+    }
+
+    try {
+      await fetch("/api/reveal-in-explorer", { method: "POST" });
+    } catch (error) {
+      console.error("Failed to open file explorer.", error);
+    }
+  }
+
+  function showOpenButton() {
+    document.getElementById("sidebar-open-btn")?.classList.remove("hidden");
+  }
+
   function initFileTree() {
     bindSearch();
     bindContextMenuDismiss();
@@ -605,6 +637,12 @@
     document.getElementById("file-tree-new-file")?.addEventListener("click", async () => {
       await handleNewFile();
     });
+
+    document.getElementById("sidebar-open-btn")?.addEventListener("click", async () => {
+      await handleSidebarOpen();
+    });
+
+    showOpenButton();
   }
 
   function setMode(mode) {
@@ -619,6 +657,7 @@
     setCurrentFile,
     handleNewFile,
     setFolderModeUI,
+    hideFolderModeUI,
     setMode,
   };
 

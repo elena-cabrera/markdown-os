@@ -7,7 +7,7 @@ import {
   stopBackend,
   type BackendHandle,
 } from "./backend";
-import { pickMarkdownFile, pickWorkspaceFolder } from "./dialogs";
+import { pickMarkdownFile, pickWorkspaceFolder, pickFileOrFolder } from "./dialogs";
 import {
   addRecent,
   clearRecent,
@@ -31,6 +31,9 @@ function getPreloadPath(): string {
 }
 
 function getBuildIconPath(filename: string): string {
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, filename);
+  }
   return path.resolve(__dirname, "..", "build", filename);
 }
 
@@ -78,19 +81,10 @@ function buildMenu(): Menu {
       label: "File",
       submenu: [
         {
-          label: "Open File",
+          label: "Open...",
+          accelerator: "CmdOrCtrl+O",
           click: async () => {
-            const selectedPath = await pickMarkdownFile(currentWindow());
-            if (!selectedPath) {
-              return;
-            }
-            await sendWorkspaceToRenderer(selectedPath);
-          },
-        },
-        {
-          label: "Open Folder",
-          click: async () => {
-            const selectedPath = await pickWorkspaceFolder(currentWindow());
+            const selectedPath = await pickFileOrFolder(currentWindow());
             if (!selectedPath) {
               return;
             }
@@ -147,6 +141,7 @@ async function createMainWindow(): Promise<void> {
 function registerIpcHandlers(): void {
   ipcMain.handle("desktop:pick-file", async () => pickMarkdownFile(currentWindow()));
   ipcMain.handle("desktop:pick-folder", async () => pickWorkspaceFolder(currentWindow()));
+  ipcMain.handle("desktop:pick-file-or-folder", async () => pickFileOrFolder(currentWindow()));
   ipcMain.handle("desktop:list-recents", async () => listRecents());
   ipcMain.handle("desktop:open-recent", async (_event, targetPath: string) => {
     await sendWorkspaceToRenderer(targetPath);

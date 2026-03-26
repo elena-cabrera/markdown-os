@@ -734,7 +734,9 @@
 
       if (nextMode === "file") {
         window.fileTree?.setMode?.("file");
+        window.fileTree?.hideFolderModeUI?.();
         window.fileTabs?.init?.("file");
+        window.fileTabs?.setEmptyState?.(false);
         await loadContent();
         return;
       }

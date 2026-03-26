@@ -17,6 +17,8 @@ extraResources:
     to: pyproject.toml
   - from: ../uv.lock
     to: uv.lock
+  - from: build/icon.png
+    to: icon.png
 asar: true
 mac:
   target:

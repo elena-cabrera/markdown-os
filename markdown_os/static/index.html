@@ -56,6 +56,10 @@
     <div id="app-loading" class="loading-banner">Loading markdown document...</div>
     <div class="container hidden" id="app-container">
       <aside id="sidebar">
+        <button id="sidebar-open-btn" class="sidebar-open-btn hidden" type="button" title="Open file or folder">
+          <svg class="sidebar-open-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" aria-hidden="true"><path d="M3.75 9.776q.168-.026.344-.026h15.812q.176 0 .344.026m-16.5 0a2.25 2.25 0 0 0-1.883 2.542l.857 6a2.25 2.25 0 0 0 2.227 1.932H19.05a2.25 2.25 0 0 0 2.227-1.932l.857-6a2.25 2.25 0 0 0-1.883-2.542m-16.5 0V6A2.25 2.25 0 0 1 6 3.75h3.879a1.5 1.5 0 0 1 1.06.44l2.122 2.12a1.5 1.5 0 0 0 1.06.44H18A2.25 2.25 0 0 1 20.25 9v.776"/></svg>
+          <span>Open</span>
+        </button>
         <div id="file-tree-container" class="hidden">
           <button
             id="file-tree-toggle"
@@ -586,17 +590,12 @@
           Open a markdown file or a workspace folder, or choose a recent item below.
         </p>
         <div class="modal-actions">
-          <button id="desktop-open-file" class="btn btn-primary" type="button">Open file</button>
-          <button id="desktop-open-folder" class="btn btn-tertiary" type="button">Open folder</button>
+          <button id="desktop-open-file-or-folder" class="btn btn-primary" type="button">Open...</button>
         </div>
         <div class="desktop-picker-recents">
           <div class="desktop-picker-recents-section">
-            <h4 class="desktop-picker-section-title">Recent files</h4>
-            <div id="desktop-recent-files" class="desktop-recents-list"></div>
-          </div>
-          <div class="desktop-picker-recents-section">
-            <h4 class="desktop-picker-section-title">Recent folders</h4>
-            <div id="desktop-recent-folders" class="desktop-recents-list"></div>
+            <h4 class="desktop-picker-section-title">Recents</h4>
+            <div id="desktop-recent-items" class="desktop-recents-list"></div>
           </div>
         </div>
       </div>

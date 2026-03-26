@@ -6,6 +6,7 @@ import type { ReleaseInfo } from "./updater";
 const desktopBridge = {
   pickFile: (): Promise<string | null> => ipcRenderer.invoke("desktop:pick-file"),
   pickFolder: (): Promise<string | null> => ipcRenderer.invoke("desktop:pick-folder"),
+  pickFileOrFolder: (): Promise<string | null> => ipcRenderer.invoke("desktop:pick-file-or-folder"),
   listRecents: (): Promise<RecentEntry[]> => ipcRenderer.invoke("desktop:list-recents"),
   openRecent: (targetPath: string): Promise<void> =>
     ipcRenderer.invoke("desktop:open-recent", targetPath),

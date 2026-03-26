@@ -99,29 +99,22 @@
   }
 
   async function renderRecents() {
-    const fileList = document.getElementById("desktop-recent-files");
-    const folderList = document.getElementById("desktop-recent-folders");
-    if (!fileList || !folderList) {
+    const list = document.getElementById("desktop-recent-items");
+    if (!list) {
       return;
     }
 
     if (!isDesktopMode()) {
-      fileList.innerHTML = "";
-      folderList.innerHTML = "";
+      list.innerHTML = "";
       return;
     }
 
     const recents = await window.electronDesktop?.listRecents?.();
     const recentItems = Array.isArray(recents) ? recents : [];
-    const files = recentItems.filter((item) => item.type === "file");
-    const folders = recentItems.filter((item) => item.type === "folder");
 
-    fileList.innerHTML = files.length
-      ? files.map(recentItemMarkup).join("")
-      : '<p class="desktop-recents-empty">No recent files</p>';
-    folderList.innerHTML = folders.length
-      ? folders.map(recentItemMarkup).join("")
-      : '<p class="desktop-recents-empty">No recent folders</p>';
+    list.innerHTML = recentItems.length
+      ? recentItems.map(recentItemMarkup).join("")
+      : '<p class="desktop-recents-empty">No recent items</p>';
   }
 
   async function refreshPicker() {
@@ -198,28 +191,15 @@
   }
 
   function bindPickerActions() {
-    document.getElementById("desktop-open-file")?.addEventListener("click", async () => {
+    document.getElementById("desktop-open-file-or-folder")?.addEventListener("click", async () => {
       try {
-        const raw = await window.electronDesktop?.pickFile?.();
+        const raw = await window.electronDesktop?.pickFileOrFolder?.();
         const selectedPath = pathFromNativePickerResult(raw);
         if (selectedPath) {
           await desktopShell()?.openWorkspace?.(selectedPath);
         }
       } catch (error) {
-        console.error("Failed to open file from picker.", error);
-      }
-      await refreshPicker();
-    });
-
-    document.getElementById("desktop-open-folder")?.addEventListener("click", async () => {
-      try {
-        const raw = await window.electronDesktop?.pickFolder?.();
-        const selectedPath = pathFromNativePickerResult(raw);
-        if (selectedPath) {
-          await desktopShell()?.openWorkspace?.(selectedPath);
-        }
-      } catch (error) {
-        console.error("Failed to open folder from picker.", error);
+        console.error("Failed to open from picker.", error);
       }
       await refreshPicker();
     });

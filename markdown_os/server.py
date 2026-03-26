@@ -741,6 +741,37 @@ def create_app(
 
         return FileResponse(image_path)
 
+    @app.post("/api/reveal-in-explorer")
+    async def reveal_in_explorer() -> dict[str, bool]:
+        """Open the workspace directory in the OS file explorer."""
+
+        handler = app.state.handler
+        if handler is None:
+            raise HTTPException(status_code=400, detail="No workspace open.")
+
+        if isinstance(handler, DirectoryHandler):
+            target = handler._directory
+        elif isinstance(handler, FileHandler):
+            target = handler._filepath.parent
+        else:
+            raise HTTPException(status_code=400, detail="Unknown handler type.")
+
+        if not target.is_dir():
+            raise HTTPException(status_code=400, detail="Directory not found.")
+
+        import platform
+        import subprocess
+
+        system = platform.system()
+        if system == "Darwin":
+            subprocess.Popen(["open", str(target)])
+        elif system == "Windows":
+            subprocess.Popen(["explorer", str(target)])
+        else:
+            subprocess.Popen(["xdg-open", str(target)])
+
+        return {"ok": True}
+
     @app.websocket("/ws")
     async def websocket_endpoint(websocket: WebSocket) -> None:
         """

@@ -46,17 +46,24 @@ def serve_desktop_backend(
 
     _ = request_id
     selected_port = find_available_port(host=host, start_port=port)
+    ready_url = f"http://{host}:{selected_port}"
     application = build_editor_app(mode="empty", handler=None, desktop=True)
-    _print_ready(f"http://{host}:{selected_port}")
 
-    server = uvicorn.Server(
-        uvicorn.Config(
-            app=application,
-            host=host,
-            port=selected_port,
-            log_level="info",
-        )
+    config = uvicorn.Config(
+        app=application,
+        host=host,
+        port=selected_port,
+        log_level="info",
     )
+    server = uvicorn.Server(config)
+
+    original_startup = server.startup
+
+    async def _startup_then_signal(*args: object, **kwargs: object) -> None:
+        await original_startup(*args, **kwargs)
+        _print_ready(ready_url)
+
+    server.startup = _startup_then_signal  # type: ignore[assignment]
 
     def _handle_signal(_signum: int, _frame: object) -> None:
         """
