@@ -1611,7 +1611,7 @@
                     markdown-os
                 </a>
                 <nav class="header-nav" aria-label="Primary">
-                    <a href="downloads.html">Downloads</a>
+                    <a href="/downloads">Downloads</a>
                 </nav>
             </div>
         </header>
@@ -1628,6 +1628,12 @@
                     </p>
 
                     <div class="hero-cta" style="display: flex; gap: 12px; flex-wrap: wrap">
+                        <a
+                            id="desktop-download-btn"
+                            href="/downloads"
+                            class="btn btn-primary"
+                            >Download</a
+                        >
                         <a
                             href="https://github.com/elena-cabrera/markdown-os"
                             class="btn btn-secondary"
@@ -2282,7 +2288,7 @@
                     <h2>Start using markdown-os</h2>
                     <p>The desktop app and CLI ship from the same release tags.</p>
                     <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap">
-                        <a href="downloads.html" class="btn btn-white">Download desktop app</a>
+                        <a href="/downloads" class="btn btn-white">Download desktop app</a>
                         <a
                             href="https://github.com/elena-cabrera/markdown-os"
                             class="btn btn-secondary"
@@ -2456,7 +2462,7 @@
                     "desktop-download-meta",
                 );
 
-                const downloadsHref = "downloads.html";
+                const downloadsHref = "/downloads";
                 const releaseApi =
                     "https://api.github.com/repos/elena-cabrera/markdown-os/releases/latest";
 
@@ -2508,8 +2514,7 @@
                         platform,
                     );
 
-                    // Desktop download CTA is optional (we moved it into the navbar),
-                    // but the meta text still updates based on the latest release.
+                    // Hero primary button: direct asset URL when available, else /downloads.
                     if (downloadBtn) {
                         downloadBtn.textContent =
                             labels[platform] || labels.unknown;

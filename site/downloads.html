@@ -5,18 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>markdown-os downloads</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <style>
       :root {
         --bg: #ffffff;
         --panel: #ffffff;
-        --text: #171717;
+        --text: #1a1a1a;
         --muted: #666666;
-        --border: #e7e7e7;
+        --border: #e8e8e8;
         --accent: #1a1a1a;
-        --max-width: 960px;
+        --color-text-secondary: #666666;
+        --page-max-width: 960px;
+        --header-max-width: 1120px;
         --radius: 12px;
         font-family:
-          Inter,
+          "Inter",
           -apple-system,
           BlinkMacSystemFont,
           "Segoe UI",
@@ -34,9 +42,9 @@
       }
 
       .page {
-        max-width: var(--max-width);
+        max-width: var(--page-max-width);
         margin: 0 auto;
-        padding: 96px 24px 80px;
+        padding: 96px 32px 80px;
       }
 
       .site-header {
@@ -45,38 +53,48 @@
         left: 0;
         right: 0;
         z-index: 100;
-        padding: 0 24px;
+        padding: 0 32px;
         background: rgba(255, 255, 255, 0.92);
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
       }
 
       .header-content {
-        max-width: var(--max-width);
+        max-width: var(--header-max-width);
         margin: 0 auto;
         padding: 16px 0;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 16px;
       }
 
-      .brand {
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
         font-size: 16px;
-        font-weight: 600;
-        color: var(--text);
+        font-weight: 400;
+        letter-spacing: -0.5px;
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .logo-icon {
+        width: 27px;
+        height: 27px;
+        flex-shrink: 0;
       }
 
       .header-nav {
         display: flex;
         align-items: center;
-        gap: 16px;
+        gap: 32px;
       }
 
       .header-nav a {
         font-size: 14px;
-        color: var(--muted);
-        transition: color 0.15s ease;
+        color: var(--color-text-secondary);
+        transition: color 0.15s;
       }
 
       .header-nav a:hover {
@@ -123,8 +141,7 @@
       }
 
       .release-card.latest {
-        border-color: #cfd8ff;
-        box-shadow: 0 8px 24px rgba(37, 99, 235, 0.08);
+        border-color: var(--border);
       }
 
       .release-heading {
@@ -142,10 +159,12 @@
 
       .release-badge {
         font-size: 12px;
-        border: 1px solid var(--border);
+        font-weight: 600;
         border-radius: 999px;
-        padding: 4px 8px;
-        color: var(--muted);
+        padding: 4px 10px;
+        background: #1a1a1a;
+        color: #ffffff;
+        border: 1px solid #1a1a1a;
       }
 
       .asset-groups {
@@ -195,16 +214,36 @@
   <body>
     <header class="site-header">
       <div class="header-content">
-        <a class="brand" href="./">markdown-os</a>
+        <a href="/" class="logo">
+          <svg
+            class="logo-icon"
+            width="27"
+            height="27"
+            viewBox="0 0 27 27"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            aria-hidden="true"
+          >
+            <path
+              d="M0 5C0 2.23858 2.23858 0 5 0H22C24.7614 0 27 2.23858 27 5V22C27 24.7614 24.7614 27 22 27H5C2.23858 27 0 24.7614 0 22V5Z"
+              fill="#1C1C1E"
+            />
+            <path
+              d="M19.6105 8.66L20.0705 18.86L21.7905 19.56L21.6705 20H16.9305L16.8105 19.56L17.7105 19.12C18.1371 18.92 18.3438 18.66 18.3305 18.34L17.8905 8.54L14.0505 19.6L12.8105 20L12.4305 19.8L8.69047 8.56L8.13047 18.86L9.65047 19.56L9.53047 20H5.33047L5.21047 19.56L6.31047 19.1C6.6438 18.9533 6.83714 18.8067 6.89047 18.66C6.9038 18.5933 6.91714 18.4867 6.93047 18.34L7.43047 8.14L5.71047 7.44L5.83047 7H9.87047L10.1305 7.2L13.5105 17.64L17.0505 7H21.2105L21.3305 7.44L20.2305 7.9C19.8038 8.07333 19.5971 8.32667 19.6105 8.66Z"
+              fill="white"
+            />
+          </svg>
+          markdown-os
+        </a>
         <nav class="header-nav" aria-label="Primary">
-          <a href="./downloads.html" aria-current="page">Downloads</a>
+          <a href="/downloads" aria-current="page">Downloads</a>
         </nav>
       </div>
     </header>
 
     <main class="page">
       <div class="header">
-        <a class="back-link" href="./">← Back to homepage</a>
+        <a class="back-link" href="/">← Back to homepage</a>
       </div>
 
       <header>
@@ -244,12 +283,13 @@
         title.className = "release-title";
         title.textContent = release.tag_name || release.name || "Unnamed release";
 
-        const badge = document.createElement("div");
-        badge.className = "release-badge";
-        badge.textContent = isLatest ? "Latest" : "Previous";
-
         heading.appendChild(title);
-        heading.appendChild(badge);
+        if (isLatest) {
+          const badge = document.createElement("div");
+          badge.className = "release-badge";
+          badge.textContent = "Latest";
+          heading.appendChild(badge);
+        }
         card.appendChild(heading);
 
         const groups = new Map([
