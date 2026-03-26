@@ -224,53 +224,61 @@
             <span id="current-file-text"></span>
           </div>
           <div class="tab-controls">
-            <button
-              id="export-pdf-button"
-              class="history-button"
-              type="button"
-              title="Export to PDF"
-              aria-label="Export to PDF"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24">
-                <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5">
-                  <path d="M20 14v-3.343c0-.818 0-1.226-.152-1.594c-.152-.367-.441-.657-1.02-1.235l-4.736-4.736c-.499-.499-.748-.748-1.058-.896a2 2 0 0 0-.197-.082C12.514 2 12.161 2 11.456 2c-3.245 0-4.868 0-5.967.886a4 4 0 0 0-.603.603C4 4.59 4 6.211 4 9.456V14c0 3.771 0 5.657 1.172 6.828S8.229 22 12 22m1-19.5V3c0 2.828 0 4.243.879 5.121C14.757 9 16.172 9 19 9h.5"/>
-                  <path d="M17 22c.607-.59 3-2.16 3-3s-2.393-2.41-3-3m2 3h-7"/>
-                </g>
-              </svg>
-            </button>
-            <div class="theme-dropdown" id="theme-dropdown">
+            <div class="quick-actions-menu" id="quick-actions-menu">
               <button
-                class="theme-dropdown-toggle"
-                id="theme-dropdown-toggle"
+                class="history-button"
+                id="quick-actions-toggle"
                 type="button"
-                aria-label="Select theme"
-                aria-haspopup="listbox"
+                title="Actions"
+                aria-label="Open editor actions"
+                aria-haspopup="menu"
                 aria-expanded="false"
               >
-                <span class="theme-dots" id="theme-dots"></span>
-                <svg
-                  class="dropdown-chevron"
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="12"
-                  height="12"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2.4"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <polyline points="6 9 12 15 18 9"></polyline>
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24">
+                  <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+                    <path d="M3 7V5a2 2 0 0 1 2-2h2m10 0h2a2 2 0 0 1 2 2v2m0 10v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/>
+                    <rect width="10" height="8" x="7" y="8" rx="1"/>
+                  </g>
                 </svg>
               </button>
-              <ul
-                class="theme-dropdown-menu"
-                id="theme-dropdown-menu"
-                role="listbox"
-                aria-label="Theme selection"
-                hidden
-              ></ul>
+              <div id="quick-actions-dropdown" class="quick-actions-dropdown" role="menu" hidden>
+                <button id="export-pdf-button" class="quick-actions-item" type="button" role="menuitem">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5">
+                      <path d="M20 14v-3.343c0-.818 0-1.226-.152-1.594c-.152-.367-.441-.657-1.02-1.235l-4.736-4.736c-.499-.499-.748-.748-1.058-.896a2 2 0 0 0-.197-.082C12.514 2 12.161 2 11.456 2c-3.245 0-4.868 0-5.967.886a4 4 0 0 0-.603.603C4 4.59 4 6.211 4 9.456V14c0 3.771 0 5.657 1.172 6.828S8.229 22 12 22m1-19.5V3c0 2.828 0 4.243.879 5.121C14.757 9 16.172 9 19 9h.5"/>
+                      <path d="M17 22c.607-.59 3-2.16 3-3s-2.393-2.41-3-3m2 3h-7"/>
+                    </g>
+                  </svg>
+                  <span>Export to PDF</span>
+                </button>
+                <div class="theme-dropdown quick-actions-theme" id="theme-dropdown">
+                  <button
+                    class="quick-actions-item quick-actions-theme-toggle"
+                    id="theme-dropdown-toggle"
+                    type="button"
+                    role="menuitem"
+                    aria-label="Select theme"
+                    aria-haspopup="listbox"
+                    aria-expanded="false"
+                  >
+                    <span class="theme-dots" id="theme-dots"></span>
+                    <span class="quick-actions-item-label" id="theme-current-name"></span>
+                    <svg class="dropdown-chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                  </button>
+                  <ul class="theme-dropdown-menu" id="theme-dropdown-menu" role="listbox" aria-label="Theme selection" hidden></ul>
+                </div>
+                <button id="focus-mode-button" class="quick-actions-item" type="button" role="menuitem">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+                      <path d="M3 7V5a2 2 0 0 1 2-2h2m10 0h2a2 2 0 0 1 2 2v2m0 10v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/>
+                      <rect width="10" height="8" x="7" y="8" rx="1"/>
+                    </g>
+                  </svg>
+                  <span>Focus mode</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -278,6 +286,7 @@
         <div id="file-tabs-bar" class="file-tabs-bar hidden" role="tablist" aria-label="Open files"></div>
 
         <div class="view-area">
+          <nav id="focus-toc" class="focus-toc" role="navigation" aria-label="Contents"></nav>
           <div id="desktop-update-banner" class="desktop-update-banner hidden" role="status" aria-live="polite">
             <span id="desktop-update-text"></span>
             <div class="desktop-update-actions">

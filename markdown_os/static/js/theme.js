@@ -7,7 +7,7 @@
       id: "light",
       name: "Default Light",
       type: "light",
-      dots: ["#f7f8fa", "#17233b", "#2563eb"],
+      dots: ["#f7f8fa", "#17233b", "#2563eb", "#dbeafe"],
       highlightTheme: "github",
       mermaidTheme: "default",
     },
@@ -15,7 +15,7 @@
       id: "dark",
       name: "Default Dark",
       type: "dark",
-      dots: ["#0f172a", "#e2e8f0", "#60a5fa"],
+      dots: ["#0f172a", "#e2e8f0", "#60a5fa", "#1d4ed8"],
       highlightTheme: "github-dark",
       mermaidTheme: "dark",
     },
@@ -23,7 +23,7 @@
       id: "dracula",
       name: "Dracula",
       type: "dark",
-      dots: ["#282a36", "#f8f8f2", "#bd93f9"],
+      dots: ["#282a36", "#f8f8f2", "#bd93f9", "#ff79c6"],
       highlightTheme: "base16/dracula",
       mermaidTheme: "dark",
     },
@@ -31,7 +31,7 @@
       id: "nord-light",
       name: "Nord Light",
       type: "light",
-      dots: ["#eceff4", "#2e3440", "#5e81ac"],
+      dots: ["#eceff4", "#2e3440", "#5e81ac", "#81a1c1"],
       highlightTheme: "github",
       mermaidTheme: "neutral",
     },
@@ -39,7 +39,7 @@
       id: "nord-dark",
       name: "Nord Dark",
       type: "dark",
-      dots: ["#2e3440", "#eceff4", "#88c0d0"],
+      dots: ["#2e3440", "#eceff4", "#88c0d0", "#5e81ac"],
       highlightTheme: "nord",
       mermaidTheme: "dark",
     },
@@ -47,7 +47,7 @@
       id: "lofi",
       name: "Lofi",
       type: "light",
-      dots: ["#f5f5f5", "#333333", "#555555"],
+      dots: ["#f5f5f5", "#333333", "#555555", "#d4d4d4"],
       highlightTheme: "grayscale",
       mermaidTheme: "neutral",
     },
@@ -308,6 +308,11 @@
 
       if (!this.toggleButton) {
         return;
+      }
+
+      const currentName = document.getElementById("theme-current-name");
+      if (currentName) {
+        currentName.textContent = theme.name;
       }
 
       this.toggleButton.setAttribute(

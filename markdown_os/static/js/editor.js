@@ -12,6 +12,70 @@
   const tocUpdateState = {
     timeout: null,
   };
+  const quickActionsState = {
+    open: false,
+  };
+
+  function closeQuickActionsMenu() {
+    const menu = document.getElementById("quick-actions-dropdown");
+    const toggle = document.getElementById("quick-actions-toggle");
+    if (!menu || !toggle) {
+      return;
+    }
+    quickActionsState.open = false;
+    menu.hidden = true;
+    toggle.setAttribute("aria-expanded", "false");
+  }
+
+  function openQuickActionsMenu() {
+    const menu = document.getElementById("quick-actions-dropdown");
+    const toggle = document.getElementById("quick-actions-toggle");
+    if (!menu || !toggle) {
+      return;
+    }
+    quickActionsState.open = true;
+    menu.hidden = false;
+    toggle.setAttribute("aria-expanded", "true");
+  }
+
+  function bindQuickActionsMenu() {
+    const root = document.getElementById("quick-actions-menu");
+    const toggle = document.getElementById("quick-actions-toggle");
+    const focusModeButton = document.getElementById("focus-mode-button");
+    if (!root || !toggle || !focusModeButton) {
+      return;
+    }
+
+    toggle.addEventListener("click", () => {
+      if (quickActionsState.open) {
+        closeQuickActionsMenu();
+        return;
+      }
+      openQuickActionsMenu();
+    });
+
+    focusModeButton.addEventListener("click", () => {
+      window.MarkdownOS?.focusMode?.toggle?.();
+      closeQuickActionsMenu();
+    });
+
+    document.addEventListener("pointerdown", (event) => {
+      if (!quickActionsState.open) {
+        return;
+      }
+      if (event.target instanceof Node && root.contains(event.target)) {
+        return;
+      }
+      closeQuickActionsMenu();
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && quickActionsState.open) {
+        event.preventDefault();
+        closeQuickActionsMenu();
+      }
+    });
+  }
 
   function getDisplayName(metadata) {
     return metadata?.relative_path || (metadata?.path ? metadata.path.replace(/^.*[/\\]/, "") : "");
@@ -631,9 +695,11 @@
 
   function bindEvents() {
     bindImageEvents();
+    bindQuickActionsMenu();
 
     document.getElementById("export-pdf-button")?.addEventListener("click", () => {
       window.MarkdownOS?.pdfExport?.exportToPdf?.();
+      closeQuickActionsMenu();
     });
 
     if (window.wysiwyg?.onChange) {
