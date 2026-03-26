@@ -1,5 +1,6 @@
 import { app, BrowserWindow, Menu, dialog, ipcMain } from "electron";
 import path from "node:path";
+import fs from "node:fs";
 
 import {
   startBackend,
@@ -27,6 +28,23 @@ let pendingOpenPath: string | null = null;
 
 function getPreloadPath(): string {
   return path.join(__dirname, "preload.js");
+}
+
+function getBuildIconPath(filename: string): string {
+  return path.resolve(__dirname, "..", "build", filename);
+}
+
+function applyMacDockIcon(): void {
+  if (process.platform !== "darwin" || !app.dock) {
+    return;
+  }
+
+  const dockIconPath = getBuildIconPath("icon.png");
+  if (!fs.existsSync(dockIconPath)) {
+    return;
+  }
+
+  app.dock.setIcon(dockIconPath);
 }
 
 function currentWindow(): BrowserWindow {
@@ -103,6 +121,7 @@ async function createMainWindow(): Promise<void> {
     height: 900,
     minWidth: 960,
     minHeight: 640,
+    icon: process.platform === "darwin" ? undefined : getBuildIconPath("icon.png"),
     webPreferences: {
       preload: getPreloadPath(),
       contextIsolation: true,
@@ -159,6 +178,7 @@ async function bootstrap(): Promise<void> {
     return;
   }
 
+  applyMacDockIcon();
   registerIpcHandlers();
   backendHandle = await startBackend({
     projectRoot: path.resolve(__dirname, "..", ".."),
