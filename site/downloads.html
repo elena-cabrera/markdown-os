@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>markdown-os downloads</title>
+    <title>markdown-os releases</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -13,22 +13,14 @@
     />
     <style>
       :root {
-        --bg: #ffffff;
-        --panel: #ffffff;
-        --text: #1a1a1a;
-        --muted: #666666;
-        --border: #e8e8e8;
-        --accent: #1a1a1a;
-        --color-text-secondary: #666666;
-        --page-max-width: 960px;
+        --bg: #2f3136;
+        --panel: #383b41;
+        --text: #f5f6f7;
+        --muted: #c8cbd1;
+        --border: #494c52;
         --header-max-width: 1120px;
-        --radius: 12px;
-        font-family:
-          "Inter",
-          -apple-system,
-          BlinkMacSystemFont,
-          "Segoe UI",
-          sans-serif;
+        --page-max-width: 1060px;
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       }
 
       * {
@@ -41,12 +33,6 @@
         color: var(--text);
       }
 
-      .page {
-        max-width: var(--page-max-width);
-        margin: 0 auto;
-        padding: 96px 32px 80px;
-      }
-
       .site-header {
         position: fixed;
         top: 0;
@@ -54,9 +40,8 @@
         right: 0;
         z-index: 100;
         padding: 0 32px;
-        background: rgba(255, 255, 255, 0.92);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
+        background: rgba(47, 49, 54, 0.92);
+        backdrop-filter: blur(10px);
       }
 
       .header-content {
@@ -73,40 +58,13 @@
         align-items: center;
         gap: 10px;
         font-size: 16px;
-        font-weight: 400;
-        letter-spacing: -0.5px;
-        color: inherit;
+        color: var(--text);
         text-decoration: none;
       }
 
       .logo-icon {
         width: 27px;
         height: 27px;
-        flex-shrink: 0;
-      }
-
-      .header-nav {
-        display: flex;
-        align-items: center;
-        gap: 32px;
-      }
-
-      .header-nav a {
-        font-size: 14px;
-        color: var(--color-text-secondary);
-        transition: color 0.15s;
-      }
-
-      .header-nav a:hover {
-        color: var(--text);
-      }
-
-      .header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 16px;
-        margin-bottom: 32px;
       }
 
       .back-link {
@@ -115,99 +73,136 @@
         font-size: 14px;
       }
 
-      h1 {
-        margin: 0 0 10px;
-        font-size: 36px;
-        letter-spacing: -0.04em;
+      .back-link:hover {
+        color: var(--text);
       }
 
-      p {
-        margin: 0;
-        color: var(--muted);
-        line-height: 1.6;
+      .page {
+        max-width: var(--page-max-width);
+        margin: 0 auto;
+        padding: 92px 24px 64px;
       }
 
-      .release-list {
-        margin-top: 32px;
+      .releases {
         display: grid;
-        gap: 18px;
+        gap: 24px;
       }
 
-      .release-card {
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        background: var(--panel);
-        padding: 20px;
-      }
-
-      .release-card.latest {
-        border-color: var(--border);
-      }
-
-      .release-heading {
-        display: flex;
-        justify-content: space-between;
-        align-items: baseline;
-        gap: 16px;
-        margin-bottom: 14px;
+      .release-item {
+        padding: 4px 0 10px;
       }
 
       .release-title {
-        font-size: 22px;
-        font-weight: 600;
-      }
-
-      .release-badge {
-        font-size: 12px;
-        font-weight: 600;
-        border-radius: 999px;
-        padding: 4px 10px;
-        background: #1a1a1a;
-        color: #ffffff;
-        border: 1px solid #1a1a1a;
-      }
-
-      .asset-groups {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-        gap: 14px;
-      }
-
-      .asset-group {
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        padding: 14px;
-      }
-
-      .asset-group h2 {
-        margin: 0 0 12px;
-        font-size: 16px;
-      }
-
-      .asset-list {
+        font-size: 46px;
+        letter-spacing: -0.03em;
+        line-height: 1.05;
         margin: 0;
-        padding: 0;
-        list-style: none;
-        display: grid;
+      }
+
+      .release-title a {
+        color: var(--text);
+        text-decoration: none;
+      }
+
+      .release-notes {
+        margin: 14px 0 0;
+        padding-left: 24px;
+        color: var(--text);
+      }
+
+      .release-notes li {
+        margin: 4px 0;
+        line-height: 1.5;
+        font-size: 18px;
+      }
+
+      .release-assets {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 16px;
+      }
+
+      .asset-link {
+        display: inline-flex;
+        align-items: stretch;
+        color: #fff;
+        text-decoration: none;
+        border-radius: 5px;
+        overflow: hidden;
+        font-size: 14px;
+        line-height: 1;
+      }
+
+      .asset-label,
+      .asset-ext {
+        padding: 8px 12px;
+      }
+
+      .asset-ext {
+        font-size: 11px;
+        background: rgba(0, 0, 0, 0.2);
+      }
+
+      .asset-label {
+        display: inline-flex;
+        align-items: center;
         gap: 8px;
       }
 
-      .asset-list a {
-        color: var(--text);
-        text-decoration: none;
-        font-size: 14px;
+      .asset-label svg {
+        width: 16px;
+        height: 16px;
       }
 
-      .asset-list a:hover {
-        text-decoration: underline;
+      .asset-link.macos {
+        background: #f2f2f2;
+        color: #1a1a1a;
+      }
+
+      .asset-link.windows {
+        background: #2a74d9;
+      }
+
+      .asset-link.linux {
+        background: #6f4a93;
+      }
+
+      .asset-link.generic {
+        background: #666;
       }
 
       .empty {
-        margin-top: 32px;
         border: 1px dashed var(--border);
-        border-radius: var(--radius);
-        padding: 24px;
+        padding: 16px;
         color: var(--muted);
+        border-radius: 8px;
+      }
+
+      @media (max-width: 760px) {
+        .site-header {
+          padding: 0 20px;
+        }
+
+        .page {
+          padding: 84px 20px 56px;
+        }
+
+        .release-title {
+          font-size: 32px;
+        }
+
+        .release-notes li {
+          font-size: 18px;
+        }
+
+        .asset-link {
+          font-size: 14px;
+        }
+
+        .asset-ext {
+          font-size: 12px;
+        }
       }
     </style>
   </head>
@@ -235,23 +230,12 @@
           </svg>
           markdown-os
         </a>
-        <nav class="header-nav" aria-label="Primary">
-          <a href="/downloads" aria-current="page">Downloads</a>
-        </nav>
+        <a class="back-link" href="/">← Back to homepage</a>
       </div>
     </header>
 
     <main class="page">
-      <div class="header">
-        <a class="back-link" href="/">← Back to homepage</a>
-      </div>
-
-      <header>
-        <h1>Downloads</h1>
-        <p>Desktop installers from GitHub Releases. Latest release first, older releases below.</p>
-      </header>
-
-      <section id="downloads-root" class="release-list" aria-live="polite"></section>
+      <section id="downloads-root" class="releases" aria-live="polite"></section>
       <section id="downloads-empty" class="empty" hidden>
         No desktop release assets are available yet.
       </section>
@@ -261,88 +245,109 @@
       const RELEASES_API =
         "https://api.github.com/repos/elena-cabrera/markdown-os/releases";
 
+      const ICONS = {
+        macos: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47c-1.34.03-1.77-.79-3.29-.79c-1.53 0-2 .77-3.27.82c-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51c1.28-.02 2.5.87 3.29.87c.78 0 2.26-1.07 3.81-.91c.65.03 2.47.26 3.64 1.98c-.09.06-2.17 1.28-2.15 3.81c.03 3.02 2.65 4.03 2.68 4.04c-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5c.13 1.17-.34 2.35-1.04 3.19c-.69.85-1.83 1.51-2.95 1.42c-.15-1.15.41-2.35 1.05-3.11"/></svg>`,
+        windows: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M21 13v7.434a1.5 1.5 0 0 1-1.553 1.499l-.133-.011L12 21.008V13zm-11 0v7.758l-5.248-.656A2 2 0 0 1 3 18.117V13zm9.314-10.922a1.5 1.5 0 0 1 1.68 1.355l.006.133V11h-9V2.992zM10 3.242V11H3V5.883a2 2 0 0 1 1.752-1.985z"/></svg>`,
+        generic: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M12 15V3m9 12v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10l5 5l5-5"/></g></svg>`,
+      };
+
       function classifyAsset(assetName) {
-        const name = assetName.toLowerCase();
+        const name = (assetName || "").toLowerCase();
+        const extension = name.split(".").pop() || "";
+
         if (name.includes("macos") || name.endsWith(".dmg")) {
-          return "macOS";
+          return { family: "macos", label: "macOS", icon: ICONS.macos, ext: extension.toUpperCase() };
         }
+
         if (name.includes("windows") || name.endsWith(".exe")) {
-          return "Windows";
+          if (name.includes("arm")) {
+            return { family: "windows", label: "Windows (ARM)", icon: ICONS.windows, ext: extension.toUpperCase() };
+          }
+          if (name.includes("32") || name.includes("x86")) {
+            return { family: "windows", label: "Windows (32bit)", icon: ICONS.windows, ext: extension.toUpperCase() };
+          }
+          return { family: "windows", label: "Windows (64bit)", icon: ICONS.windows, ext: extension.toUpperCase() };
         }
+
+        if (name.includes("linux") || name.endsWith(".deb") || name.endsWith(".tar.gz")) {
+          if (name.includes("arm")) {
+            return { family: "linux", label: "Linux (ARM)", icon: ICONS.generic, ext: extension.toUpperCase() };
+          }
+          return { family: "linux", label: "Linux (64bit)", icon: ICONS.generic, ext: extension.toUpperCase() };
+        }
+
         return null;
       }
 
-      function renderRelease(release, isLatest) {
-        const card = document.createElement("article");
-        card.className = `release-card${isLatest ? " latest" : ""}`;
+      function extractNotes(body) {
+        if (!body) return [];
+        return body
+          .split("\n")
+          .map((line) => line.trim())
+          .filter((line) => /^[*-]\s+/.test(line))
+          .map((line) => line.replace(/^[*-]\s+/, ""));
+      }
 
-        const heading = document.createElement("div");
-        heading.className = "release-heading";
+      function renderRelease(release) {
+        const wrapper = document.createElement("article");
+        wrapper.className = "release-item";
 
-        const title = document.createElement("div");
+        const title = document.createElement("h2");
         title.className = "release-title";
-        title.textContent = release.tag_name || release.name || "Unnamed release";
 
-        heading.appendChild(title);
-        if (isLatest) {
-          const badge = document.createElement("div");
-          badge.className = "release-badge";
-          badge.textContent = "Latest";
-          heading.appendChild(badge);
-        }
-        card.appendChild(heading);
+        const releaseLink = document.createElement("a");
+        releaseLink.href = release.html_url;
+        releaseLink.target = "_blank";
+        releaseLink.rel = "noopener";
+        releaseLink.textContent = release.tag_name || release.name || "Unnamed release";
+        title.appendChild(releaseLink);
+        wrapper.appendChild(title);
 
-        const groups = new Map([
-          ["macOS", []],
-          ["Windows", []],
-        ]);
-
-        (release.assets || []).forEach((asset) => {
-          const platform = classifyAsset(asset.name || "");
-          if (!platform) {
-            return;
-          }
-          groups.get(platform).push(asset);
-        });
-
-        const assetGroups = document.createElement("div");
-        assetGroups.className = "asset-groups";
-
-        for (const [platform, assets] of groups.entries()) {
-          const group = document.createElement("section");
-          group.className = "asset-group";
-
-          const groupTitle = document.createElement("h2");
-          groupTitle.textContent = platform;
-          group.appendChild(groupTitle);
-
+        const notes = extractNotes(release.body || "");
+        if (notes.length > 0) {
           const list = document.createElement("ul");
-          list.className = "asset-list";
-
-          if (assets.length === 0) {
-            const emptyItem = document.createElement("li");
-            emptyItem.textContent = "No assets for this platform.";
-            emptyItem.style.color = "#666666";
-            list.appendChild(emptyItem);
-          } else {
-            assets.forEach((asset) => {
-              const item = document.createElement("li");
-              const link = document.createElement("a");
-              link.href = asset.browser_download_url;
-              link.textContent = asset.name;
-              link.target = "_blank";
-              link.rel = "noopener";
-              item.appendChild(link);
-              list.appendChild(item);
-            });
-          }
-
-          group.appendChild(list);
-          assetGroups.appendChild(group);
+          list.className = "release-notes";
+          notes.forEach((note) => {
+            const item = document.createElement("li");
+            item.textContent = note;
+            list.appendChild(item);
+          });
+          wrapper.appendChild(list);
         }
 
-        card.appendChild(assetGroups);
-        return card;
+        const assets = (release.assets || []).map((asset) => ({
+          asset,
+          details: classifyAsset(asset.name),
+        })).filter((entry) => entry.details);
+
+        if (assets.length > 0) {
+          const actions = document.createElement("div");
+          actions.className = "release-assets";
+
+          assets.forEach(({ asset, details }) => {
+            const link = document.createElement("a");
+            link.className = `asset-link ${details.family}`;
+            link.href = asset.browser_download_url;
+            link.target = "_blank";
+            link.rel = "noopener";
+
+            const label = document.createElement("span");
+            label.className = "asset-label";
+            label.innerHTML = `${details.icon}<span>${details.label}</span>`;
+
+            const ext = document.createElement("span");
+            ext.className = "asset-ext";
+            ext.textContent = details.ext;
+
+            link.appendChild(label);
+            link.appendChild(ext);
+            actions.appendChild(link);
+          });
+
+          wrapper.appendChild(actions);
+        }
+
+        return wrapper;
       }
 
       async function loadDownloads() {
@@ -365,8 +370,8 @@
             return;
           }
 
-          desktopReleases.forEach((release, index) => {
-            root.appendChild(renderRelease(release, index === 0));
+          desktopReleases.forEach((release) => {
+            root.appendChild(renderRelease(release));
           });
         } catch (error) {
           empty.hidden = false;

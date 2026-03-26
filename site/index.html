@@ -202,6 +202,86 @@
                 border-color: #f0f0f0;
             }
 
+            .download-dropdown {
+                position: relative;
+                display: inline-flex;
+                align-items: stretch;
+            }
+
+            .download-main-btn {
+                border-top-right-radius: 0;
+                border-bottom-right-radius: 0;
+                padding-right: 14px;
+            }
+
+            .download-main-btn .download-btn-icon {
+                width: 16px;
+                height: 16px;
+                display: inline-flex;
+            }
+
+            .download-main-btn .download-btn-icon svg {
+                width: 16px;
+                height: 16px;
+            }
+
+            .download-toggle-btn {
+                border-top-left-radius: 0;
+                border-bottom-left-radius: 0;
+                border-left: 1px solid rgba(255, 255, 255, 0.28);
+                padding: 10px 12px;
+            }
+
+            .download-toggle-btn svg {
+                width: 14px;
+                height: 14px;
+            }
+
+            .download-menu {
+                position: absolute;
+                top: calc(100% + 8px);
+                left: 0;
+                min-width: 272px;
+                background: #fff;
+                border: 1px solid var(--color-border);
+                border-radius: 8px;
+                box-shadow: 0 10px 28px rgba(0, 0, 0, 0.12);
+                padding: 6px;
+                z-index: 40;
+            }
+
+            .download-menu[hidden] {
+                display: none;
+            }
+
+            .download-menu-item {
+                width: 100%;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 10px 12px;
+                border-radius: 6px;
+                font-size: 14px;
+                color: var(--color-text);
+                text-decoration: none;
+            }
+
+            .download-menu-item:hover {
+                background: #f5f5f5;
+            }
+
+            .download-menu-item svg {
+                width: 16px;
+                height: 16px;
+                flex-shrink: 0;
+            }
+
+            .download-menu-divider {
+                border: 0;
+                border-top: 1px solid var(--color-border);
+                margin: 6px 0;
+            }
+
             /* ========== Hero Section ========== */
             .hero {
                 width: 100%;
@@ -1610,9 +1690,7 @@
                     </svg>
                     markdown-os
                 </a>
-                <nav class="header-nav" aria-label="Primary">
-                    <a href="/downloads">Downloads</a>
-                </nav>
+                <nav class="header-nav" aria-label="Primary"></nav>
             </div>
         </header>
 
@@ -1628,12 +1706,44 @@
                     </p>
 
                     <div class="hero-cta" style="display: flex; gap: 12px; flex-wrap: wrap">
-                        <a
-                            id="desktop-download-btn"
-                            href="/downloads"
-                            class="btn btn-primary"
-                            >Download</a
-                        >
+                        <div class="download-dropdown" id="desktop-download-dropdown">
+                            <a
+                                id="desktop-download-btn"
+                                href="/downloads"
+                                class="btn btn-primary download-main-btn"
+                            >
+                                <span class="download-btn-icon" id="desktop-download-icon"></span>
+                                <span>Download</span>
+                            </a>
+                            <button
+                                id="desktop-download-toggle"
+                                class="btn btn-primary download-toggle-btn"
+                                type="button"
+                                aria-haspopup="menu"
+                                aria-expanded="false"
+                                aria-label="Show download options"
+                            >
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    aria-hidden="true"
+                                >
+                                    <path d="m6 9l6 6l6-6" />
+                                </svg>
+                            </button>
+                            <div
+                                id="desktop-download-menu"
+                                class="download-menu"
+                                hidden
+                                role="menu"
+                                aria-label="Desktop download options"
+                            ></div>
+                        </div>
                         <a
                             href="https://github.com/elena-cabrera/markdown-os"
                             class="btn btn-secondary"
@@ -2458,6 +2568,17 @@
                 const footerVersion = document.getElementById("footer-version");
                 const downloadBtn =
                     document.getElementById("desktop-download-btn");
+                const downloadIcon = document.getElementById(
+                    "desktop-download-icon",
+                );
+                const dropdown = document.getElementById(
+                    "desktop-download-dropdown",
+                );
+                const dropdownToggle = document.getElementById(
+                    "desktop-download-toggle",
+                );
+                const dropdownMenu =
+                    document.getElementById("desktop-download-menu");
                 const downloadMeta = document.getElementById(
                     "desktop-download-meta",
                 );
@@ -2479,6 +2600,63 @@
                     return "unknown";
                 }
 
+                const icons = {
+                    macos: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47c-1.34.03-1.77-.79-3.29-.79c-1.53 0-2 .77-3.27.82c-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51c1.28-.02 2.5.87 3.29.87c.78 0 2.26-1.07 3.81-.91c.65.03 2.47.26 3.64 1.98c-.09.06-2.17 1.28-2.15 3.81c.03 3.02 2.65 4.03 2.68 4.04c-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5c.13 1.17-.34 2.35-1.04 3.19c-.69.85-1.83 1.51-2.95 1.42c-.15-1.15.41-2.35 1.05-3.11"/></svg>`,
+                    windows: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M21 13v7.434a1.5 1.5 0 0 1-1.553 1.499l-.133-.011L12 21.008V13zm-11 0v7.758l-5.248-.656A2 2 0 0 1 3 18.117V13zm9.314-10.922a1.5 1.5 0 0 1 1.68 1.355l.006.133V11h-9V2.992zM10 3.242V11H3V5.883a2 2 0 0 1 1.752-1.985z"/></svg>`,
+                    generic: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M12 15V3m9 12v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10l5 5l5-5"/></g></svg>`,
+                };
+
+                function classifyDesktopAsset(assetName) {
+                    const name = (assetName || "").toLowerCase();
+                    if (name.endsWith(".dmg") || name.includes("macos")) {
+                        return {
+                            id: "macos",
+                            label: "Download for macOS",
+                            icon: icons.macos,
+                        };
+                    }
+                    if (name.endsWith(".exe") || name.includes("windows")) {
+                        if (name.includes("arm")) {
+                            return {
+                                id: "windows-arm",
+                                label: "Download for Windows (ARM)",
+                                icon: icons.windows,
+                            };
+                        }
+                        if (
+                            name.includes("32") ||
+                            name.includes("x86") ||
+                            name.includes("ia32")
+                        ) {
+                            return {
+                                id: "windows-32",
+                                label: "Download for Windows (32-bit)",
+                                icon: icons.windows,
+                            };
+                        }
+                        return {
+                            id: "windows-64",
+                            label: "Download for Windows (64-bit)",
+                            icon: icons.windows,
+                        };
+                    }
+                    if (name.endsWith(".deb") || name.endsWith(".tar.gz")) {
+                        if (name.includes("arm")) {
+                            return {
+                                id: "linux-arm",
+                                label: "Download for Linux (ARM)",
+                                icon: icons.generic,
+                            };
+                        }
+                        return {
+                            id: "linux-64",
+                            label: "Download for Linux (64-bit)",
+                            icon: icons.generic,
+                        };
+                    }
+                    return null;
+                }
+
                 function assetForPlatform(assets, platform) {
                     if (!Array.isArray(assets)) return null;
                     if (platform === "macos") {
@@ -2493,35 +2671,82 @@
                     if (platform === "windows") {
                         return (
                             assets.find((asset) =>
-                                /markdown-os-desktop-.*windows.*\.exe$/i.test(
+                                /markdown-os-desktop-.*windows.*(?:64|x64).*\.exe$/i.test(
                                     asset.name || "",
                                 ),
+                            ) ||
+                            assets.find((asset) =>
+                                /markdown-os-desktop-.*windows.*\.exe$/i.test(asset.name || ""),
                             ) || null
                         );
                     }
                     return null;
                 }
 
-                function setDefaultDownload(platform, latestRelease) {
-                    const labels = {
-                        macos: "Download for macOS",
-                        windows: "Download for Windows",
-                        unknown: "See desktop downloads",
-                    };
+                function defaultIconForPlatform(platform) {
+                    if (platform === "macos") return icons.macos;
+                    if (platform === "windows") return icons.windows;
+                    return icons.generic;
+                }
 
+                function closeDownloadMenu() {
+                    if (!dropdownMenu || !dropdownToggle) return;
+                    dropdownMenu.hidden = true;
+                    dropdownToggle.setAttribute("aria-expanded", "false");
+                }
+
+                function populateDownloadMenu(latestRelease) {
+                    if (!dropdownMenu) return;
+                    dropdownMenu.innerHTML = "";
+                    const grouped = new Map();
+                    (latestRelease?.assets || []).forEach((asset) => {
+                        const details = classifyDesktopAsset(asset.name);
+                        if (!details) return;
+                        if (!grouped.has(details.id)) {
+                            grouped.set(details.id, {
+                                ...details,
+                                href: asset.browser_download_url,
+                            });
+                        }
+                    });
+
+                    grouped.forEach((entry) => {
+                        const item = document.createElement("a");
+                        item.className = "download-menu-item";
+                        item.href = entry.href;
+                        item.target = "_blank";
+                        item.rel = "noopener";
+                        item.role = "menuitem";
+                        item.innerHTML = `${entry.icon}<span>${entry.label}</span>`;
+                        dropdownMenu.appendChild(item);
+                    });
+
+                    const divider = document.createElement("hr");
+                    divider.className = "download-menu-divider";
+                    dropdownMenu.appendChild(divider);
+
+                    const allReleases = document.createElement("a");
+                    allReleases.className = "download-menu-item";
+                    allReleases.href = downloadsHref;
+                    allReleases.role = "menuitem";
+                    allReleases.innerHTML = `${icons.generic}<span>All releases</span>`;
+                    dropdownMenu.appendChild(allReleases);
+                }
+
+                function setDefaultDownload(platform, latestRelease) {
                     const asset = assetForPlatform(
                         latestRelease?.assets,
                         platform,
                     );
 
-                    // Hero primary button: direct asset URL when available, else /downloads.
                     if (downloadBtn) {
-                        downloadBtn.textContent =
-                            labels[platform] || labels.unknown;
                         downloadBtn.href = downloadsHref;
                         if (asset?.browser_download_url) {
                             downloadBtn.href = asset.browser_download_url;
                         }
+                    }
+                    if (downloadIcon) {
+                        downloadIcon.innerHTML = defaultIconForPlatform(platform);
                     }
 
                     if (downloadMeta) {
@@ -2535,6 +2760,31 @@
 
                 const platform = detectPlatform();
                 setDefaultDownload(platform, null);
+                populateDownloadMenu(null);
+
+                if (dropdownToggle && dropdownMenu && dropdown) {
+                    dropdownToggle.addEventListener("click", (event) => {
+                        event.preventDefault();
+                        const isOpen = !dropdownMenu.hidden;
+                        dropdownMenu.hidden = isOpen;
+                        dropdownToggle.setAttribute(
+                            "aria-expanded",
+                            isOpen ? "false" : "true",
+                        );
+                    });
+
+                    document.addEventListener("click", (event) => {
+                        if (!dropdown.contains(event.target)) {
+                            closeDownloadMenu();
+                        }
+                    });
+
+                    document.addEventListener("keydown", (event) => {
+                        if (event.key === "Escape") {
+                            closeDownloadMenu();
+                        }
+                    });
+                }
 
                 fetch(releaseApi)
                     .then((response) => response.json())
@@ -2543,6 +2793,7 @@
                             footerVersion.textContent = release.tag_name;
                         }
                         setDefaultDownload(platform, release);
+                        populateDownloadMenu(release);
                     })
                     .catch(() => {
                         if (!footerVersion) return;
