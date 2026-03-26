@@ -5,6 +5,7 @@
   "description": "Electron shell for Markdown-OS",
   "main": "dist/main.js",
   "scripts": {
+    "icon:mac": "../scripts/generate_macos_icon.sh",
     "build": "tsc -p tsconfig.json",
     "dev": "npm run build && env -u ELECTRON_RUN_AS_NODE electron .",
     "start": "env -u ELECTRON_RUN_AS_NODE electron .",
