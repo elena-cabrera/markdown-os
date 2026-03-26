@@ -6,7 +6,11 @@ import {
   stopBackend,
   type BackendHandle,
 } from "./backend";
-import { pickMarkdownFile, pickWorkspaceFolder } from "./dialogs";
+import {
+  pickMarkdownFile,
+  pickWorkspaceFolder,
+  pickWorkspaceTarget,
+} from "./dialogs";
 import {
   addRecent,
   clearRecent,
@@ -128,6 +132,7 @@ async function createMainWindow(): Promise<void> {
 function registerIpcHandlers(): void {
   ipcMain.handle("desktop:pick-file", async () => pickMarkdownFile(currentWindow()));
   ipcMain.handle("desktop:pick-folder", async () => pickWorkspaceFolder(currentWindow()));
+  ipcMain.handle("desktop:pick-path", async () => pickWorkspaceTarget(currentWindow()));
   ipcMain.handle("desktop:list-recents", async () => listRecents());
   ipcMain.handle("desktop:open-recent", async (_event, targetPath: string) => {
     await sendWorkspaceToRenderer(targetPath);

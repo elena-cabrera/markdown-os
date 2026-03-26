@@ -25,6 +25,10 @@
     return document.getElementById("empty-state-primary-action");
   }
 
+  function workspaceControlsRoot() {
+    return document.getElementById("desktop-open-workspace-controls");
+  }
+
   /**
    * Electron preload returns a path string or null; some callers may use { canceled, path }.
    *
@@ -137,6 +141,19 @@
     return desktopShell()?.openWorkspace?.(path);
   }
 
+  async function promptAndOpenWorkspace() {
+    try {
+      const raw = await window.electronDesktop?.pickPath?.();
+      const selectedPath = pathFromNativePickerResult(raw);
+      if (selectedPath) {
+        await desktopShell()?.openWorkspace?.(selectedPath);
+      }
+    } catch (error) {
+      console.error("Failed to open workspace from picker.", error);
+    }
+    await refreshPicker();
+  }
+
   async function promptForFirstNote() {
     const filename = await window.markdownDialogs?.prompt?.({
       title: "Create first note",
@@ -224,6 +241,14 @@
       await refreshPicker();
     });
 
+    document.getElementById("desktop-open-workspace-icon")?.addEventListener("click", async () => {
+      await promptAndOpenWorkspace();
+    });
+
+    document.getElementById("desktop-open-workspace-button")?.addEventListener("click", async () => {
+      await promptAndOpenWorkspace();
+    });
+
     pickerModal()?.addEventListener("click", handlePickerClick);
 
     emptyStateButton()?.addEventListener("click", async () => {
@@ -258,6 +283,10 @@
     }
     bindPickerActions();
     setEmptyFolderActionVisible(false);
+    const workspaceControls = workspaceControlsRoot();
+    if (workspaceControls && isDesktopMode()) {
+      workspaceControls.classList.remove("hidden");
+    }
     refreshPicker();
   }
 
