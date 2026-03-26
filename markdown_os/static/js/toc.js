@@ -73,7 +73,7 @@
   }
 
   function setActiveTOCLink(activeHeadingId) {
-    document.querySelectorAll("#toc a[data-target-id]").forEach((link) => {
+    document.querySelectorAll("#toc a[data-target-id], #focus-toc a[data-target-id]").forEach((link) => {
       if (link.dataset.targetId === activeHeadingId) {
         link.classList.add("active");
       } else {
@@ -122,7 +122,7 @@
   }
 
   function bindTOCLinkHandlers() {
-    document.querySelectorAll("#toc a[data-target-id]").forEach((link) => {
+    document.querySelectorAll("#toc a[data-target-id], #focus-toc a[data-target-id]").forEach((link) => {
       link.addEventListener("click", (event) => {
         event.preventDefault();
         const targetId = link.dataset.targetId;
@@ -186,20 +186,24 @@
 
   function generateTOC() {
     const toc = document.getElementById("toc");
-    if (!toc) {
+    const focusToc = document.getElementById("focus-toc");
+    if (!toc || !focusToc) {
       return;
     }
 
     const headings = window.wysiwyg?.getHeadingElements?.() || [];
     if (headings.length === 0) {
       toc.innerHTML = '<p class="tree-empty-state">No headings</p>';
+      focusToc.innerHTML = "";
       tocState.headings = [];
       return;
     }
 
     tocState.headings = headings;
     toc.innerHTML = "";
+    focusToc.innerHTML = "";
     toc.appendChild(createTOCTree(headings));
+    focusToc.appendChild(createTOCTree(headings));
     bindTOCLinkHandlers();
     ensureScrollBinding();
     updateActiveTOCItem();
