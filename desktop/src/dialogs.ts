@@ -54,4 +54,34 @@ export async function pickWorkspaceFolder(
   return result.filePaths[0] ?? null;
 }
 
+/**
+ * Open a native picker dialog for either a markdown file or a folder.
+ *
+ * Args:
+ * - window (BrowserWindow): Parent Electron browser window for the dialog.
+ *
+ * Returns:
+ * - Promise<string | null>: Absolute path to the selected target, or null when cancelled.
+ */
+export async function pickWorkspaceTarget(
+  window: BrowserWindow,
+): Promise<string | null> {
+  const result = await dialog.showOpenDialog(window, {
+    title: "Open folder or markdown file",
+    properties: ["openFile", "openDirectory"],
+    filters: [
+      {
+        name: "Markdown",
+        extensions: ["md", "markdown"],
+      },
+    ],
+  });
+
+  if (result.canceled || result.filePaths.length === 0) {
+    return null;
+  }
+
+  return result.filePaths[0] ?? null;
+}
+
 export { pickWorkspaceFolder as pickFolder };

@@ -52,8 +52,8 @@ class DeleteFileRequest(BaseModel):
     path: str
 
 
-class DesktopOpenRequest(BaseModel):
-    """Body payload for desktop workspace open operations."""
+class WorkspaceOpenRequest(BaseModel):
+    """Body payload for workspace open operations."""
 
     path: str
 
@@ -391,6 +391,26 @@ def create_app(
             "desktop": bool(app.state.desktop),
         }
 
+    @app.post("/api/workspace/open")
+    async def open_workspace(payload: WorkspaceOpenRequest) -> dict[str, object]:
+        """
+        Open a markdown file or folder workspace from an absolute or relative path.
+
+        Args:
+        - payload (WorkspaceOpenRequest): Path to a markdown file or directory.
+
+        Returns:
+        - dict[str, object]: Snapshot describing the resulting workspace state.
+        """
+
+        session = _require_workspace_session(app)
+        try:
+            snapshot = await session.open_path(Path(payload.path))
+        except (typer.BadParameter, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+        return {"ok": True, **snapshot}
+
     @app.get("/api/desktop/state")
     async def get_desktop_state() -> dict[str, object]:
         """
@@ -408,7 +428,7 @@ def create_app(
         return session.snapshot()
 
     @app.post("/api/desktop/open-file")
-    async def desktop_open_file(payload: DesktopOpenRequest) -> dict[str, object]:
+    async def desktop_open_file(payload: WorkspaceOpenRequest) -> dict[str, object]:
         """
         Open a markdown file as the active desktop workspace target.
 
@@ -429,7 +449,7 @@ def create_app(
         return {"ok": True, **snapshot}
 
     @app.post("/api/desktop/open-folder")
-    async def desktop_open_folder(payload: DesktopOpenRequest) -> dict[str, object]:
+    async def desktop_open_folder(payload: WorkspaceOpenRequest) -> dict[str, object]:
         """
         Open a folder as the active desktop workspace target.
 

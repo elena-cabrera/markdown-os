@@ -25,6 +25,32 @@
     return document.getElementById("empty-state-primary-action");
   }
 
+  function workspaceControlsRoot() {
+    return document.getElementById("desktop-open-workspace-controls");
+  }
+
+  function setWorkspaceControlsAvailability(isDesktop) {
+    const controls = workspaceControlsRoot();
+    const iconButton = document.getElementById("desktop-open-workspace-icon");
+    const textButton = document.getElementById("desktop-open-workspace-button");
+    if (!(controls instanceof HTMLElement)) {
+      return;
+    }
+
+    controls.classList.remove("hidden");
+
+    const desktopUnavailableTitle =
+      "Desktop app: native file explorer. Browser: enter a path manually.";
+    for (const button of [iconButton, textButton]) {
+      if (!(button instanceof HTMLButtonElement)) {
+        continue;
+      }
+      button.disabled = false;
+      button.setAttribute("title", desktopUnavailableTitle);
+      button.setAttribute("aria-label", desktopUnavailableTitle);
+    }
+  }
+
   /**
    * Electron preload returns a path string or null; some callers may use { canceled, path }.
    *
@@ -137,6 +163,49 @@
     return desktopShell()?.openWorkspace?.(path);
   }
 
+  async function promptAndOpenWorkspace() {
+    if (!isDesktopMode()) {
+      const path = await window.markdownDialogs?.prompt?.({
+        title: "Open folder or file",
+        message: "Enter an absolute path to a markdown file (.md) or folder.",
+        label: "Path",
+        value: "",
+        confirmText: "Open",
+      });
+      const selectedPath = path?.trim();
+      if (!selectedPath) {
+        return;
+      }
+      try {
+        const response = await fetch("/api/workspace/open", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ path: selectedPath }),
+        });
+        if (!response.ok) {
+          throw new Error(`Failed to open workspace (${response.status})`);
+        }
+        const snapshot = await response.json();
+        desktopShell()?.setSnapshot?.(snapshot);
+      } catch (error) {
+        console.error("Failed to open workspace by path.", error);
+      }
+      await refreshPicker();
+      return;
+    }
+
+    try {
+      const raw = await window.electronDesktop?.pickPath?.();
+      const selectedPath = pathFromNativePickerResult(raw);
+      if (selectedPath) {
+        await desktopShell()?.openWorkspace?.(selectedPath);
+      }
+    } catch (error) {
+      console.error("Failed to open workspace from picker.", error);
+    }
+    await refreshPicker();
+  }
+
   async function promptForFirstNote() {
     const filename = await window.markdownDialogs?.prompt?.({
       title: "Create first note",
@@ -224,6 +293,14 @@
       await refreshPicker();
     });
 
+    document.getElementById("desktop-open-workspace-icon")?.addEventListener("click", async () => {
+      await promptAndOpenWorkspace();
+    });
+
+    document.getElementById("desktop-open-workspace-button")?.addEventListener("click", async () => {
+      await promptAndOpenWorkspace();
+    });
+
     pickerModal()?.addEventListener("click", handlePickerClick);
 
     emptyStateButton()?.addEventListener("click", async () => {
@@ -258,6 +335,7 @@
     }
     bindPickerActions();
     setEmptyFolderActionVisible(false);
+    setWorkspaceControlsAvailability(isDesktopMode());
     refreshPicker();
   }
 

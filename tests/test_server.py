@@ -295,6 +295,58 @@ def test_desktop_open_folder_switches_to_folder_mode(tmp_path: Path) -> None:
     assert tree_response.status_code == 200
 
 
+def test_workspace_open_route_switches_to_folder_mode_outside_desktop(tmp_path: Path) -> None:
+    """
+    Verify the generic workspace-open route works in regular browser/CLI mode.
+
+    Args:
+    - tmp_path (Path): Pytest-managed temporary directory fixture.
+
+    Returns:
+    - None: Assertions validate snapshot response and file tree availability.
+    """
+
+    workspace = tmp_path / "workspace"
+    workspace.mkdir(parents=True, exist_ok=True)
+    (workspace / "notes.md").write_text("# Notes", encoding="utf-8")
+
+    with _build_folder_client(tmp_path) as client:
+        response = client.post("/api/workspace/open", json={"path": str(workspace)})
+        tree_response = client.get("/api/file-tree")
+
+    assert response.status_code == 200
+    assert response.json()["ok"] is True
+    assert response.json()["mode"] == "folder"
+    assert response.json()["workspacePath"] == str(workspace.resolve())
+    assert tree_response.status_code == 200
+
+
+def test_workspace_open_route_switches_to_file_mode_outside_desktop(tmp_path: Path) -> None:
+    """
+    Verify the generic workspace-open route can open a single markdown file.
+
+    Args:
+    - tmp_path (Path): Pytest-managed temporary directory fixture.
+
+    Returns:
+    - None: Assertions validate file-mode snapshot and content endpoint response.
+    """
+
+    markdown_path = tmp_path / "notes.md"
+    markdown_path.write_text("# Notes", encoding="utf-8")
+
+    with _build_folder_client(tmp_path) as client:
+        response = client.post("/api/workspace/open", json={"path": str(markdown_path)})
+        content_response = client.get("/api/content")
+
+    assert response.status_code == 200
+    assert response.json()["ok"] is True
+    assert response.json()["mode"] == "file"
+    assert response.json()["workspacePath"] == str(markdown_path.resolve())
+    assert content_response.status_code == 200
+    assert content_response.json()["content"] == "# Notes"
+
+
 def test_desktop_open_empty_folder_marks_empty_workspace(tmp_path: Path) -> None:
     """
     Verify desktop open-folder route reports empty workspaces correctly.
