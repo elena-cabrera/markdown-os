@@ -193,7 +193,7 @@
       editorState.currentFilePath = null;
       setEmptyStateCopy(
         "Open a markdown file or workspace folder",
-        "Use the picker to open a recent file, recent folder, or a new workspace.",
+        "Use the picker to open a file or folder.",
       );
       setSaveStatus("Open a file or folder");
       setPageTitle(null);
@@ -799,7 +799,7 @@
 
     setEmptyStateCopy(
       "Open a markdown file or workspace folder",
-      "Use the picker to open a recent file, recent folder, or a new workspace.",
+      "Use the picker to open a file or folder.",
     );
     setSaveStatus("Open a file or folder");
     window.fileTabs?.setEmptyState?.(true);

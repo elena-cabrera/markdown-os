@@ -1,16 +1,11 @@
 import { contextBridge, ipcRenderer } from "electron";
 
-import type { RecentEntry } from "./recents";
 import type { ReleaseInfo } from "./updater";
 
 const desktopBridge = {
   pickFile: (): Promise<string | null> => ipcRenderer.invoke("desktop:pick-file"),
   pickFolder: (): Promise<string | null> => ipcRenderer.invoke("desktop:pick-folder"),
   pickFileOrFolder: (): Promise<string | null> => ipcRenderer.invoke("desktop:pick-file-or-folder"),
-  listRecents: (): Promise<RecentEntry[]> => ipcRenderer.invoke("desktop:list-recents"),
-  openRecent: (targetPath: string): Promise<void> =>
-    ipcRenderer.invoke("desktop:open-recent", targetPath),
-  clearRecent: (path: string): Promise<void> => ipcRenderer.invoke("desktop:clear-recent", path),
   getPlatform: (): Promise<NodeJS.Platform> => ipcRenderer.invoke("desktop:get-platform"),
   getAppVersion: (): Promise<string> => ipcRenderer.invoke("desktop:get-app-version"),
   getReleaseFeedUrl: (): Promise<string> => ipcRenderer.invoke("desktop:get-release-feed-url"),

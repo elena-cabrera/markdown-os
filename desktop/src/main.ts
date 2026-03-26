@@ -9,12 +9,6 @@ import {
 } from "./backend";
 import { pickMarkdownFile, pickWorkspaceFolder, pickFileOrFolder } from "./dialogs";
 import {
-  addRecent,
-  clearRecent,
-  listRecents,
-  type RecentEntry,
-} from "./recents";
-import {
   dismissVersion,
   getDismissedVersion,
   checkForUpdate,
@@ -68,10 +62,6 @@ async function sendWorkspaceToRenderer(filePath: string): Promise<void> {
       window.MarkdownOS?.desktopShell?.openWorkspace?.(${JSON.stringify(filePath)});
     `,
     true,
-  );
-  addRecent(
-    filePath,
-    filePath.endsWith(".md") || filePath.endsWith(".markdown") ? "file" : "folder",
   );
 }
 
@@ -142,14 +132,6 @@ function registerIpcHandlers(): void {
   ipcMain.handle("desktop:pick-file", async () => pickMarkdownFile(currentWindow()));
   ipcMain.handle("desktop:pick-folder", async () => pickWorkspaceFolder(currentWindow()));
   ipcMain.handle("desktop:pick-file-or-folder", async () => pickFileOrFolder(currentWindow()));
-  ipcMain.handle("desktop:list-recents", async () => listRecents());
-  ipcMain.handle("desktop:open-recent", async (_event, targetPath: string) => {
-    await sendWorkspaceToRenderer(targetPath);
-    return { canceled: false, path: targetPath };
-  });
-  ipcMain.handle("desktop:clear-recent", async (_event, targetPath: string) => {
-    clearRecent(targetPath);
-  });
   ipcMain.handle("desktop:open-external", async (_event, targetUrl: string) => {
     await openReleaseUrl(targetUrl);
   });

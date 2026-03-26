@@ -5,10 +5,6 @@
     return window.MarkdownOS?.desktopShell || null;
   }
 
-  function isDesktopMode() {
-    return desktopShell()?.isDesktop?.() === true;
-  }
-
   function pickerOverlay() {
     return document.getElementById("desktop-picker-overlay");
   }
@@ -78,56 +74,9 @@
     }
   }
 
-  function recentItemMarkup(item) {
-    const safeName = item?.name || item?.path || "";
-    const safePath = item?.path || "";
-    const typeLabel = item?.type === "folder" ? "Folder" : "File";
-    return `
-      <button
-        type="button"
-        class="desktop-recent-item"
-        data-recent-path="${safePath}"
-        data-recent-type="${item?.type || "file"}"
-      >
-        <div class="desktop-recent-main">
-          <p class="desktop-recent-name">${safeName}</p>
-          <p class="desktop-recent-path">${safePath}</p>
-        </div>
-        <span class="desktop-recent-type">${typeLabel}</span>
-      </button>
-    `;
-  }
-
-  async function renderRecents() {
-    const list = document.getElementById("desktop-recent-items");
-    if (!list) {
-      return;
-    }
-
-    if (!isDesktopMode()) {
-      list.innerHTML = "";
-      return;
-    }
-
-    const recents = await window.electronDesktop?.listRecents?.();
-    const recentItems = Array.isArray(recents) ? recents : [];
-
-    list.innerHTML = recentItems.length
-      ? recentItems.map(recentItemMarkup).join("")
-      : '<p class="desktop-recents-empty">No recent items</p>';
-  }
-
   async function refreshPicker() {
-    await renderRecents();
     const snapshot = desktopShell()?.getSnapshot?.();
     setPickerVisibility(snapshot?.mode === "empty");
-  }
-
-  async function openRecent(path, type) {
-    if (!path || !type) {
-      return false;
-    }
-    return desktopShell()?.openWorkspace?.(path);
   }
 
   async function promptForFirstNote() {
@@ -175,21 +124,6 @@
     }
   }
 
-  async function handlePickerClick(event) {
-    const target = event.target instanceof Element ? event.target.closest(".desktop-recent-item") : null;
-    if (!target) {
-      return;
-    }
-    const path = target.getAttribute("data-recent-path");
-    const type = target.getAttribute("data-recent-type");
-    try {
-      await openRecent(path, type);
-    } catch (error) {
-      console.error("Failed to open recent workspace.", error);
-    }
-    await refreshPicker();
-  }
-
   function bindPickerActions() {
     document.getElementById("desktop-open-file-or-folder")?.addEventListener("click", async () => {
       try {
@@ -203,8 +137,6 @@
       }
       await refreshPicker();
     });
-
-    pickerModal()?.addEventListener("click", handlePickerClick);
 
     emptyStateButton()?.addEventListener("click", async () => {
       await createFirstNote();
@@ -228,7 +160,6 @@
       } else {
         setEmptyFolderActionVisible(false);
       }
-      await renderRecents();
     });
   }
 
