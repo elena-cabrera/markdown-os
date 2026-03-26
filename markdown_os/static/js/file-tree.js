@@ -607,20 +607,29 @@
     });
   }
 
+  function setMode(mode) {
+    if (mode === "empty" || mode === "file" || mode === "folder") {
+      fileTreeState.mode = mode;
+    }
+  }
+
   window.fileTree = {
     initFileTree,
     loadFileTree,
     setCurrentFile,
+    handleNewFile,
+    setFolderModeUI,
+    setMode,
   };
 
   document.addEventListener("DOMContentLoaded", async () => {
     fileTreeState.mode = await getMode();
+    initFileTree();
     if (fileTreeState.mode !== "folder") {
       return;
     }
 
     setFolderModeUI();
-    initFileTree();
     await loadFileTree();
 
     const initialFile = new URLSearchParams(window.location.search).get("file");

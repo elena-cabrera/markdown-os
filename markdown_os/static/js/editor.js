@@ -68,6 +68,28 @@
     }
   }
 
+  function setEmptyStateCopy(title, subtitle) {
+    const titleElement =
+      document.getElementById("empty-state-title") ||
+      document.querySelector("#empty-state .empty-state-title");
+    const subtitleElement =
+      document.getElementById("empty-state-subtitle") ||
+      document.querySelector("#empty-state .empty-state-subtitle");
+    if (titleElement) {
+      titleElement.textContent = title;
+    }
+    if (subtitleElement) {
+      subtitleElement.textContent = subtitle;
+    }
+  }
+
+  function syncDesktopBodyClass() {
+    document.body.classList.toggle(
+      "desktop-shell-active",
+      Boolean(window.markdownOSDesktop?.isDesktopMode?.()),
+    );
+  }
+
   function buildContentUrl(filePath = null) {
     if (editorState.mode === "file") {
       return "/api/content";
@@ -95,6 +117,23 @@
   async function loadContent(filePath = null) {
     if (editorState.mode === "folder" && window.fileTabs?.isEnabled()) {
       return window.fileTabs.reloadTab(filePath || window.fileTabs.getActiveTabPath());
+    }
+
+    if (editorState.mode === "empty") {
+      await setMarkdown("", { silent: true });
+      editorState.lastSavedContent = "";
+      editorState.currentFilePath = null;
+      setEmptyStateCopy(
+        "Open a markdown file or workspace folder",
+        "Use the picker to open a recent file, recent folder, or a new workspace.",
+      );
+      setSaveStatus("Open a file or folder");
+      setPageTitle(null);
+      setLoadingState(false);
+      window.fileTree?.setCurrentFile?.(null);
+      window.fileTabs?.reset?.({ keepEnabled: false });
+      window.fileTabs?.setEmptyState?.(true);
+      return false;
     }
 
     const requestUrl = buildContentUrl(filePath);
@@ -125,6 +164,7 @@
       const initialContent = payload.content || "";
       await setMarkdown(initialContent, { silent: true });
       editorState.lastSavedContent = initialContent;
+      setEmptyStateCopy("No file selected", "Select a file from the sidebar to open it.");
 
       setPageTitle(payload.metadata);
 
@@ -155,6 +195,10 @@
   }
 
   async function checkForExternalChanges(filePath = null) {
+    if (editorState.mode === "empty") {
+      return false;
+    }
+
     if (editorState.mode === "folder" && window.fileTabs?.isEnabled()) {
       return window.fileTabs.checkForExternalChanges(filePath || window.fileTabs.getActiveTabPath());
     }
@@ -243,6 +287,11 @@
   }
 
   async function saveContent() {
+    if (editorState.mode === "empty") {
+      setSaveStatus("Open a file or folder", "error");
+      return false;
+    }
+
     if (editorState.mode === "folder" && window.fileTabs?.isEnabled()) {
       return window.fileTabs.saveTabContent(window.fileTabs.getActiveTabPath());
     }
@@ -600,6 +649,36 @@
         setSaveStatus("Realtime sync unavailable", "error");
       }
     });
+
+    window.addEventListener("markdown-os:desktop-state", async (event) => {
+      const snapshot = event.detail || {};
+      const nextMode = snapshot.mode || editorState.mode;
+      editorState.mode = nextMode;
+      syncDesktopBodyClass();
+
+      if (nextMode === "empty") {
+        window.fileTree?.setMode?.("empty");
+        await loadContent();
+        return;
+      }
+
+      if (nextMode === "file") {
+        window.fileTree?.setMode?.("file");
+        window.fileTabs?.init?.("file");
+        await loadContent();
+        return;
+      }
+
+      if (nextMode === "folder") {
+        window.fileTree?.setMode?.("folder");
+        window.fileTabs?.init?.("folder");
+        await window.fileTabs?.resetWorkspace?.();
+        window.fileTree?.setFolderModeUI?.();
+        await window.fileTree?.loadFileTree?.();
+        setSaveStatus("Select a file");
+        window.fileTabs?.setEmptyState?.(true);
+      }
+    });
   }
 
   window.switchFile = switchFile;
@@ -623,7 +702,14 @@
     window.wysiwyg?.init?.();
 
     editorState.mode = await detectMode();
+    const initialMode = editorState.mode;
     bindEvents();
+    syncDesktopBodyClass();
+
+    if (window.MarkdownOS?.desktopShell?.isDesktop?.()) {
+      await window.MarkdownOS.desktopShell.fetchDesktopState?.();
+      editorState.mode = await detectMode();
+    }
 
     if (editorState.mode === "file") {
       await loadContent();
@@ -632,7 +718,19 @@
 
     window.fileTabs?.init(editorState.mode);
     setLoadingState(false);
-    setSaveStatus("Select a file");
+    if (editorState.mode === "folder") {
+      setSaveStatus("Select a file");
+      window.fileTabs?.setEmptyState?.(true);
+      window.desktopPicker?.setPickerVisibility?.(false);
+      return;
+    }
+
+    setEmptyStateCopy(
+      "Open a markdown file or workspace folder",
+      "Use the picker to open a recent file, recent folder, or a new workspace.",
+    );
+    setSaveStatus("Open a file or folder");
     window.fileTabs?.setEmptyState?.(true);
+    window.desktopPicker?.setPickerVisibility?.(true);
   });
 })();

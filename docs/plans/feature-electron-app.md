@@ -2,22 +2,61 @@
 
 ## Goal
 
-Ship a native desktop app for **macOS** and **Windows** that lets a non-technical user download Markdown-OS from the landing page, open it like a normal app, choose a markdown file or folder from a native picker modal, and use the existing editor without touching a terminal.
+Ship a native desktop app for **macOS** and **Windows** that lets a user:
+
+- download Markdown-OS from the landing page
+- install and open it like a normal desktop app
+- choose a markdown file or folder from native OS dialogs
+- use the existing editor without touching a terminal
 
 When the user closes the app, the embedded backend process must shut down cleanly.
 
 The desktop app must:
 
--   start on a native picker screen every launch
--   show recent files and folders
--   open either a markdown file or a folder workspace
--   allow empty folders and offer **Create first note**
--   preserve the existing in-app multi-tab behavior
--   work offline, including vendored frontend assets and themes
--   expose downloadable installers from the landing page, with OS-aware default download buttons
--   expose a downloads page that lists the latest release first and older versions when available
--   support file associations for `.md` and `.markdown`
--   show a dismissible in-app update banner when a newer version is available
+- start on a picker-first screen every launch
+- show recent files and folders
+- open a markdown file or a folder workspace
+- allow empty folders and offer **Create first note**
+- preserve current in-app multi-tab behavior
+- work fully offline after installation
+- expose downloadable installers from the landing page
+- expose a downloads page with latest release first and older releases below
+- support file associations for `.md` and `.markdown`
+- show a dismissible in-app update banner when a newer release exists
+
+---
+
+## Current Repo Reality
+
+### What already exists
+
+The desktop plan should build on current behavior instead of replacing it.
+
+- `markdown_os/cli.py` already resolves a target path, detects `file` vs `folder`, finds an open port, opens a browser, and starts Uvicorn.
+- `markdown_os/server.py` already serves the editor shell, file content APIs, file-tree APIs, image uploads, and websocket change notifications.
+- `markdown_os/directory_handler.py` already supports empty folder workspaces, file creation, rename, and delete.
+- `tests/test_server.py` already covers empty folder mode returning an empty file tree.
+- `markdown_os/static/index.html` already contains a generic empty state, file tabs, file tree actions, PDF export, and focus mode.
+- `site/index.html` already serves as the marketing/landing page and currently promotes CLI installation.
+- `.github/workflows/publish.yml` already publishes tagged releases to PyPI.
+
+### What does not exist yet
+
+- No desktop runtime entrypoint.
+- No `empty` backend mode.
+- No way to swap the active workspace after the server has already started.
+- No Electron shell, preload bridge, recents store, or updater.
+- No vendored frontend assets; the app still depends on public CDNs.
+- No downloads page in `site/`.
+- No desktop release workflow for macOS/Windows installers.
+
+### Important correction
+
+The current repo already accepts empty folder workspaces in browser/CLI folder mode. The desktop plan does **not** need special folder validation to allow empties; it needs:
+
+- picker-first app startup
+- dynamic workspace switching after startup
+- a better empty-folder UX inside desktop mode
 
 ---
 
@@ -25,81 +64,59 @@ The desktop app must:
 
 ### Supported platforms
 
--   **macOS**
--   **Windows**
+- **macOS**
+- **Windows**
 
-Linux is out of scope for this feature.
+Linux is out of scope for v1.
 
 ### Launch behavior
 
-Every launch opens a picker-first desktop shell with:
+Every app launch opens a picker-first shell with:
 
--   recent files
--   recent folders
--   **Open file**
--   **Open folder**
+- recent files
+- recent folders
+- **Open file**
+- **Open folder**
 
-The app does **not** auto-open the previously used workspace on startup. Users always land on the picker first.
+The app does **not** auto-open the last workspace on startup. Recents are shown, but the user explicitly chooses what to open.
 
 ### Workspace behavior
 
--   Single app window for v1
--   Existing file tabs remain unchanged inside the editor
--   Empty folders are allowed
--   Empty folders show a **Create first note** action
+- single desktop window in v1
+- reuse existing browser editor UI inside the window
+- keep current tab behavior unchanged
+- empty folders are valid
+- empty folders show a focused **Create first note** action
 
 ### Distribution behavior
 
--   Installers are distributed through **GitHub Releases**
--   The landing page detects the visitor OS and shows a default download button for that OS
--   A downloads subpage shows the latest version first and older versions below
+- desktop installers are distributed through **GitHub Releases**
+- the landing page shows an OS-aware default desktop download button
+- the site keeps CLI install instructions, because the Python package still exists
+- a dedicated downloads page lists desktop assets by release
 
 ### Update behavior
 
-The app checks GitHub Releases for a newer version and, when found, shows a dismissible banner in the sidebar footer with:
+The desktop app checks GitHub Releases at startup.
 
--   latest version number
--   **Download update**
--   **Dismiss**
+If a newer release exists, show a dismissible sidebar-footer banner with:
 
-For v1, the update flow is download-only. In-app self-installing updates are out of scope.
+- latest version number
+- **Download update**
+- **Dismiss**
 
----
+For v1, updates are download-only. Silent/self-installing updates are out of scope.
 
-## Current Constraints in the Repository
+### Versioning behavior
 
-### Current CLI startup flow
+Use the existing tag format `vX.Y.Z` as the release source for:
 
-The existing CLI validates a concrete input path up front, decides between `file` and `folder` mode, opens a browser, and then blocks in `uvicorn.run(...)`.
+- PyPI package publishing
+- desktop installer publishing
+- desktop update checks
+- site download links
 
-That is the correct flow for terminal usage, but not for an Electron app that must start before the user selects a file or folder.
-
-Implications:
-
--   startup logic must be extracted from the current CLI path
--   browser auto-open must be skipped for Electron mode
--   backend startup must support an initial **empty desktop state**
-
-### Current folder validation behavior
-
-The current CLI rejects directories that do not already contain markdown files.
-
-For desktop mode this must be relaxed, because the product requirement is to allow empty folders and offer **Create first note**.
-
-### Current frontend asset behavior
-
-The current editor HTML loads multiple dependencies from public CDNs:
-
--   KaTeX
--   Marked
--   Turndown
--   Turndown GFM plugin
--   Mermaid
--   svg-pan-zoom
--   highlight.js
--   html2pdf
-
-This must be replaced with vendored local assets so the desktop app works fully offline.
+The desktop app version should match the package version for the same release tag.
 
 ---
 
@@ -107,108 +124,147 @@ This must be replaced with vendored local assets so the desktop app works fully 
 
 ### High-level approach
 
-Keep the existing Python FastAPI backend and static frontend as the editor runtime, and wrap them in a native Electron shell.
+Keep the existing Python FastAPI backend and static frontend as the editor runtime, then wrap them with Electron.
 
-#### Runtime model
+Runtime flow:
 
-1.  Electron starts
-2.  Electron launches a bundled Python backend process on `127.0.0.1`
-3.  Backend starts in **empty desktop mode**
-4.  Electron loads the editor shell in a `BrowserWindow`
-5.  Picker modal is shown immediately
-6.  User selects a file or folder through a native Electron dialog
-7.  Electron sends the selection to the backend via HTTP or IPC-backed HTTP calls
-8.  Backend initializes file or folder mode dynamically
-9.  Existing editor UI loads the selected workspace
-10. On app close, Electron shuts the backend down cleanly
+1. Electron starts.
+2. Electron spawns a bundled Python backend process on `127.0.0.1`.
+3. The backend starts in `empty` mode.
+4. Electron opens a `BrowserWindow` pointed at the local backend URL.
+5. The frontend shows the desktop picker overlay.
+6. Electron opens a native file/folder dialog on demand.
+7. The chosen absolute path is sent to the backend over HTTP.
+8. The backend switches from `empty` to `file` or `folder`.
+9. Existing editor UI handles editing, tabs, saves, and websocket updates.
+10. On app quit, Electron shuts the backend down gracefully.
 
 ### Why this approach
 
--   Reuses the existing server routes, file handlers, websocket sync, and editor UI
--   Avoids rewriting the editor in a different renderer stack
--   Keeps desktop-specific concerns isolated to shell, picker UX, packaging, recents, and update checks
--   Preserves the current browser-based architecture while removing terminal/browser friction for end users
+- reuses current FastAPI routes and most frontend modules
+- avoids rewriting the editor in React/Electron-native UI
+- keeps desktop-specific logic isolated to shell, packaging, picker UX, recents, and updates
+- preserves the current markdown rendering and save pipeline
+
+### Key architectural requirement: dynamic workspace sessions
+
+The current server lifecycle assumes the handler and watcher are known at app creation time.
+
+That is not enough for Electron, because the app must:
+
+- start with **no workspace loaded**
+- open a file later
+- close that workspace
+- open a different folder later
+
+The desktop plan therefore needs a dedicated session controller instead of storing raw `handler` and `mode` directly on `app.state`.
 
 ---
 
-## Desktop Backend Spec
+## Backend Spec
 
-### New Python entrypoint
+### 1. Extract shared runtime helpers
 
-Add a desktop-specific backend module:
-
-```text
-markdown_os/desktop_runtime.py
-```
-
-Responsibilities:
-
--   launch the FastAPI server without opening a browser
--   bind only to `127.0.0.1`
--   start in a desktop-aware empty state
--   print or otherwise expose a readiness signal and chosen port for Electron
--   handle graceful shutdown
-
-### Startup refactor
-
-Extract reusable logic from `markdown_os/cli.py` into helper functions.
-
-Recommended structure:
+Add:
 
 ```text
 markdown_os/app_runtime.py
 ```
 
-Suggested public functions:
+Move CLI/runtime helpers out of `markdown_os/cli.py` so both CLI and desktop can reuse them.
 
--   `resolve_target_path(path: Path, allow_empty_folder: bool = False) -> tuple[Path, str]`
--   `build_handler_for_target(path: Path, mode: str) -> FileHandler | DirectoryHandler`
--   `build_application(handler: FileHandler | DirectoryHandler | None, mode: str, desktop: bool = False) -> FastAPI`
--   `find_available_port(host: str = "127.0.0.1", start_port: int = 8000) -> int`
+Suggested functions:
 
-CLI behavior remains unchanged by default.
+- `resolve_target_path(path: Path, *, allow_file: bool = True, allow_folder: bool = True) -> tuple[Path, str]`
+- `build_handler_for_target(path: Path, mode: str) -> FileHandler | DirectoryHandler`
+- `find_available_port(host: str = "127.0.0.1", start_port: int = 8000) -> int`
+- `build_editor_app(*, mode: str, handler: FileHandler | DirectoryHandler | None, desktop: bool = False) -> FastAPI`
 
-Desktop mode uses the same path validation rules, with one extension:
+Rules:
 
--   `allow_empty_folder=True`
+- CLI behavior stays unchanged.
+- Desktop mode reuses the same path validation rules.
+- Empty folders remain valid in folder mode, matching current behavior.
 
-### New desktop state model
+### 2. Add a workspace session controller
 
-Extend the server to support:
+Add:
 
--   `mode = "empty"`
--   `handler = None`
--   `current_file = None`
+```text
+markdown_os/workspace_session.py
+```
 
-In this state:
+This object owns mutable runtime state for the current desktop session.
 
--   `/` still serves the app shell
--   desktop overlay is shown
--   editing routes that require a loaded workspace return a clear error or desktop-specific empty-state payload
+Suggested responsibilities:
 
-### New desktop routes
+- track `mode`: `"empty" | "file" | "folder"`
+- track current handler or `None`
+- track `current_file`
+- track `workspace_path`
+- track whether the folder is empty
+- own the watchdog `Observer`
+- stop/restart watchers when workspace changes
+- clean up handler lock files on close
+- expose current health/state payloads
 
-Add desktop-only routes in `markdown_os/server.py` when the app is created with `desktop=True`.
+Suggested API:
+
+```text
+WorkspaceSession
+  open_file(path: Path) -> dict[str, object]
+  open_folder(path: Path) -> dict[str, object]
+  close_workspace() -> None
+  snapshot() -> dict[str, object]
+  mark_internal_write() -> None
+  cleanup() -> None
+```
+
+This is the main backend refactor that makes Electron viable.
+
+### 3. Extend server modes
+
+Update `markdown_os/server.py` so `create_app(...)` accepts:
+
+- `mode = "empty" | "file" | "folder"`
+- `handler = None` when mode is `empty`
+- `desktop = True | False`
+
+Behavior in `empty` mode:
+
+- `/` still serves the editor shell
+- `/api/mode` returns `{"mode": "empty"}`
+- routes that require a loaded workspace return a clear `409` response with `detail = "No workspace loaded."`
+- websocket endpoint still exists, but no watcher is active
+
+### 4. Desktop-specific routes
+
+Add desktop routes only when `desktop=True`.
 
 #### `GET /api/health`
 
-Returns:
+Response:
 
 ```json
-{ "ok": true, "mode": "empty" | "file" | "folder", "desktop": true }
+{ "ok": true, "desktop": true, "mode": "empty" }
 ```
 
-Used by Electron for readiness and health checks.
+Purpose:
+
+- Electron readiness probe
+- backend health checks after startup
+- backend health checks before graceful shutdown
 
 #### `GET /api/desktop/state`
 
-Returns:
+Response:
 
 ```json
 {
   "mode": "empty" | "file" | "folder",
-  "currentPath": "/absolute/path/or/null",
-  "isEmptyFolder": false
+  "workspacePath": "/absolute/path/or/null",
+  "currentFile": "relative/path/or/null",
+  "isEmptyWorkspace": false
 }
 ```
 
@@ -222,15 +278,20 @@ Body:
 
 Behavior:
 
--   validate file path with existing markdown file rules
--   instantiate `FileHandler`
--   switch app state to `mode = "file"`
--   return success payload
+- validate the file with existing markdown file rules
+- close any current session
+- open a new `FileHandler`
+- start the correct watcher
+- switch mode to `file`
 
 Response:
 
 ```json
-{ "ok": true, "mode": "file", "path": "/absolute/path/to/file.md" }
+{
+  "ok": true,
+  "mode": "file",
+  "workspacePath": "/absolute/path/to/file.md"
+}
 ```
 
 #### `POST /api/desktop/open-folder`
@@ -243,11 +304,12 @@ Body:
 
 Behavior:
 
--   validate folder exists
--   allow empty folder
--   instantiate `DirectoryHandler`
--   switch app state to `mode = "folder"`
--   detect whether the folder contains markdown files
+- validate the directory exists
+- close any current session
+- open a new `DirectoryHandler`
+- start a recursive watcher
+- detect whether there are any markdown files
+- switch mode to `folder`
 
 Response:
 
@@ -255,34 +317,8 @@ Response:
 {
   "ok": true,
   "mode": "folder",
-  "path": "/absolute/path/to/folder",
-  "isEmptyFolder": true
-}
-```
-
-#### `POST /api/desktop/create-first-note`
-
-Body:
-
-```json
-{
-  "directory": "/absolute/path/to/folder",
-  "filename": "Untitled.md"
-}
-```
-
-Behavior:
-
--   verify current desktop session is folder mode
--   create a new markdown file in the target directory
--   open it in the existing editor workflow
-
-Response:
-
-```json
-{
-  "ok": true,
-  "path": "Untitled.md"
+  "workspacePath": "/absolute/path/to/folder",
+  "isEmptyWorkspace": true
 }
 ```
 
@@ -290,41 +326,173 @@ Response:
 
 Behavior:
 
--   close active file/folder state
--   stop watchers for current handler
--   clear `current_file`
--   return to `mode = "empty"`
+- stop the active watcher
+- clean up the active handler
+- clear mode/handler/current file
+- return to `empty`
 
-### Empty-folder behavior
+Response:
 
-Current folder validation rejects folders without markdown files. Desktop mode changes that behavior only for the desktop routes.
+```json
+{ "ok": true, "mode": "empty" }
+```
 
-Implementation rule:
+### 5. Reuse existing folder APIs
 
--   CLI `markdown-os open <folder>` stays strict
--   Electron folder selection accepts empty folders
+Do **not** add a desktop-only `create-first-note` backend route.
 
-### Shutdown behavior
+Once an empty folder is open in normal folder mode, reuse existing APIs:
 
-Electron must request a graceful backend exit.
+- `POST /api/files/create`
+- `GET /api/file-tree`
+- `GET /api/content?file=...`
 
-Preferred order:
+That keeps desktop-specific backend surface smaller and reuses tested logic already in the repo.
 
-1.  send shutdown signal to backend process
-2.  wait briefly for normal exit
-3.  only force-kill if graceful shutdown fails
+### 6. Graceful shutdown
 
-This preserves current FastAPI lifespan cleanup:
+Add:
 
--   stop file watcher observer
--   join observer thread
--   call `handler.cleanup()`
+```text
+markdown_os/desktop_runtime.py
+```
+
+Responsibilities:
+
+- start the FastAPI app in desktop mode
+- bind to `127.0.0.1`
+- print a machine-readable readiness line with the final URL/port
+- handle termination signals cleanly
+- call workspace-session cleanup on exit
+
+Shutdown order:
+
+1. Electron sends a polite termination request to the Python child.
+2. Backend exits Uvicorn normally.
+3. Workspace session stops observer and cleans handler resources.
+4. Electron only force-kills if the child fails to exit in time.
+
+---
+
+## Frontend/Desktop Integration
+
+### Desktop detection
+
+Expose a preload bridge as `window.electronDesktop`.
+
+Frontend uses the bridge to:
+
+- detect desktop mode
+- open native pickers
+- read/write recents
+- launch update URLs in the OS browser
+- query platform/app version metadata
+
+### New frontend modules
+
+Add:
+
+```text
+markdown_os/static/js/desktop-shell.js
+markdown_os/static/js/desktop-picker.js
+markdown_os/static/js/desktop-updates.js
+```
+
+Responsibilities:
+
+#### `desktop-shell.js`
+
+- detect Electron presence
+- fetch `/api/desktop/state`
+- bootstrap desktop-only UI state
+- expose helpers to return to picker mode
+
+#### `desktop-picker.js`
+
+- render the picker-first overlay
+- render recent files/folders
+- trigger `pickFile()` / `pickFolder()`
+- call desktop open routes after a path is selected
+- handle empty-folder UX
+
+#### `desktop-updates.js`
+
+- render the update banner
+- dismiss the banner for a specific version
+- open the release/download URL
+
+### Empty state behavior
+
+There are two distinct empty states:
+
+#### App start, no workspace loaded
+
+Show a desktop picker overlay with:
+
+- **Open file**
+- **Open folder**
+- recent files
+- recent folders
+
+#### Empty folder workspace
+
+After opening a folder with no markdown files:
+
+- keep folder mode active
+- show the existing main editor shell
+- replace the current generic empty-state copy with desktop-specific copy:
+
+```text
+This folder has no markdown files yet.
+[Create first note]
+```
+
+Implementation detail:
+
+- `Create first note` should call the existing `POST /api/files/create`
+- default filename: `Untitled.md`
+- on success, open the new file using existing folder-mode navigation/tab logic
+
+### Existing modules to extend
+
+#### `markdown_os/static/index.html`
+
+- add desktop scripts
+- add container markup for picker/update UI
+- swap CDN assets to local vendor files
+
+#### `markdown_os/static/js/editor.js`
+
+- handle `mode = "empty"`
+- avoid assuming a workspace exists on initial load
+- coordinate picker open/close transitions
+
+#### `markdown_os/static/js/file-tree.js`
+
+- continue to own `POST /api/files/create`
+- expose or reuse the existing create-file flow for empty-folder CTA
+
+#### `markdown_os/static/js/tabs.js`
+
+- gracefully handle transition back to `empty`
+- clear open tabs when `Back to picker` closes the current workspace
+
+### Desktop menu items
+
+Desktop app menu should include:
+
+- Open file
+- Open folder
+- Back to picker
+- Recent files
+- Recent folders
+- Check for updates
 
 ---
 
 ## Electron App Spec
 
-### New desktop project layout
+### Project layout
 
 Add:
 
@@ -336,193 +504,157 @@ desktop/
   src/
     main.ts
     preload.ts
-    updater.ts
-    recents.ts
     backend.ts
     dialogs.ts
+    recents.ts
+    updater.ts
 ```
 
 ### Main process responsibilities
 
 `desktop/src/main.ts`
 
--   enforce single-instance lock
--   create one `BrowserWindow`
--   spawn bundled Python runtime/backend
--   wait for backend readiness using `/api/health`
--   load backend URL in the window
--   register native menu items
--   register file association handlers
--   handle deep app launch events from file opens
--   shut backend down on quit
+- enforce single-instance lock
+- create a single `BrowserWindow`
+- spawn the bundled Python backend
+- wait for `/api/health`
+- load the backend URL
+- register app menu items
+- handle OS-level file-open events
+- forward second-instance file opens to the running app
+- shut backend down on quit
 
 ### Preload bridge
 
 `desktop/src/preload.ts`
 
-Expose only safe desktop APIs through `contextBridge`.
-
-Suggested bridge:
+Expose only safe functions:
 
 ```text
 window.electronDesktop = {
   pickFile,
   pickFolder,
-  openRecent,
   listRecents,
+  openRecent,
   clearRecent,
-  checkForUpdates,
-  dismissUpdateBanner,
   getPlatform,
   getAppVersion,
+  getReleaseFeedUrl,
+  dismissUpdateVersion,
+  getDismissedUpdateVersion,
+  openExternalUrl,
 }
 ```
 
-### Browser window configuration
+### BrowserWindow configuration
 
 Use:
 
--   `contextIsolation: true`
--   `nodeIntegration: false`
--   `sandbox: true` if compatible
--   preload script only
+- `contextIsolation: true`
+- `nodeIntegration: false`
+- `sandbox: true` if Electron dependencies remain compatible
+- preload script only
 
-### Native dialogs
+### Native dialog behavior
 
-Electron owns the picker UX, not the Python backend.
+Electron owns OS dialogs.
 
-#### Open file dialog
+#### File picker
 
--   markdown-only filters:
-    -   `.md`
-    -   `.markdown`
+- allow `.md`
+- allow `.markdown`
 
-#### Open folder dialog
+#### Folder picker
 
--   allow directory selection only
+- folder selection only
 
-### Single-window rule
+### Single-window behavior
 
 For v1:
 
--   one app window only
--   reuse existing multi-tab support inside the web app
+- one desktop window only
+- reuse existing in-app tabs instead of multiple app windows
 
-If the user tries to open a file from the OS while the app is already open:
+If the user opens a file from Finder/Explorer while the app is already open:
 
--   focus the existing window
--   open the selected file in the running session
+- focus the existing window
+- call the desktop open-file route
+- add/update the recent entry
 
 ---
 
-## Picker, Recents, and Desktop UX
-
-### Picker-first overlay
-
-When the desktop app loads in `mode = "empty"`, the frontend shows a full-screen or centered modal overlay with:
-
--   recent files
--   recent folders
--   **Open file**
--   **Open folder**
-
-Suggested UX copy:
-
-```text
-Open a markdown file or workspace folder
-Recent
-[file list]
-[folder list]
-[Open file] [Open folder]
-```
+## Recents, File Associations, and Updates
 
 ### Recents storage
 
-Store recents in Electron, not in Python.
+Store recents in Electron, not Python.
 
-Recommended storage:
+Recommended dependency:
 
--   `electron-store`
+- `electron-store`
 
-Schema:
+Suggested schema:
 
 ```json
 {
   "recents": [
     {
-      "id": "stable-id",
       "path": "/absolute/path",
       "type": "file" | "folder",
       "name": "Display name",
       "lastOpenedAt": "2026-03-25T12:00:00Z"
     }
   ],
-  "dismissedUpdateVersion": "0.7.5"
+  "dismissedUpdateVersion": "0.8.0"
 }
 ```
 
 Rules:
 
--   deduplicate by absolute path
--   newest first
--   validate existence before opening
--   remove invalid entries when encountered
--   cap list length, e.g. 12 entries
+- deduplicate by absolute path
+- newest first
+- cap length, for example 12 items
+- drop missing paths when encountered
 
-### Empty-folder UX
-
-When `open-folder` returns `isEmptyFolder = true`, show:
-
-```text
-This folder has no markdown files yet.
-[Create first note]
-```
-
-Flow:
-
-1.  user clicks **Create first note**
-2.  prompt for filename, default `Untitled.md`
-3.  create file via backend route
-4.  open file in the editor
-
-### Reopen picker
-
-Add a desktop action in the app menu and optionally the UI:
-
--   **Open another file**
--   **Open another folder**
--   **Back to picker**
-
-Returning to picker should close the active workspace session via `POST /api/desktop/close-workspace`.
-
----
-
-## File Associations
-
-### File types
+### File associations
 
 Register:
 
--   `.md`
--   `.markdown`
+- `.md`
+- `.markdown`
 
-### Expected behavior
-
-If the user double-clicks an associated file:
-
--   app opens
--   if no existing instance: launch app and open file directly
--   if app already running: send the file path to the existing instance and focus the window
-
-### Platform packaging implications
+Platform notes:
 
 #### macOS
 
-Declare document types in Electron builder config.
+- declare document types in Electron Builder config
 
 #### Windows
 
-Declare file associations in NSIS / Electron Builder config.
+- declare file associations in NSIS/Electron Builder config
+
+### Update banner
+
+Check GitHub Releases on startup.
+
+Banner copy:
+
+```text
+Update available: 0.8.1
+[Download] [Dismiss]
+```
+
+Behavior:
+
+- compare current app version vs latest release tag with semver
+- persist dismissals per version
+- `Download` opens the release page or platform asset URL in the OS browser
+
+Out of scope for v1:
+
+- silent background downloads
+- in-place binary replacement
+- auto-install on restart
 
 ---
 
@@ -530,7 +662,23 @@ Declare file associations in NSIS / Electron Builder config.
 
 ### Goal
 
-Remove CDN dependence from the editor so the Electron app works fully offline.
+Remove CDN dependence from the editor so installed desktop builds work offline.
+
+### Current CDN dependencies to vendor
+
+The current app loads these remotely and all of them must become local assets:
+
+- KaTeX CSS
+- KaTeX JS
+- DOMPurify
+- Marked
+- Turndown
+- Turndown GFM plugin
+- Mermaid
+- svg-pan-zoom
+- highlight.js JS
+- highlight.js theme CSS
+- html2pdf
 
 ### Vendor directory
 
@@ -539,6 +687,7 @@ Add:
 ```text
 markdown_os/static/vendor/
   katex/
+  dompurify/
   marked/
   turndown/
   turndown-plugin-gfm/
@@ -548,7 +697,7 @@ markdown_os/static/vendor/
   html2pdf/
 ```
 
-### Script
+### Vendor sync script
 
 Add:
 
@@ -558,69 +707,101 @@ scripts/download_vendor.py
 
 Responsibilities:
 
--   download pinned versions of all current CDN assets
--   place them into `markdown_os/static/vendor/`
--   download all highlight.js theme files needed by current theme logic
--   be re-runnable
+- download pinned versions of all frontend vendor assets
+- write them under `markdown_os/static/vendor/`
+- include every highlight.js theme required by `theme.js`
+- be re-runnable and deterministic
 
 ### Frontend changes
 
-Update `markdown_os/static/index.html`:
+Update `markdown_os/static/index.html` to:
 
--   replace CDN `<script>` tags with local `/static/vendor/...` paths
--   replace CDN `<link>` stylesheet tags with local vendor files
--   keep exact version pinning in filenames or a manifest
+- replace CDN `<script>` tags with `/static/vendor/...`
+- replace CDN `<link>` tags with local files
+- keep current versions pinned
 
-### Theme coverage
+### Offline acceptance checklist
 
-Ensure vendored files cover all existing app themes:
+Desktop smoke tests must verify, without internet access:
 
--   light
--   dark
--   dracula
--   nord-light
--   nord-dark
--   lofi
-
-### Offline testing requirements
-
-Smoke tests must verify all of the following without internet access:
-
--   editor loads
--   theme switching works
--   syntax highlighting works
--   Mermaid renders
--   KaTeX renders
--   PDF export works if still enabled
+- editor shell loads
+- theme switching still works
+- syntax highlighting still works
+- Mermaid rendering still works
+- KaTeX rendering still works
+- PDF export still works
 
 ---
 
-## Landing Page and Downloads Spec
+## Packaging Spec
 
-### Landing page behavior
+### Desktop dependencies
 
-Update `site/index.html` to include:
+Add a Node/Electron toolchain under `desktop/`:
 
--   OS detection for macOS / Windows
--   a primary CTA button:
-    -   **Download for macOS**
-    -   **Download for Windows**
--   fallback button:
-    -   **See all downloads**
+- `electron`
+- `electron-builder`
+- `typescript`
+- `electron-store`
 
-### OS detection rules
+Optional:
 
-Client-side detection is sufficient:
+- `electron-log`
 
--   macOS if `navigator.userAgent` / platform indicates Mac
--   Windows if it indicates Windows
--   otherwise fallback to downloads page
+### Python bundling strategy
 
-### Latest-version default
+Bundle a self-contained Python runtime plus the Markdown-OS package and its dependencies inside the desktop app.
 
-The latest release should always be the default download target for the detected OS.
+Recommended approach:
 
-### Downloads subpage
+- build a per-platform Python payload in CI
+- include that payload inside the Electron package
+- spawn the bundled runtime from Electron
+
+The desktop installer must not require the user to install Python separately.
+
+### Installer targets
+
+#### macOS
+
+- `.dmg`
+
+#### Windows
+
+- NSIS `.exe`
+
+### Signing and notarization
+
+For v1:
+
+- ship unsigned installers
+
+Known consequence:
+
+- macOS and Windows will show trust/security prompts
+
+Signing/notarization is follow-up work, not part of this feature.
+
+---
+
+## Landing Page and Downloads
+
+### Landing page changes
+
+Update `site/index.html` to add desktop download CTAs **without removing** the current CLI install widget.
+
+Behavior:
+
+- detect macOS vs Windows on the client
+- show a primary CTA:
+  - **Download for macOS**
+  - **Download for Windows**
+- show a secondary CTA:
+  - **See all downloads**
+
+This page should still support users who want the Python/CLI install path.
+
+### Downloads page
 
 Add:
 
@@ -630,30 +811,23 @@ site/downloads.html
 
 Requirements:
 
--   latest release shown first
--   older releases listed below
--   OS-specific asset grouping
--   clear labels for:
-    -   macOS
-    -   Windows
--   links to installer assets
+- latest release first
+- older releases below
+- assets grouped by OS
+- clear labels for macOS and Windows
+- links to installer artifacts
 
 ### Release metadata source
 
-For v1, populate download links from the GitHub Releases API.
+Use the GitHub Releases API for desktop assets.
 
 Behavior:
 
--   landing page fetches latest release data
--   downloads page fetches release list
--   latest matching asset is used for primary CTA
--   older versions are listed when easily available from the API
+- landing page fetches latest release data
+- downloads page fetches release list
+- asset matching uses predictable filenames
 
-### Asset naming convention
-
-Use predictable filenames so the site can match assets reliably.
-
-Recommended:
+Recommended filenames:
 
 ```text
 markdown-os-desktop-0.8.0-macos.dmg
@@ -667,98 +841,14 @@ markdown-os-desktop-0.8.0-macos-universal.dmg
 markdown-os-desktop-0.8.0-windows-x64-setup.exe
 ```
 
-### If older versions become hard to surface
+### Site implementation notes
 
-Fallback rule:
+Keep the site static.
 
--   latest version support is mandatory
--   older versions list is best-effort using GitHub Releases API
+That means:
 
----
-
-## Update Banner Spec
-
-### Update source
-
-Check GitHub Releases for the latest release at app startup.
-
-### Banner placement
-
-Show a small footer banner in the sidebar area.
-
-Suggested content:
-
-```text
-Update available: 0.8.1
-[Download] [Dismiss]
-```
-
-### Behavior
-
--   banner appears on app launch if a newer version exists
--   dismiss is persisted per version
--   download opens the release page or direct installer URL in the OS browser
-
-### Version comparison
-
-Use semver comparison on the desktop app version vs latest GitHub release tag.
-
-### Out of scope for v1
-
--   background installer download
--   silent update installation
--   in-place binary replacement
-
----
-
-## Packaging Spec
-
-### Desktop dependencies
-
-Add Node/Electron tooling:
-
--   `electron`
--   `electron-builder`
--   `typescript`
--   `electron-store`
-
-Optional helper:
-
--   `electron-log`
-
-### Python bundling strategy
-
-Bundle a self-contained Python runtime plus the Markdown-OS package and dependencies inside the Electron app.
-
-Recommended approach:
-
--   create a per-platform packaged Python environment during CI
--   include it in the desktop build artifact
--   spawn that runtime from Electron
-
-This avoids requiring users to install Python.
-
-### Installers
-
-#### macOS
-
--   `.dmg`
-
-#### Windows
-
--   NSIS `.exe`
-
-### Signing / notarization
-
-For the first iteration:
-
--   ship **unsigned** installers to keep build complexity low
-
-Known consequence:
-
--   macOS and Windows may show trust/security prompts during install or first open
-
-This does not block functionality, but it is a follow-up item for smoother end-user trust UX.
+- inline JS or a small shared site script is fine
+- no frontend build step should be introduced for the marketing site
 
 ---
 
@@ -774,106 +864,48 @@ Add:
 
 ### Trigger
 
-Recommended:
-
--   run on version tags `v*`
--   after the Python/PyPI release path or in parallel with it
+Run on version tags `v*`, alongside the existing PyPI publish workflow.
 
 ### Build matrix
 
--   `macos-latest`
--   `windows-latest`
+- `macos-latest`
+- `windows-latest`
 
 ### Workflow steps
 
-1.  checkout
-2.  setup Node
-3.  setup Python / `uv`
-4.  install Python app dependencies
-5.  vendor frontend assets
-6.  build bundled Python runtime payload
-7.  install Electron dependencies
-8.  build desktop app installers
-9.  run smoke tests
-10. upload artifacts to GitHub Release
+1. checkout repo
+2. setup Node
+3. setup Python / `uv`
+4. install Python app deps
+5. download/vendor frontend assets
+6. build bundled Python payload
+7. install desktop deps
+8. package installers
+9. run targeted smoke tests
+10. upload assets to the GitHub Release
 
 ### Smoke-test checklist
 
 Per platform:
 
--   app starts
--   picker is shown first
--   open markdown file works
--   open folder works
--   open empty folder works
--   create first note works
--   close app shuts backend down
--   offline asset rendering works
--   recents update after open
+- desktop app starts
+- picker screen appears first
+- open file works
+- open folder works
+- open empty folder works
+- create first note works
+- recents update after open
+- update check logic runs
+- closing app shuts backend down
+- offline asset rendering works
 
-### Release assets
+### Release outputs
 
 Upload:
 
--   macOS installer
--   Windows installer
--   optional checksums file
-
----
-
-## Frontend/Desktop Integration Spec
-
-### Desktop detection
-
-Expose a desktop bridge on `window.electronDesktop`.
-
-Frontend uses presence of the bridge to:
-
--   show picker overlay
--   show recents
--   show update banner
--   disable browser-only assumptions
-
-### UI modules to add
-
-Suggested frontend files:
-
-```text
-markdown_os/static/js/desktop-shell.js
-markdown_os/static/js/desktop-picker.js
-markdown_os/static/js/desktop-updates.js
-```
-
-Responsibilities:
-
-#### `desktop-shell.js`
-
--   detect Electron mode
--   bootstrap desktop UI behaviors
-
-#### `desktop-picker.js`
-
--   render picker overlay
--   render recents
--   call Electron bridge actions
--   handle empty-folder create-first-note flow
-
-#### `desktop-updates.js`
-
--   render update banner
--   dismiss banner
--   open update link
-
-### Menu items
-
-Desktop app menu should include:
-
--   Open file
--   Open folder
--   Back to picker
--   Recent files
--   Recent folders
--   Check for updates
+- macOS installer
+- Windows installer
+- optional checksum file
 
 ---
 
@@ -881,131 +913,147 @@ Desktop app menu should include:
 
 | File | Change |
 | --- | --- |
-| `markdown_os/cli.py` | Extract reusable startup and validation logic; keep CLI behavior unchanged |
-| `markdown_os/server.py` | Add desktop mode, empty state support, health route, desktop open/close/create routes |
-| `markdown_os/desktop_runtime.py` | New file — desktop backend entrypoint |
-| `markdown_os/static/index.html` | Add desktop-specific scripts; replace CDN assets with local vendor paths |
-| `markdown_os/static/js/desktop-shell.js` | New file — Electron mode bootstrap |
-| `markdown_os/static/js/desktop-picker.js` | New file — picker, recents, create-first-note flow |
-| `markdown_os/static/js/desktop-updates.js` | New file — update banner |
-| `markdown_os/static/js/theme.js` | Adjust theme asset resolution for vendored highlight themes if needed |
+| `markdown_os/cli.py` | Extract reusable runtime helpers; preserve existing CLI UX |
+| `markdown_os/app_runtime.py` | New file - shared runtime/path/port helpers |
+| `markdown_os/workspace_session.py` | New file - dynamic workspace and watcher lifecycle controller |
+| `markdown_os/server.py` | Add `empty` mode, desktop routes, and workspace-session integration |
+| `markdown_os/desktop_runtime.py` | New file - desktop backend entrypoint |
+| `markdown_os/static/index.html` | Add desktop scripts/containers and replace CDN assets with local vendor assets |
+| `markdown_os/static/js/editor.js` | Support `empty` mode and desktop transitions |
+| `markdown_os/static/js/file-tree.js` | Reuse/create desktop empty-folder file creation flow |
+| `markdown_os/static/js/tabs.js` | Clear tabs when returning to picker and handle desktop workspace resets |
+| `markdown_os/static/js/theme.js` | Point highlight theme loading at vendored files if needed |
+| `markdown_os/static/js/desktop-shell.js` | New file - Electron mode bootstrap |
+| `markdown_os/static/js/desktop-picker.js` | New file - picker UI, recents, empty-folder CTA |
+| `markdown_os/static/js/desktop-updates.js` | New file - update banner |
 | `markdown_os/static/vendor/**` | New vendored frontend dependencies |
-| `scripts/download_vendor.py` | New or restored script to fetch pinned frontend assets |
-| `desktop/package.json` | New file — Electron package metadata and scripts |
-| `desktop/tsconfig.json` | New file — TypeScript config for desktop shell |
-| `desktop/electron-builder.yml` | New file — installer targets, associations, build metadata |
-| `desktop/src/main.ts` | New file — Electron main process |
-| `desktop/src/preload.ts` | New file — preload bridge |
-| `desktop/src/backend.ts` | New file — backend process lifecycle helpers |
-| `desktop/src/dialogs.ts` | New file — native file/folder dialog helpers |
-| `desktop/src/recents.ts` | New file — recents persistence |
-| `desktop/src/updater.ts` | New file — GitHub release/update checks |
-| `site/index.html` | Add OS-aware download CTA logic |
-| `site/downloads.html` | New file — list latest and older desktop downloads |
-| `README.md` | Add desktop install docs and release/download notes |
-| `.github/workflows/desktop-release.yml` | New file — macOS/Windows desktop build and release workflow |
-| `tests/test_server.py` | Add desktop route tests |
-| `tests/test_cli.py` | Add or adjust startup helper tests if logic is extracted |
-| `tests/test_desktop_runtime.py` | New file — backend desktop-mode tests |
+| `scripts/download_vendor.py` | New file - deterministic vendor sync script |
+| `desktop/package.json` | New file - desktop package metadata and scripts |
+| `desktop/tsconfig.json` | New file - desktop TypeScript config |
+| `desktop/electron-builder.yml` | New file - installer targets, file associations, packaging config |
+| `desktop/src/main.ts` | New file - Electron main process |
+| `desktop/src/preload.ts` | New file - secure preload bridge |
+| `desktop/src/backend.ts` | New file - backend child process lifecycle helpers |
+| `desktop/src/dialogs.ts` | New file - native open-file/open-folder helpers |
+| `desktop/src/recents.ts` | New file - recents persistence |
+| `desktop/src/updater.ts` | New file - GitHub release/update checks |
+| `site/index.html` | Add OS-aware desktop download CTA while retaining CLI install UI |
+| `site/downloads.html` | New file - desktop downloads page |
+| `README.md` | Add desktop install/download docs |
+| `.github/workflows/desktop-release.yml` | New file - desktop packaging and release workflow |
+| `tests/test_cli.py` | Add shared runtime extraction tests where relevant |
+| `tests/test_server.py` | Add desktop route and empty-mode coverage |
+| `tests/test_workspace_session.py` | New file - dynamic session/watcher lifecycle tests |
+| `tests/test_desktop_runtime.py` | New file - desktop backend startup/shutdown tests |
 
 ---
 
 ## Testing Plan
 
-### Automated tests
+### Python automated tests
 
-#### Python tests
+- empty-mode app state
+- desktop open-file route
+- desktop open-folder route
+- desktop close-workspace route
+- empty-mode route guarding
+- workspace-session watcher swap behavior
+- shared runtime helper parity with current CLI validation
 
--   desktop empty-mode state
--   open file route
--   open folder route
--   empty-folder acceptance
--   create-first-note route
--   close-workspace route
--   path validation parity between CLI and desktop mode
+### Electron/desktop automated tests
 
-#### Desktop tests
+Use targeted desktop tests for:
 
-Use targeted Electron tests for:
-
--   app startup
--   picker visibility
--   open file
--   open folder
--   recents persistence
--   update banner visibility logic
+- app startup
+- picker visibility
+- open file
+- open folder
+- empty-folder create-first-note
+- recents persistence
+- update banner visibility logic
 
 ### Manual smoke tests
 
 #### macOS
 
--   install app
--   first launch shows picker
--   open file
--   open folder
--   open empty folder
--   create first note
--   verify themes
--   verify Mermaid / KaTeX / syntax highlighting offline
--   close app and confirm backend stops
+- install app
+- first launch shows picker
+- open markdown file
+- open folder
+- open empty folder
+- create first note
+- verify themes
+- verify Mermaid / KaTeX / syntax highlighting offline
+- close app and verify backend exits
 
 #### Windows
 
--   same set as macOS
+- same checklist as macOS
 
-### Landing page tests
+### Site tests
 
--   macOS user agent shows **Download for macOS**
--   Windows user agent shows **Download for Windows**
--   unknown user agent falls back to downloads page
--   downloads page lists latest release first
--   older release links render when available
+- macOS user agent shows **Download for macOS**
+- Windows user agent shows **Download for Windows**
+- unknown user agent falls back to downloads page
+- downloads page lists latest release first
+- older release links render when available
 
 ---
 
 ## Implementation Phases
 
-### Phase 1 — Backend desktop mode
+### Phase 1 - Shared runtime and session controller
 
--   extract startup helpers from CLI
--   add desktop runtime entrypoint
--   add empty state and desktop APIs
--   support empty folders and first-note creation
+- extract reusable CLI/runtime helpers
+- add workspace-session controller
+- support `empty` mode and dynamic watcher lifecycle
 
-### Phase 2 — Offline asset vendoring
+### Phase 2 - Desktop backend and frontend shell
 
--   vendor CDN dependencies
--   patch editor HTML and theme handling
--   verify full offline behavior
+- add desktop runtime entrypoint
+- add desktop routes
+- add picker overlay
+- add return-to-picker behavior
+- add empty-folder `Create first note` UX using existing file-create API
 
-### Phase 3 — Electron shell MVP
+### Phase 3 - Offline asset vendoring
 
--   add Electron app project
--   implement backend spawning
--   implement picker and recents
--   implement single-window shell
--   implement graceful shutdown
+- vendor every current CDN asset
+- patch `index.html` and theme loading
+- verify offline rendering and PDF export
 
-### Phase 4 — Distribution surface
+### Phase 4 - Electron shell and installers
 
--   add GitHub desktop release workflow
--   add landing page OS-aware download CTA
--   add downloads page
+- add `desktop/` project
+- implement backend spawning
+- implement native dialogs, recents, and file associations
+- package macOS and Windows installers
 
-### Phase 5 — Desktop polish
+### Phase 5 - Distribution surface
 
--   add file associations
--   add update banner
--   refine menu items and recents interactions
+- add desktop release workflow
+- add landing page desktop CTA
+- add downloads page
+- add in-app update banner
+
+---
+
+## Risks
+
+- **Watcher lifecycle complexity:** current observer setup is static; dynamic swapping is the largest backend change.
+- **Bundled Python size:** packaging a Python runtime inside Electron will increase artifact size.
+- **Offline asset drift:** every CDN dependency must stay pinned and reproducible.
+- **Unsigned installers:** first-launch trust prompts will exist until signing/notarization is added.
+- **Dual distribution UX:** the site must present desktop downloads without breaking the current CLI/PyPI flow.
 
 ---
 
 ## Out of Scope
 
--   Linux desktop packaging
--   Multiple desktop windows in v1
--   Self-installing auto-updates
--   Code signing and notarization in v1
--   Non-GitHub distribution hosting
--   Mobile app support
--   Rewriting the editor UI in Electron-native components
+- Linux desktop packaging
+- multiple desktop windows
+- self-installing auto-updates
+- code signing and notarization
+- non-GitHub distribution hosting
+- mobile apps
+- rewriting the editor UI in Electron-native components

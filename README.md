@@ -4,6 +4,8 @@
 
 Developer-focused markdown editor that runs as a local web server. Edit in the browser with live preview, Mermaid diagrams, syntax highlighting, and auto-save.
 
+Desktop installers for macOS and Windows are published from GitHub Releases. The desktop app bundles the local server and opens with a picker-first workflow, so users do not need Python or a terminal after installation.
+
 ## Install
 
 ```bash
@@ -19,6 +21,15 @@ uv tool install markdown-os
 ```
 
 To upgrade after installing with uv: `uv tool upgrade markdown-os`
+
+## Desktop app
+
+Download the latest desktop installers from GitHub Releases:
+
+- macOS: `.dmg`
+- Windows: `.exe`
+
+The desktop app keeps the same editor UI, but launches in a native desktop shell with recent files/folders and native open dialogs.
 
 ## Usage
 

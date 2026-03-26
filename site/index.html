@@ -121,7 +121,7 @@
                 padding: 16px 0;
                 display: flex;
                 align-items: center;
-                justify-content: flex-start;
+                justify-content: space-between;
             }
 
             .logo {
@@ -1610,6 +1610,9 @@
                     </svg>
                     markdown-os
                 </a>
+                <nav class="header-nav" aria-label="Primary">
+                    <a href="downloads.html">Downloads</a>
+                </nav>
             </div>
         </header>
 
@@ -1624,15 +1627,26 @@
                         your machine.
                     </p>
 
-                    <div class="hero-cta">
+                    <div class="hero-cta" style="display: flex; gap: 12px; flex-wrap: wrap">
                         <a
                             href="https://github.com/elena-cabrera/markdown-os"
-                            class="btn btn-primary"
+                            class="btn btn-secondary"
                             target="_blank"
                             rel="noopener"
                             >View on GitHub</a
                         >
                     </div>
+                    <p
+                        id="desktop-download-meta"
+                        style="
+                            margin-top: -4px;
+                            margin-bottom: 20px;
+                            color: var(--color-text-secondary);
+                            font-size: 13px;
+                        "
+                    >
+                        Native desktop builds for macOS and Windows. CLI install remains available below.
+                    </p>
 
                     <div class="install-widget">
                         <div class="install-tabs">
@@ -2266,14 +2280,18 @@
             <div class="cta-inner">
                 <div class="reveal">
                     <h2>Start using markdown-os</h2>
-                    <p>The new way to work with markdown files</p>
-                    <a
-                        href="https://github.com/elena-cabrera/markdown-os"
-                        class="btn btn-white"
-                        target="_blank"
-                        rel="noopener"
-                        >View on GitHub</a
-                    >
+                    <p>The desktop app and CLI ship from the same release tags.</p>
+                    <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap">
+                        <a href="downloads.html" class="btn btn-white">Download desktop app</a>
+                        <a
+                            href="https://github.com/elena-cabrera/markdown-os"
+                            class="btn btn-secondary"
+                            style="background: transparent; color: white; border-color: rgba(255,255,255,0.35)"
+                            target="_blank"
+                            rel="noopener"
+                            >View on GitHub</a
+                        >
+                    </div>
                 </div>
             </div>
         </section>
@@ -2429,17 +2447,109 @@
                 }, 2000);
             })();
 
-            // ---- Footer version from PyPI ----
+            // ---- Desktop download CTA + footer version from GitHub Releases/PyPI ----
             (() => {
-                const el = document.getElementById("footer-version");
-                if (!el) return;
-                fetch("https://pypi.org/pypi/markdown-os/json")
-                    .then((r) => r.json())
-                    .then((data) => {
-                        el.textContent = "v" + data.info.version;
+                const footerVersion = document.getElementById("footer-version");
+                const downloadBtn =
+                    document.getElementById("desktop-download-btn");
+                const downloadMeta = document.getElementById(
+                    "desktop-download-meta",
+                );
+
+                const downloadsHref = "downloads.html";
+                const releaseApi =
+                    "https://api.github.com/repos/elena-cabrera/markdown-os/releases/latest";
+
+                function detectPlatform() {
+                    const userAgent = navigator.userAgent || "";
+                    const platform = navigator.platform || "";
+                    const normalized = `${platform} ${userAgent}`.toLowerCase();
+                    if (normalized.includes("mac")) {
+                        return "macos";
+                    }
+                    if (normalized.includes("win")) {
+                        return "windows";
+                    }
+                    return "unknown";
+                }
+
+                function assetForPlatform(assets, platform) {
+                    if (!Array.isArray(assets)) return null;
+                    if (platform === "macos") {
+                        return (
+                            assets.find((asset) =>
+                                /markdown-os-desktop-.*macos.*\.dmg$/i.test(
+                                    asset.name || "",
+                                ),
+                            ) || null
+                        );
+                    }
+                    if (platform === "windows") {
+                        return (
+                            assets.find((asset) =>
+                                /markdown-os-desktop-.*windows.*\.exe$/i.test(
+                                    asset.name || "",
+                                ),
+                            ) || null
+                        );
+                    }
+                    return null;
+                }
+
+                function setDefaultDownload(platform, latestRelease) {
+                    const labels = {
+                        macos: "Download for macOS",
+                        windows: "Download for Windows",
+                        unknown: "See desktop downloads",
+                    };
+
+                    const asset = assetForPlatform(
+                        latestRelease?.assets,
+                        platform,
+                    );
+
+                    // Desktop download CTA is optional (we moved it into the navbar),
+                    // but the meta text still updates based on the latest release.
+                    if (downloadBtn) {
+                        downloadBtn.textContent =
+                            labels[platform] || labels.unknown;
+                        downloadBtn.href = downloadsHref;
+                        if (asset?.browser_download_url) {
+                            downloadBtn.href = asset.browser_download_url;
+                        }
+                    }
+
+                    if (downloadMeta) {
+                        const version = latestRelease?.tag_name || "latest";
+                        downloadMeta.textContent =
+                            asset?.name
+                                ? `Desktop ${version} is ready for ${platform === "macos" ? "macOS" : "Windows"}. CLI install remains available below.`
+                                : "Native desktop builds for macOS and Windows. CLI install remains available below.";
+                    }
+                }
+
+                const platform = detectPlatform();
+                setDefaultDownload(platform, null);
+
+                fetch(releaseApi)
+                    .then((response) => response.json())
+                    .then((release) => {
+                        if (footerVersion && release?.tag_name) {
+                            footerVersion.textContent = release.tag_name;
+                        }
+                        setDefaultDownload(platform, release);
                     })
                     .catch(() => {
-                        el.textContent = "v—";
+                        if (!footerVersion) return;
+                        fetch("https://pypi.org/pypi/markdown-os/json")
+                            .then((response) => response.json())
+                            .then((data) => {
+                                footerVersion.textContent =
+                                    "v" + data.info.version;
+                            })
+                            .catch(() => {
+                                footerVersion.textContent = "v—";
+                            });
                     });
             })();
 

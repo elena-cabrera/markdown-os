@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>markdown-os downloads</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <style>
+      :root {
+        --bg: #ffffff;
+        --panel: #ffffff;
+        --text: #171717;
+        --muted: #666666;
+        --border: #e7e7e7;
+        --accent: #1a1a1a;
+        --max-width: 960px;
+        --radius: 12px;
+        font-family:
+          Inter,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      .page {
+        max-width: var(--max-width);
+        margin: 0 auto;
+        padding: 96px 24px 80px;
+      }
+
+      .site-header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 100;
+        padding: 0 24px;
+        background: rgba(255, 255, 255, 0.92);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+      }
+
+      .header-content {
+        max-width: var(--max-width);
+        margin: 0 auto;
+        padding: 16px 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      .brand {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--text);
+      }
+
+      .header-nav {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+
+      .header-nav a {
+        font-size: 14px;
+        color: var(--muted);
+        transition: color 0.15s ease;
+      }
+
+      .header-nav a:hover {
+        color: var(--text);
+      }
+
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 32px;
+      }
+
+      .back-link {
+        color: var(--muted);
+        text-decoration: none;
+        font-size: 14px;
+      }
+
+      h1 {
+        margin: 0 0 10px;
+        font-size: 36px;
+        letter-spacing: -0.04em;
+      }
+
+      p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .release-list {
+        margin-top: 32px;
+        display: grid;
+        gap: 18px;
+      }
+
+      .release-card {
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--panel);
+        padding: 20px;
+      }
+
+      .release-card.latest {
+        border-color: #cfd8ff;
+        box-shadow: 0 8px 24px rgba(37, 99, 235, 0.08);
+      }
+
+      .release-heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 16px;
+        margin-bottom: 14px;
+      }
+
+      .release-title {
+        font-size: 22px;
+        font-weight: 600;
+      }
+
+      .release-badge {
+        font-size: 12px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        padding: 4px 8px;
+        color: var(--muted);
+      }
+
+      .asset-groups {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 14px;
+      }
+
+      .asset-group {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 14px;
+      }
+
+      .asset-group h2 {
+        margin: 0 0 12px;
+        font-size: 16px;
+      }
+
+      .asset-list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 8px;
+      }
+
+      .asset-list a {
+        color: var(--text);
+        text-decoration: none;
+        font-size: 14px;
+      }
+
+      .asset-list a:hover {
+        text-decoration: underline;
+      }
+
+      .empty {
+        margin-top: 32px;
+        border: 1px dashed var(--border);
+        border-radius: var(--radius);
+        padding: 24px;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="header-content">
+        <a class="brand" href="./">markdown-os</a>
+        <nav class="header-nav" aria-label="Primary">
+          <a href="./downloads.html" aria-current="page">Downloads</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="page">
+      <div class="header">
+        <a class="back-link" href="./">← Back to homepage</a>
+      </div>
+
+      <header>
+        <h1>Downloads</h1>
+        <p>Desktop installers from GitHub Releases. Latest release first, older releases below.</p>
+      </header>
+
+      <section id="downloads-root" class="release-list" aria-live="polite"></section>
+      <section id="downloads-empty" class="empty" hidden>
+        No desktop release assets are available yet.
+      </section>
+    </main>
+
+    <script>
+      const RELEASES_API =
+        "https://api.github.com/repos/elena-cabrera/markdown-os/releases";
+
+      function classifyAsset(assetName) {
+        const name = assetName.toLowerCase();
+        if (name.includes("macos") || name.endsWith(".dmg")) {
+          return "macOS";
+        }
+        if (name.includes("windows") || name.endsWith(".exe")) {
+          return "Windows";
+        }
+        return null;
+      }
+
+      function renderRelease(release, isLatest) {
+        const card = document.createElement("article");
+        card.className = `release-card${isLatest ? " latest" : ""}`;
+
+        const heading = document.createElement("div");
+        heading.className = "release-heading";
+
+        const title = document.createElement("div");
+        title.className = "release-title";
+        title.textContent = release.tag_name || release.name || "Unnamed release";
+
+        const badge = document.createElement("div");
+        badge.className = "release-badge";
+        badge.textContent = isLatest ? "Latest" : "Previous";
+
+        heading.appendChild(title);
+        heading.appendChild(badge);
+        card.appendChild(heading);
+
+        const groups = new Map([
+          ["macOS", []],
+          ["Windows", []],
+        ]);
+
+        (release.assets || []).forEach((asset) => {
+          const platform = classifyAsset(asset.name || "");
+          if (!platform) {
+            return;
+          }
+          groups.get(platform).push(asset);
+        });
+
+        const assetGroups = document.createElement("div");
+        assetGroups.className = "asset-groups";
+
+        for (const [platform, assets] of groups.entries()) {
+          const group = document.createElement("section");
+          group.className = "asset-group";
+
+          const groupTitle = document.createElement("h2");
+          groupTitle.textContent = platform;
+          group.appendChild(groupTitle);
+
+          const list = document.createElement("ul");
+          list.className = "asset-list";
+
+          if (assets.length === 0) {
+            const emptyItem = document.createElement("li");
+            emptyItem.textContent = "No assets for this platform.";
+            emptyItem.style.color = "#666666";
+            list.appendChild(emptyItem);
+          } else {
+            assets.forEach((asset) => {
+              const item = document.createElement("li");
+              const link = document.createElement("a");
+              link.href = asset.browser_download_url;
+              link.textContent = asset.name;
+              link.target = "_blank";
+              link.rel = "noopener";
+              item.appendChild(link);
+              list.appendChild(item);
+            });
+          }
+
+          group.appendChild(list);
+          assetGroups.appendChild(group);
+        }
+
+        card.appendChild(assetGroups);
+        return card;
+      }
+
+      async function loadDownloads() {
+        const root = document.getElementById("downloads-root");
+        const empty = document.getElementById("downloads-empty");
+
+        try {
+          const response = await fetch(RELEASES_API);
+          if (!response.ok) {
+            throw new Error(`Release fetch failed (${response.status})`);
+          }
+
+          const releases = await response.json();
+          const desktopReleases = releases.filter((release) =>
+            (release.assets || []).some((asset) => classifyAsset(asset.name || "")),
+          );
+
+          if (desktopReleases.length === 0) {
+            empty.hidden = false;
+            return;
+          }
+
+          desktopReleases.forEach((release, index) => {
+            root.appendChild(renderRelease(release, index === 0));
+          });
+        } catch (error) {
+          empty.hidden = false;
+          empty.textContent = "Failed to load releases from GitHub.";
+          console.error(error);
+        }
+      }
+
+      loadDownloads();
+    </script>
+  </body>
+</html>

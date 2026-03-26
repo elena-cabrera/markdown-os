@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import socket
 import threading
 import webbrowser
 from importlib.resources import files
@@ -12,9 +11,14 @@ from typing import Annotated
 import typer
 import uvicorn
 
-from markdown_os.directory_handler import DirectoryHandler
-from markdown_os.file_handler import FileHandler
-from markdown_os.server import create_app
+from markdown_os.app_runtime import (
+    build_editor_app,
+    build_handler_for_target,
+    find_available_port,
+    resolve_target_path,
+    validate_markdown_directory,
+    validate_markdown_file,
+)
 
 app = typer.Typer(
     help="Open and edit markdown files in a local browser UI.",
@@ -49,14 +53,7 @@ def _validate_markdown_file(filepath: Path) -> Path:
     - Path: Fully resolved markdown file path when validation passes.
     """
 
-    resolved_path = filepath.expanduser().resolve()
-    if not resolved_path.exists():
-        raise typer.BadParameter(f"File does not exist: {resolved_path}")
-    if not resolved_path.is_file():
-        raise typer.BadParameter(f"Path is not a file: {resolved_path}")
-    if resolved_path.suffix.lower() not in {".md", ".markdown"}:
-        raise typer.BadParameter("Only markdown files are supported (.md, .markdown).")
-    return resolved_path
+    return validate_markdown_file(filepath)
 
 
 def _validate_markdown_directory(directory: Path) -> Path:
@@ -70,12 +67,7 @@ def _validate_markdown_directory(directory: Path) -> Path:
     - Path: Fully resolved directory path when validation passes.
     """
 
-    resolved_path = directory.expanduser().resolve()
-    if not resolved_path.exists():
-        raise typer.BadParameter(f"Path does not exist: {resolved_path}")
-    if not resolved_path.is_dir():
-        raise typer.BadParameter(f"Path is not a directory: {resolved_path}")
-    return resolved_path
+    return validate_markdown_directory(directory)
 
 
 def _validate_path(path: Path) -> tuple[Path, str]:
@@ -89,59 +81,7 @@ def _validate_path(path: Path) -> tuple[Path, str]:
     - tuple[Path, str]: (resolved_path, mode) where mode is "file" or "folder".
     """
 
-    resolved_path = path.expanduser().resolve()
-    if not resolved_path.exists():
-        raise typer.BadParameter(f"Path does not exist: {resolved_path}")
-
-    if resolved_path.is_file():
-        return _validate_markdown_file(resolved_path), "file"
-    if resolved_path.is_dir():
-        return _validate_markdown_directory(resolved_path), "folder"
-
-    raise typer.BadParameter(f"Path is neither a file nor directory: {resolved_path}")
-
-
-def _is_port_available(host: str, port: int) -> bool:
-    """
-    Check whether a TCP port can be bound on the given host.
-
-    Args:
-    - host (str): Hostname or IP address to test.
-    - port (int): TCP port number to verify.
-
-    Returns:
-    - bool: True when the host/port pair is free for binding.
-    """
-
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        try:
-            sock.bind((host, port))
-        except OSError:
-            return False
-    return True
-
-
-def find_available_port(host: str = "127.0.0.1", start_port: int = 8000) -> int:
-    """
-    Locate the first available port starting from the preferred base port.
-
-    Args:
-    - host (str): Host to probe for bind availability.
-    - start_port (int): Initial port candidate used for probing.
-
-    Returns:
-    - int: Available port that can be used to start the web server.
-    """
-
-    if start_port < 1 or start_port > 65535:
-        raise typer.BadParameter("Start port must be between 1 and 65535.")
-
-    for candidate_port in range(start_port, 65536):
-        if _is_port_available(host=host, port=candidate_port):
-            return candidate_port
-
-    raise typer.BadParameter("No available TCP port found in range 8000-65535.")
+    return resolve_target_path(path)
 
 
 def _open_browser(url: str) -> None:
@@ -237,12 +177,8 @@ def open_markdown_file(
     typer.echo(f"Opening {target_label} {resolved_path} at {editor_url}")
     _open_browser(editor_url)
 
-    if mode == "file":
-        handler = FileHandler(resolved_path)
-        application = create_app(handler, mode="file")
-    else:
-        handler = DirectoryHandler(resolved_path)
-        application = create_app(handler, mode="folder")
+    handler = build_handler_for_target(resolved_path, mode)
+    application = build_editor_app(mode=mode, handler=handler)
 
     uvicorn.run(application, host=host, port=selected_port)
 
