@@ -36,7 +36,51 @@
       .page {
         max-width: var(--max-width);
         margin: 0 auto;
-        padding: 48px 24px 80px;
+        padding: 96px 24px 80px;
+      }
+
+      .site-header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 100;
+        padding: 0 24px;
+        background: rgba(255, 255, 255, 0.92);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+      }
+
+      .header-content {
+        max-width: var(--max-width);
+        margin: 0 auto;
+        padding: 16px 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      .brand {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--text);
+      }
+
+      .header-nav {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+
+      .header-nav a {
+        font-size: 14px;
+        color: var(--muted);
+        transition: color 0.15s ease;
+      }
+
+      .header-nav a:hover {
+        color: var(--text);
       }
 
       .header {
@@ -149,6 +193,15 @@
     </style>
   </head>
   <body>
+    <header class="site-header">
+      <div class="header-content">
+        <a class="brand" href="./">markdown-os</a>
+        <nav class="header-nav" aria-label="Primary">
+          <a href="./downloads.html" aria-current="page">Downloads</a>
+        </nav>
+      </div>
+    </header>
+
     <main class="page">
       <div class="header">
         <a class="back-link" href="./">← Back to homepage</a>

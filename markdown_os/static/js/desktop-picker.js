@@ -9,8 +9,12 @@
     return desktopShell()?.isDesktop?.() === true;
   }
 
-  function pickerRoot() {
+  function pickerOverlay() {
     return document.getElementById("desktop-picker-overlay");
+  }
+
+  function pickerModal() {
+    return document.getElementById("desktop-picker-modal");
   }
 
   function emptyStateRoot() {
@@ -21,12 +25,38 @@
     return document.getElementById("empty-state-primary-action");
   }
 
+  /**
+   * Electron preload returns a path string or null; some callers may use { canceled, path }.
+   *
+   * @param {unknown} result
+   * @returns {string | null}
+   */
+  function pathFromNativePickerResult(result) {
+    if (result == null) {
+      return null;
+    }
+    if (typeof result === "string") {
+      return result;
+    }
+    if (typeof result === "object" && result !== null && "path" in result) {
+      const candidate = /** @type {{ canceled?: boolean; path?: string }} */ (result);
+      if (candidate.canceled) {
+        return null;
+      }
+      return typeof candidate.path === "string" ? candidate.path : null;
+    }
+    return null;
+  }
+
   function setPickerVisibility(visible) {
-    const root = pickerRoot();
-    if (!root) {
+    const overlay = pickerOverlay();
+    const modal = pickerModal();
+    if (!overlay || !modal) {
       return;
     }
-    root.classList.toggle("hidden", !visible);
+    overlay.classList.toggle("hidden", !visible);
+    modal.classList.toggle("hidden", !visible);
+    overlay.setAttribute("aria-hidden", visible ? "false" : "true");
   }
 
   function setEmptyFolderActionVisible(visible) {
@@ -59,8 +89,11 @@
         data-recent-path="${safePath}"
         data-recent-type="${item?.type || "file"}"
       >
-        <span class="desktop-recent-name">${safeName}</span>
-        <span class="desktop-recent-meta">${typeLabel} · ${safePath}</span>
+        <div class="desktop-recent-main">
+          <p class="desktop-recent-name">${safeName}</p>
+          <p class="desktop-recent-path">${safePath}</p>
+        </div>
+        <span class="desktop-recent-type">${typeLabel}</span>
       </button>
     `;
   }
@@ -85,10 +118,10 @@
 
     fileList.innerHTML = files.length
       ? files.map(recentItemMarkup).join("")
-      : '<p class="desktop-empty-recents">No recent files</p>';
+      : '<p class="desktop-recents-empty">No recent files</p>';
     folderList.innerHTML = folders.length
       ? folders.map(recentItemMarkup).join("")
-      : '<p class="desktop-empty-recents">No recent folders</p>';
+      : '<p class="desktop-recents-empty">No recent folders</p>';
   }
 
   async function refreshPicker() {
@@ -149,35 +182,49 @@
     }
   }
 
-  function handlePickerClick(event) {
+  async function handlePickerClick(event) {
     const target = event.target instanceof Element ? event.target.closest(".desktop-recent-item") : null;
     if (!target) {
       return;
     }
-    openRecent(
-      target.getAttribute("data-recent-path"),
-      target.getAttribute("data-recent-type"),
-    );
+    const path = target.getAttribute("data-recent-path");
+    const type = target.getAttribute("data-recent-type");
+    try {
+      await openRecent(path, type);
+    } catch (error) {
+      console.error("Failed to open recent workspace.", error);
+    }
+    await refreshPicker();
   }
 
   function bindPickerActions() {
     document.getElementById("desktop-open-file")?.addEventListener("click", async () => {
-      const result = await window.electronDesktop?.pickFile?.();
-      if (!result?.canceled && result?.path) {
-        await desktopShell()?.openWorkspace?.(result.path);
+      try {
+        const raw = await window.electronDesktop?.pickFile?.();
+        const selectedPath = pathFromNativePickerResult(raw);
+        if (selectedPath) {
+          await desktopShell()?.openWorkspace?.(selectedPath);
+        }
+      } catch (error) {
+        console.error("Failed to open file from picker.", error);
       }
       await refreshPicker();
     });
 
     document.getElementById("desktop-open-folder")?.addEventListener("click", async () => {
-      const result = await window.electronDesktop?.pickFolder?.();
-      if (!result?.canceled && result?.path) {
-        await desktopShell()?.openWorkspace?.(result.path);
+      try {
+        const raw = await window.electronDesktop?.pickFolder?.();
+        const selectedPath = pathFromNativePickerResult(raw);
+        if (selectedPath) {
+          await desktopShell()?.openWorkspace?.(selectedPath);
+        }
+      } catch (error) {
+        console.error("Failed to open folder from picker.", error);
       }
       await refreshPicker();
     });
 
-    pickerRoot()?.addEventListener("click", handlePickerClick);
+    pickerModal()?.addEventListener("click", handlePickerClick);
 
     emptyStateButton()?.addEventListener("click", async () => {
       await createFirstNote();
@@ -187,15 +234,19 @@
       const snapshot = event.detail || {};
       const showPicker = snapshot.mode === "empty";
       setPickerVisibility(showPicker);
-      const isEmptyWorkspace = snapshot.mode === "folder" && snapshot.isEmptyWorkspace === true;
-      setEmptyFolderActionVisible(isEmptyWorkspace);
-      if (isEmptyWorkspace) {
-        setEmptyStateCopy(
-          "This folder has no markdown files yet",
-          "Create the first note to start editing this workspace.",
-        );
+      if (snapshot.mode === "folder") {
+        const isEmptyWorkspace = snapshot.isEmptyWorkspace === true;
+        setEmptyFolderActionVisible(isEmptyWorkspace);
+        if (isEmptyWorkspace) {
+          setEmptyStateCopy(
+            "This folder has no markdown files yet",
+            "Create the first note to start editing this workspace.",
+          );
+        } else {
+          setEmptyStateCopy("No file selected", "Select a file from the sidebar to open it.");
+        }
       } else {
-        setEmptyStateCopy("No file selected", "Select a file from the sidebar to open it.");
+        setEmptyFolderActionVisible(false);
       }
       await renderRecents();
     });

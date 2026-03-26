@@ -121,7 +121,7 @@
                 padding: 16px 0;
                 display: flex;
                 align-items: center;
-                justify-content: flex-start;
+                justify-content: space-between;
             }
 
             .logo {
@@ -1610,6 +1610,9 @@
                     </svg>
                     markdown-os
                 </a>
+                <nav class="header-nav" aria-label="Primary">
+                    <a href="downloads.html">Downloads</a>
+                </nav>
             </div>
         </header>
 
@@ -1625,18 +1628,6 @@
                     </p>
 
                     <div class="hero-cta" style="display: flex; gap: 12px; flex-wrap: wrap">
-                        <a
-                            href="downloads.html"
-                            class="btn btn-primary"
-                            id="desktop-download-btn"
-                            >See desktop downloads</a
-                        >
-                        <a
-                            href="downloads.html"
-                            class="btn btn-secondary"
-                            id="desktop-downloads-link"
-                            >See all downloads</a
-                        >
                         <a
                             href="https://github.com/elena-cabrera/markdown-os"
                             class="btn btn-secondary"
@@ -2506,22 +2497,26 @@
                 }
 
                 function setDefaultDownload(platform, latestRelease) {
-                    if (!downloadBtn) return;
-
                     const labels = {
                         macos: "Download for macOS",
                         windows: "Download for Windows",
                         unknown: "See desktop downloads",
                     };
-                    downloadBtn.textContent = labels[platform] || labels.unknown;
-                    downloadBtn.href = downloadsHref;
 
                     const asset = assetForPlatform(
                         latestRelease?.assets,
                         platform,
                     );
-                    if (asset?.browser_download_url) {
-                        downloadBtn.href = asset.browser_download_url;
+
+                    // Desktop download CTA is optional (we moved it into the navbar),
+                    // but the meta text still updates based on the latest release.
+                    if (downloadBtn) {
+                        downloadBtn.textContent =
+                            labels[platform] || labels.unknown;
+                        downloadBtn.href = downloadsHref;
+                        if (asset?.browser_download_url) {
+                            downloadBtn.href = asset.browser_download_url;
+                        }
                     }
 
                     if (downloadMeta) {

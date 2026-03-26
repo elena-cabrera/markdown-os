@@ -430,27 +430,6 @@
             </div>
           </div>
 
-          <div id="desktop-picker-overlay" class="desktop-picker-overlay hidden" role="dialog" aria-modal="true" aria-label="Open markdown workspace">
-            <div class="desktop-picker-card">
-              <h2 class="desktop-picker-title">Open a markdown file or workspace folder</h2>
-              <p class="desktop-picker-subtitle">Desktop mode starts here every launch.</p>
-              <div class="desktop-picker-actions">
-                <button id="desktop-open-file" class="btn btn-primary" type="button">Open file</button>
-                <button id="desktop-open-folder" class="btn btn-secondary" type="button">Open folder</button>
-              </div>
-              <div class="desktop-picker-recents">
-                <div class="desktop-picker-recents-section">
-                  <h3>Recent files</h3>
-                  <div id="desktop-recent-files" class="desktop-recents-list"></div>
-                </div>
-                <div class="desktop-picker-recents-section">
-                  <h3>Recent folders</h3>
-                  <div id="desktop-recent-folders" class="desktop-recents-list"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
           <div id="content-loading" class="content-loading-overlay hidden" aria-hidden="true">
             <div class="content-loading-spinner"></div>
           </div>
@@ -582,6 +561,36 @@
         <div class="modal-actions">
           <button id="block-edit-apply" class="btn btn-primary" type="button">Apply</button>
           <button id="block-edit-cancel" class="btn btn-tertiary" type="button">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="desktop-picker-overlay" class="modal-overlay hidden" aria-hidden="true"></div>
+    <div
+      id="desktop-picker-modal"
+      class="modal desktop-picker-modal hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="desktop-picker-title"
+    >
+      <div class="modal-content desktop-picker-modal-content">
+        <h3 id="desktop-picker-title" class="modal-title">Open a file or folder</h3>
+        <p class="modal-message desktop-picker-lead">
+          Open a markdown file or a workspace folder, or choose a recent item below.
+        </p>
+        <div class="modal-actions">
+          <button id="desktop-open-file" class="btn btn-primary" type="button">Open file</button>
+          <button id="desktop-open-folder" class="btn btn-tertiary" type="button">Open folder</button>
+        </div>
+        <div class="desktop-picker-recents">
+          <div class="desktop-picker-recents-section">
+            <h4 class="desktop-picker-section-title">Recent files</h4>
+            <div id="desktop-recent-files" class="desktop-recents-list"></div>
+          </div>
+          <div class="desktop-picker-recents-section">
+            <h4 class="desktop-picker-section-title">Recent folders</h4>
+            <div id="desktop-recent-folders" class="desktop-recents-list"></div>
+          </div>
         </div>
       </div>
     </div>

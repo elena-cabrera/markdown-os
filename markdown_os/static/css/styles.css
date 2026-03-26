@@ -1220,68 +1220,70 @@ body {
   filter: brightness(0.96);
 }
 
-.desktop-picker-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
+/* Desktop app: open-workspace picker — matches global .modal / modal tokens */
+
+.desktop-picker-modal {
+  width: min(640px, calc(100vw - 28px));
+  max-height: min(560px, calc(100vh - 48px));
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  background: rgba(15, 23, 42, 0.34);
-  backdrop-filter: blur(14px);
-}
-
-.desktop-picker-overlay.hidden {
-  display: none !important;
-}
-
-.desktop-picker-card {
-  width: min(760px, 100%);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  background: var(--panel-bg);
-  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.25);
+  flex-direction: column;
   overflow: hidden;
 }
 
-.desktop-picker-header {
-  padding: 24px 24px 16px;
-  border-bottom: 1px solid var(--border);
+.desktop-picker-modal-content {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+  padding-bottom: 16px;
+  overflow: hidden;
 }
 
-.desktop-picker-title {
-  margin: 0;
-  font-size: 24px;
-  font-weight: 650;
-  color: var(--text);
+.desktop-picker-modal .modal-title {
+  margin-bottom: 8px;
 }
 
-.desktop-picker-subtitle {
-  margin: 8px 0 0;
-  font-size: 14px;
-  color: var(--text-muted);
-  line-height: 1.5;
+.desktop-picker-lead {
+  margin-bottom: 14px !important;
 }
 
-.desktop-picker-body {
-  padding: 20px 24px 24px;
+.desktop-picker-modal .modal-actions {
+  margin-bottom: 16px;
+}
+
+.desktop-picker-recents {
   display: grid;
-  gap: 18px;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 20px;
+  min-height: 0;
+  padding-top: 12px;
+  margin-top: 4px;
+  border-top: 1px solid var(--border);
+  max-height: min(280px, 42vh);
+  overflow-y: auto;
+  flex: 1;
 }
 
-.desktop-picker-section {
-  display: grid;
-  gap: 10px;
+.desktop-picker-recents-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
 }
 
 .desktop-picker-section-title {
   margin: 0;
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 600;
-  color: var(--text-muted);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
+  color: var(--modal-hint);
+}
+
+@media (max-width: 560px) {
+  .desktop-picker-recents {
+    grid-template-columns: 1fr;
+  }
 }
 
 .desktop-recents-list {
@@ -1306,6 +1308,30 @@ body {
 .desktop-recent-item:hover {
   border-color: var(--accent);
   background: var(--accent-soft);
+}
+
+.desktop-picker-modal .desktop-recent-item {
+  background: color-mix(in srgb, var(--modal-message) 8%, var(--modal-bg));
+}
+
+.desktop-picker-modal .desktop-recent-item:hover {
+  background: var(--accent-soft);
+}
+
+.desktop-picker-modal .desktop-recent-name {
+  color: var(--modal-title);
+}
+
+.desktop-picker-modal .desktop-recent-path {
+  color: var(--modal-hint);
+}
+
+.desktop-picker-modal .desktop-recent-type {
+  color: var(--modal-hint);
+}
+
+.desktop-picker-modal .desktop-recents-empty {
+  background: color-mix(in srgb, var(--modal-message) 6%, var(--modal-bg));
 }
 
 .desktop-recent-main {
@@ -1348,39 +1374,6 @@ body {
   color: var(--text-muted);
   font-size: 13px;
   text-align: center;
-}
-
-.desktop-picker-actions {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.desktop-picker-button {
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--panel-bg);
-  color: var(--text);
-  padding: 11px 16px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.desktop-picker-button:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: var(--accent-soft);
-}
-
-.desktop-picker-button.primary {
-  border-color: var(--accent);
-  background: var(--accent);
-  color: #fff;
-}
-
-.desktop-picker-button.primary:hover {
-  filter: brightness(0.96);
 }
 
 #editor-container {

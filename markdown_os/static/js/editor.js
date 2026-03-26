@@ -650,11 +650,33 @@
       }
     });
 
-    window.addEventListener("markdown-os:desktop-state", (event) => {
-      editorState.mode = event.detail?.mode || editorState.mode;
+    window.addEventListener("markdown-os:desktop-state", async (event) => {
+      const snapshot = event.detail || {};
+      const nextMode = snapshot.mode || editorState.mode;
+      editorState.mode = nextMode;
       syncDesktopBodyClass();
-      if (editorState.mode === "empty") {
-        loadContent();
+
+      if (nextMode === "empty") {
+        window.fileTree?.setMode?.("empty");
+        await loadContent();
+        return;
+      }
+
+      if (nextMode === "file") {
+        window.fileTree?.setMode?.("file");
+        window.fileTabs?.init?.("file");
+        await loadContent();
+        return;
+      }
+
+      if (nextMode === "folder") {
+        window.fileTree?.setMode?.("folder");
+        window.fileTabs?.init?.("folder");
+        await window.fileTabs?.resetWorkspace?.();
+        window.fileTree?.setFolderModeUI?.();
+        await window.fileTree?.loadFileTree?.();
+        setSaveStatus("Select a file");
+        window.fileTabs?.setEmptyState?.(true);
       }
     });
   }
