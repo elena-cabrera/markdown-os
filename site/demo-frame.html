@@ -17,7 +17,7 @@
     html, body { overflow: auto; height: auto; min-height: 100%; }
     .container { height: 560px; min-height: 560px; }
     /* Demo: no actions on click, but keep pointer + hover */
-    .theme-dropdown-toggle, .file-tab, .file-tab-close, .tree-folder-header, .tree-file-link, .history-button, .toolbar-button, .format-menu-item, #toc a, .copy-button, .block-edit-trigger, .mermaid-fullscreen-trigger, .mermaid-zoom-btn { cursor: pointer; }
+    .quick-actions-toggle, .quick-actions-item, .file-tab, .file-tab-close, .tree-folder-header, .tree-file-link, .history-button, .toolbar-button, .format-menu-item, #toc a, .copy-button, .block-edit-trigger, .mermaid-fullscreen-trigger, .mermaid-zoom-btn, .sidebar-open-btn { cursor: pointer; }
     /* Preview content: same typography as #wysiwyg-editor */
     #demo-preview { color: var(--editor-text); line-height: 1.7; font-size: 16px; }
     #demo-preview p { margin: 0 0 0.85em; }
@@ -43,12 +43,20 @@
       content: ""; width: 0.28em; height: 0.52em; border: solid #fff; border-width: 0 2px 2px 0;
       transform: rotate(45deg) translate(-5%, -5%);
     }
+    /* Demo: show sidebar-open-btn (normally hidden in JS) */
+    .sidebar-open-btn { display: flex !important; }
+    /* Demo: keep quick-actions visible but dropdown hidden */
+    .quick-actions-dropdown { position: absolute; right: 0; top: 100%; }
   </style>
 </head>
 <body>
   <div id="app-loading" class="loading-banner">Loading...</div>
   <div class="container" id="app-container">
     <aside id="sidebar">
+      <button class="sidebar-open-btn" type="button" title="Open file or folder">
+        <svg class="sidebar-open-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" aria-hidden="true"><path d="M3.75 9.776q.168-.026.344-.026h15.812q.176 0 .344.026m-16.5 0a2.25 2.25 0 0 0-1.883 2.542l.857 6a2.25 2.25 0 0 0 2.227 1.932H19.05a2.25 2.25 0 0 0 2.227-1.932l.857-6a2.25 2.25 0 0 0-1.883-2.542m-16.5 0V6A2.25 2.25 0 0 1 6 3.75h3.879a1.5 1.5 0 0 1 1.06.44l2.122 2.12a1.5 1.5 0 0 0 1.06.44H18A2.25 2.25 0 0 1 20.25 9v.776"/></svg>
+        <span>Open</span>
+      </button>
       <div id="file-tree-container">
         <button id="file-tree-toggle" class="sidebar-section-toggle" type="button" aria-expanded="true">
           <svg class="toggle-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 2 8 6 4 10"></polyline></svg>
@@ -103,7 +111,7 @@
               <li class="tree-file"><button type="button" class="tree-file-link" data-path="CLAUDE.md">CLAUDE.md</button></li>
               <li class="tree-folder">
                 <button type="button" class="tree-folder-header" data-path="docs" aria-expanded="true">
-                  <span class="folder-icon">▼</span>
+                  <span class="folder-icon">&#9660;</span>
                   <span class="folder-name">docs</span>
                 </button>
                 <ul class="tree-children">
@@ -129,11 +137,33 @@
     <main id="main-content">
       <div class="tab-nav">
         <div class="nav-left-group">
+          <button
+            id="sidebar-toggle-button"
+            class="history-button"
+            type="button"
+            title="Hide sidebar"
+            aria-label="Hide sidebar"
+            aria-controls="sidebar"
+            aria-expanded="true"
+          >
+            <svg
+              id="sidebar-toggle-icon"
+              xmlns="http://www.w3.org/2000/svg"
+              width="32"
+              height="32"
+              viewBox="0 0 24 24"
+            >
+              <g fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.5">
+                <path d="M2 12c0-3.75 0-5.625.955-6.939A5 5 0 0 1 4.06 3.955C5.375 3 7.251 3 11 3h2c3.75 0 5.625 0 6.939.955a5 5 0 0 1 1.106 1.106C22 6.375 22 8.251 22 12s0 5.625-.955 6.939a5 5 0 0 1-1.106 1.106C18.625 21 16.749 21 13 21h-2c-3.75 0-5.625 0-6.939-.955a5 5 0 0 1-1.106-1.106C2 17.625 2 15.749 2 12Zm7.5-8.5v17" />
+                <path stroke-linecap="round" d="M5 7h1.5M5 11h1.5M17 10l-1.226 1.057c-.516.445-.774.667-.774.943s.258.498.774.943L17 14" />
+              </g>
+            </svg>
+          </button>
           <div class="undo-redo-group" aria-label="Edit history controls">
-            <button type="button" class="history-button" title="Undo" aria-label="Undo">
+            <button type="button" class="history-button" title="Undo (Ctrl+Z)" aria-label="Undo">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M3 8h12a6 6 0 0 1 0 12h-4"/><path d="m7 4l-1.154.877C3.95 6.318 3 7.039 3 8s.949 1.682 2.846 3.124L7 12"/></g></svg>
             </button>
-            <button type="button" class="history-button" title="Redo" aria-label="Redo">
+            <button type="button" class="history-button" title="Redo (Ctrl+Shift+Z)" aria-label="Redo">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M21 8H9a6 6 0 0 0 0 12h4"/><path d="m17 4l1.154.877C20.05 6.318 21 7.039 21 8s-.949 1.682-2.846 3.124L17 12"/></g></svg>
             </button>
           </div>
@@ -143,33 +173,71 @@
           <span id="current-file-text">docs/roadmap.md</span>
         </div>
         <div class="tab-controls">
-          <button id="export-pdf-button" class="history-button" type="button" title="Export to PDF" aria-label="Export to PDF">
-            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24">
-              <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5">
-                <path d="M20 14v-3.343c0-.818 0-1.226-.152-1.594c-.152-.367-.441-.657-1.02-1.235l-4.736-4.736c-.499-.499-.748-.748-1.058-.896a2 2 0 0 0-.197-.082C12.514 2 12.161 2 11.456 2c-3.245 0-4.868 0-5.967.886a4 4 0 0 0-.603.603C4 4.59 4 6.211 4 9.456V14c0 3.771 0 5.657 1.172 6.828S8.229 22 12 22m1-19.5V3c0 2.828 0 4.243.879 5.121C14.757 9 16.172 9 19 9h.5"/>
-                <path d="M17 22c.607-.59 3-2.16 3-3s-2.393-2.41-3-3m2 3h-7"/>
-              </g>
-            </svg>
-          </button>
-          <div class="theme-dropdown" id="theme-dropdown">
-            <button class="theme-dropdown-toggle" type="button" aria-label="Select theme (current: Default Light)" aria-haspopup="listbox" aria-expanded="false" title="Theme: Default Light">
-              <span class="theme-dots" id="theme-dots">
-                <span class="theme-dot" style="background:#f7f8fa"></span>
-                <span class="theme-dot" style="background:#17233b"></span>
-                <span class="theme-dot" style="background:#2563eb"></span>
-              </span>
-              <svg class="dropdown-chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          <div class="quick-actions-menu" id="quick-actions-menu">
+            <button
+              class="quick-actions-toggle"
+              id="quick-actions-toggle"
+              type="button"
+              title="Actions"
+              aria-label="Open options menu"
+              aria-haspopup="menu"
+              aria-expanded="false"
+            >
+              <span>Options</span>
+              <svg class="dropdown-chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
             </button>
-            <ul class="theme-dropdown-menu" id="theme-dropdown-menu" role="listbox" hidden></ul>
+            <div id="quick-actions-dropdown" class="quick-actions-dropdown" role="menu" hidden>
+              <button class="quick-actions-item" type="button" role="menuitem">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                  <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5">
+                    <path d="M20 14v-3.343c0-.818 0-1.226-.152-1.594c-.152-.367-.441-.657-1.02-1.235l-4.736-4.736c-.499-.499-.748-.748-1.058-.896a2 2 0 0 0-.197-.082C12.514 2 12.161 2 11.456 2c-3.245 0-4.868 0-5.967.886a4 4 0 0 0-.603.603C4 4.59 4 6.211 4 9.456V14c0 3.771 0 5.657 1.172 6.828S8.229 22 12 22m1-19.5V3c0 2.828 0 4.243.879 5.121C14.757 9 16.172 9 19 9h.5"/>
+                    <path d="M17 22c.607-.59 3-2.16 3-3s-2.393-2.41-3-3m2 3h-7"/>
+                  </g>
+                </svg>
+                <span>Export to PDF</span>
+              </button>
+              <div class="theme-dropdown quick-actions-theme" id="theme-dropdown">
+                <button
+                  class="quick-actions-item quick-actions-theme-toggle"
+                  type="button"
+                  role="menuitem"
+                  aria-label="Select theme"
+                  aria-haspopup="listbox"
+                  aria-expanded="false"
+                >
+                  <span class="theme-dots" id="theme-dots">
+                    <span class="theme-dot" style="background:#f7f8fa"></span>
+                    <span class="theme-dot" style="background:#17233b"></span>
+                    <span class="theme-dot" style="background:#2563eb"></span>
+                  </span>
+                  <span class="quick-actions-item-label" id="theme-current-name">Default Light</span>
+                  <svg class="dropdown-chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </button>
+                <ul class="theme-dropdown-menu" id="theme-dropdown-menu" role="listbox" aria-label="Theme selection" hidden></ul>
+              </div>
+              <button class="quick-actions-item" type="button" role="menuitem">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                  <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+                    <path d="M3 7V5a2 2 0 0 1 2-2h2m10 0h2a2 2 0 0 1 2 2v2m0 10v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/>
+                    <rect width="10" height="8" x="7" y="8" rx="1"/>
+                  </g>
+                </svg>
+                <span>Focus mode</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
       <div id="file-tabs-bar" class="file-tabs-bar" role="tablist" aria-label="Open files">
-        <button type="button" class="file-tab" role="tab"><span class="file-tab-name">README.md</span><span class="file-tab-close" role="button" aria-label="Close README.md" title="Close tab">×</span></button>
-        <button type="button" class="file-tab" role="tab"><span class="file-tab-name">CLAUDE.md</span><span class="file-tab-close" role="button" aria-label="Close CLAUDE.md" title="Close tab">×</span></button>
-        <button type="button" class="file-tab active" role="tab"><span class="file-tab-name">docs/roadmap.md</span><span class="file-tab-close" role="button" aria-label="Close docs/roadmap.md" title="Close tab">×</span></button>
-        <button type="button" class="file-tab" role="tab"><span class="file-tab-name">docs/features/multi-user.md</span><span class="file-tab-close" role="button" aria-label="Close docs/features/multi-user.md" title="Close tab">×</span></button>
+        <button type="button" class="file-tab" role="tab"><span class="file-tab-name">README.md</span><span class="file-tab-close" role="button" aria-label="Close README.md" title="Close tab">&times;</span></button>
+        <button type="button" class="file-tab" role="tab"><span class="file-tab-name">CLAUDE.md</span><span class="file-tab-close" role="button" aria-label="Close CLAUDE.md" title="Close tab">&times;</span></button>
+        <button type="button" class="file-tab active" role="tab"><span class="file-tab-name">docs/roadmap.md</span><span class="file-tab-close" role="button" aria-label="Close docs/roadmap.md" title="Close tab">&times;</span></button>
+        <button type="button" class="file-tab" role="tab"><span class="file-tab-name">docs/features/multi-user.md</span><span class="file-tab-close" role="button" aria-label="Close docs/features/multi-user.md" title="Close tab">&times;</span></button>
       </div>
 
       <div class="view-area">
@@ -214,8 +282,14 @@
             <button class="toolbar-button" type="button" data-command="taskList" title="Task list" aria-label="Task list">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"><path d="M11 6h10m-10 6h10m-10 6h10"/><path stroke-linejoin="round" d="M3 7.393S4 8.045 4.5 9C4.5 9 6 5.25 8 4M3 18.393S4 19.045 4.5 20c0 0 1.5-3.75 3.5-5"/></g></svg>
             </button>
+            <button class="toolbar-button" type="button" data-command="math" title="Math equation" aria-label="Math equation">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.5 12c0-4.478 0-6.718 1.391-8.109S7.521 2.5 12 2.5c4.478 0 6.718 0 8.109 1.391S21.5 7.521 21.5 12c0 4.478 0 6.718-1.391 8.109S16.479 21.5 12 21.5c-4.478 0-6.718 0-8.109-1.391S2.5 16.479 2.5 12Z"/><path stroke-linecap="round" stroke-linejoin="round" d="m5.5 12.5l.475-.316c.473-.316.71-.474.938-.404c.227.071.333.335.545.864L9 16.5l2.088-6.265c.44-1.32.66-1.98 1.184-2.357s1.22-.378 2.611-.378H18.5M17 12l-1.5 1.5m0 0L14 15m1.5-1.5L17 15m-1.5-1.5L14 12"/></g></svg>
+            </button>
             <button class="toolbar-button" type="button" data-command="codeBlock" title="Code block" aria-label="Code block">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m16 10l1.227 1.057c.515.445.773.667.773.943s-.258.498-.773.943L16 14m-8-4l-1.227 1.057C6.258 11.502 6 11.724 6 12s.258.498.773.943L8 14m5-5l-2 6"/><path d="M2.5 12c0-4.478 0-6.718 1.391-8.109S7.521 2.5 12 2.5c4.478 0 6.718 0 8.109 1.391S21.5 7.521 21.5 12c0 4.478 0 6.718-1.391 8.109S16.479 21.5 12 21.5c-4.478 0-6.718 0-8.109-1.391S2.5 16.479 2.5 12Z"/></g></svg>
+            </button>
+            <button class="toolbar-button" type="button" data-command="blockquote" title="Block quote" aria-label="Block quote">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"><path d="M9 6h8m-8 6h10M9 18h8"/><path stroke-linejoin="round" d="M5 3v18"/></g></svg>
             </button>
             <button class="toolbar-button" type="button" data-command="link" title="Link (Ctrl+K)" aria-label="Link">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"><path d="M10 13.229q.213.349.504.654a3.56 3.56 0 0 0 4.454.59q.391-.24.73-.59l3.239-3.372c1.43-1.49 1.43-3.904 0-5.394a3.564 3.564 0 0 0-5.183 0l-.714.743"/><path d="m10.97 18.14l-.713.743a3.564 3.564 0 0 1-5.184 0c-1.43-1.49-1.43-3.905 0-5.394l3.24-3.372a3.564 3.564 0 0 1 5.183 0q.291.305.504.654"/></g></svg>
