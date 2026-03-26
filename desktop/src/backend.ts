@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
+import fs from "node:fs";
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
+import os from "node:os";
 import path from "node:path";
 
 export type BackendHandle = {
@@ -15,11 +17,54 @@ function buildDesktopRuntimePath(projectRoot: string): string {
   return path.join(projectRoot, "markdown_os", "desktop_runtime.py");
 }
 
+function fileExists(filePath: string): boolean {
+  try {
+    fs.accessSync(filePath);
+    return true;
+  } catch (_error) {
+    return false;
+  }
+}
+
+function resolveUvExecutable(): string {
+  // Allow power users to override.
+  const overridden =
+    process.env.MARKDOWN_OS_UV_PATH ||
+    process.env.UV_PATH ||
+    process.env.OVERRIDE_UV_PATH;
+  if (overridden && fileExists(overridden)) {
+    return overridden;
+  }
+
+  // Common locations for uv installed via cargo/brew.
+  const home = os.homedir();
+  const candidates: string[] = [
+    path.join(home, ".cargo", "bin", "uv"),
+    path.join(home, ".local", "bin", "uv"),
+    "/usr/local/bin/uv",
+    "/opt/homebrew/bin/uv",
+  ];
+
+  for (const candidate of candidates) {
+    if (fileExists(candidate)) {
+      return candidate;
+    }
+  }
+
+  // Fall back to PATH lookup (works in `npm run dev` / terminal runs).
+  return "uv";
+}
+
 async function waitForReadyUrl(
   process: ChildProcessWithoutNullStreams,
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     let stderr = "";
+
+    const onError = (err: Error) => {
+      cleanup();
+      reject(err);
+    };
 
     const onStdout = (chunk: Buffer) => {
       const output = chunk.toString("utf-8");
@@ -51,10 +96,12 @@ async function waitForReadyUrl(
       process.stdout.off("data", onStdout);
       process.stderr.off("data", onStderr);
       process.off("exit", onExit);
+      process.off("error", onError);
     };
 
     process.stdout.on("data", onStdout);
     process.stderr.on("data", onStderr);
+    process.once("error", onError);
     process.once("exit", onExit);
   });
 }
@@ -66,8 +113,9 @@ export async function startBackend(
   const desktopRuntimePath = buildDesktopRuntimePath(projectRoot);
   const requestId = randomUUID();
 
+  const uvExecutable = resolveUvExecutable();
   const child = spawn(
-    "uv",
+    uvExecutable,
     ["run", "python", desktopRuntimePath, "--request-id", requestId],
     {
       cwd: projectRoot,

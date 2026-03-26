@@ -22,6 +22,9 @@ type DesktopStore = Store<DesktopStoreSchema> & {
 };
 
 const store = new Store<DesktopStoreSchema>({
+  // `electron-store` is built on `conf`, which requires a `projectName` in newer versions.
+  projectName: "markdown-os-desktop",
+  name: "markdown-os-desktop",
   defaults: {
     recents: [],
     dismissedUpdateVersion: null,
