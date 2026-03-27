@@ -1,6 +1,10 @@
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
-import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
+import {
+  spawn,
+  spawnSync,
+  type ChildProcessWithoutNullStreams,
+} from "node:child_process";
 import os from "node:os";
 import path from "node:path";
 
@@ -27,6 +31,19 @@ function fileExists(filePath: string): boolean {
 }
 
 function resolveUvExecutable(): string {
+  const isWindows = process.platform === "win32";
+
+  if (process.resourcesPath) {
+    const packagedCandidates = [
+      path.join(process.resourcesPath, isWindows ? "uv.exe" : "uv"),
+    ];
+    for (const candidate of packagedCandidates) {
+      if (fileExists(candidate)) {
+        return candidate;
+      }
+    }
+  }
+
   // Allow power users to override.
   const overridden =
     process.env.MARKDOWN_OS_UV_PATH ||
@@ -39,7 +56,10 @@ function resolveUvExecutable(): string {
   // Common locations for uv installed via cargo/brew.
   const home = os.homedir();
   const candidates: string[] = [
+    path.join(home, "AppData", "Local", "Programs", "uv", "uv.exe"),
+    path.join(home, ".local", "bin", "uv.exe"),
     path.join(home, ".cargo", "bin", "uv"),
+    path.join(home, ".cargo", "bin", "uv.exe"),
     path.join(home, ".local", "bin", "uv"),
     "/usr/local/bin/uv",
     "/opt/homebrew/bin/uv",
@@ -52,7 +72,15 @@ function resolveUvExecutable(): string {
   }
 
   // Fall back to PATH lookup (works in `npm run dev` / terminal runs).
-  return "uv";
+  const pathCandidate = isWindows ? "uv.exe" : "uv";
+  const probe = spawnSync(pathCandidate, ["--version"], { encoding: "utf-8" });
+  if (!probe.error) {
+    return pathCandidate;
+  }
+
+  throw new Error(
+    "Could not find a uv executable. Reinstall the desktop app or set MARKDOWN_OS_UV_PATH to a valid uv binary.",
+  );
 }
 
 async function waitForReadyUrl(
