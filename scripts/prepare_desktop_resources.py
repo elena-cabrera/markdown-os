@@ -33,7 +33,7 @@ def write_png_rgba(path: Path, width: int, height: int, rgba: bytes) -> None:
     path.write_bytes(bytes(png))
 
 
-def draw_icon(output_png: Path, output_ico: Path, size: int = 256) -> None:
+def draw_icon(output_png: Path, output_ico: Path, size: int = 1024) -> None:
     background = (0x1C, 0x1C, 0x1E, 0xFF)
     foreground = (0xFF, 0xFF, 0xFF, 0xFF)
     radius = int(size * 0.18)
@@ -109,11 +109,32 @@ def draw_icon(output_png: Path, output_ico: Path, size: int = 256) -> None:
     output_ico.write_bytes(icon_header + icon_dir + png_data)
 
 
+def read_png_dimensions(path: Path) -> tuple[int, int] | None:
+    try:
+        data = path.read_bytes()
+    except FileNotFoundError:
+        return None
+
+    signature = b"\x89PNG\r\n\x1a\n"
+    if len(data) < 24 or not data.startswith(signature):
+        return None
+
+    ihdr_offset = len(signature)
+    if data[ihdr_offset + 4 : ihdr_offset + 8] != b"IHDR":
+        return None
+
+    width, height = struct.unpack(">II", data[ihdr_offset + 8 : ihdr_offset + 16])
+    return width, height
+
+
 def ensure_icons(build_dir: Path) -> None:
     output_png = build_dir / "icon.png"
     output_ico = build_dir / "icon.ico"
 
-    if output_png.exists() and output_ico.exists():
+    dimensions = read_png_dimensions(output_png)
+    png_is_large_enough = dimensions is not None and dimensions[0] >= 512 and dimensions[1] >= 512
+
+    if png_is_large_enough and output_ico.exists():
         return
 
     draw_icon(output_png, output_ico)
