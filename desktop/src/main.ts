@@ -1,6 +1,5 @@
 import { app, BrowserWindow, Menu, dialog, ipcMain } from "electron";
 import path from "node:path";
-import fs from "node:fs";
 
 import {
   startBackend,
@@ -29,19 +28,6 @@ function getBuildIconPath(filename: string): string {
     return path.join(process.resourcesPath, filename);
   }
   return path.resolve(__dirname, "..", "build", filename);
-}
-
-function applyMacDockIcon(): void {
-  if (process.platform !== "darwin" || !app.dock) {
-    return;
-  }
-
-  const dockIconPath = getBuildIconPath("icon.png");
-  if (!fs.existsSync(dockIconPath)) {
-    return;
-  }
-
-  app.dock.setIcon(dockIconPath);
 }
 
 function currentWindow(): BrowserWindow {
@@ -155,7 +141,6 @@ async function bootstrap(): Promise<void> {
     return;
   }
 
-  applyMacDockIcon();
   registerIpcHandlers();
   backendHandle = await startBackend({
     projectRoot: path.resolve(__dirname, "..", ".."),

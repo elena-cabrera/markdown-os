@@ -1,98 +1,19 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 import sys
 import struct
-import zlib
 from pathlib import Path
 
 
-def run(cmd: list[str]) -> None:
-    subprocess.run(cmd, check=True)
+def run(cmd: list[str], env: dict[str, str] | None = None) -> None:
+    subprocess.run(cmd, check=True, env=env)
 
 
-def png_chunk(chunk_type: bytes, data: bytes) -> bytes:
-    crc = zlib.crc32(chunk_type + data) & 0xFFFFFFFF
-    return struct.pack(">I", len(data)) + chunk_type + data + struct.pack(">I", crc)
-
-
-def write_png_rgba(path: Path, width: int, height: int, rgba: bytes) -> None:
-    raw = bytearray()
-    stride = width * 4
-    for y in range(height):
-        raw.append(0)  # filter type: None
-        start = y * stride
-        raw.extend(rgba[start : start + stride])
-
-    png = bytearray(b"\x89PNG\r\n\x1a\n")
-    png.extend(png_chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)))
-    png.extend(png_chunk(b"IDAT", zlib.compress(bytes(raw), level=9)))
-    png.extend(png_chunk(b"IEND", b""))
-    path.write_bytes(bytes(png))
-
-
-def draw_icon(output_png: Path, output_ico: Path, size: int = 1024) -> None:
-    background = (0x1C, 0x1C, 0x1E, 0xFF)
-    foreground = (0xFF, 0xFF, 0xFF, 0xFF)
-    radius = int(size * 0.18)
-
-    pixels = bytearray(size * size * 4)
-
-    def set_pixel(x: int, y: int, color: tuple[int, int, int, int]) -> None:
-        if x < 0 or y < 0 or x >= size or y >= size:
-            return
-        idx = (y * size + x) * 4
-        pixels[idx : idx + 4] = bytes(color)
-
-    def fill_circle(cx: int, cy: int, r: int, color: tuple[int, int, int, int]) -> None:
-        r2 = r * r
-        for dy in range(-r, r + 1):
-            for dx in range(-r, r + 1):
-                if dx * dx + dy * dy <= r2:
-                    set_pixel(cx + dx, cy + dy, color)
-
-    def draw_thick_line(
-        x0: int, y0: int, x1: int, y1: int, thickness: int, color: tuple[int, int, int, int]
-    ) -> None:
-        steps = max(abs(x1 - x0), abs(y1 - y0), 1)
-        for step in range(steps + 1):
-            t = step / steps
-            x = int(round(x0 + (x1 - x0) * t))
-            y = int(round(y0 + (y1 - y0) * t))
-            fill_circle(x, y, thickness // 2, color)
-
-    # Rounded-square background.
-    for y in range(size):
-        for x in range(size):
-            if radius <= x < size - radius or radius <= y < size - radius:
-                set_pixel(x, y, background)
-                continue
-            # Corners.
-            cx = radius if x < radius else size - radius - 1
-            cy = radius if y < radius else size - radius - 1
-            if (x - cx) * (x - cx) + (y - cy) * (y - cy) <= radius * radius:
-                set_pixel(x, y, background)
-
-    # Stylized "M" glyph.
-    stroke = int(size * 0.10)
-    left_x = int(size * 0.23)
-    right_x = int(size * 0.77)
-    top_y = int(size * 0.27)
-    bottom_y = int(size * 0.76)
-    mid_left_x = int(size * 0.43)
-    mid_right_x = int(size * 0.57)
-    mid_y = int(size * 0.58)
-
-    draw_thick_line(left_x, bottom_y, left_x, top_y, stroke, foreground)
-    draw_thick_line(left_x, top_y, mid_left_x, mid_y, stroke, foreground)
-    draw_thick_line(mid_left_x, mid_y, mid_right_x, mid_y, stroke, foreground)
-    draw_thick_line(mid_right_x, mid_y, right_x, top_y, stroke, foreground)
-    draw_thick_line(right_x, top_y, right_x, bottom_y, stroke, foreground)
-
-    write_png_rgba(output_png, size, size, bytes(pixels))
-
+def write_ico_from_png(output_png: Path, output_ico: Path) -> None:
     png_data = output_png.read_bytes()
     icon_header = struct.pack("<HHH", 0, 1, 1)
     icon_dir = struct.pack(
@@ -127,17 +48,41 @@ def read_png_dimensions(path: Path) -> tuple[int, int] | None:
     return width, height
 
 
-def ensure_icons(build_dir: Path) -> None:
+def ensure_icons(root: Path, build_dir: Path) -> None:
+    source_svg = root / "desktop" / "assets" / "icon.svg"
+    if not source_svg.exists():
+        raise FileNotFoundError(f"Desktop icon source not found: {source_svg}")
+
     output_png = build_dir / "icon.png"
     output_ico = build_dir / "icon.ico"
+    output_svg = build_dir / "icon.svg"
+    legacy_icns = build_dir / "icon.icns"
+    legacy_iconset = build_dir / "icon.iconset"
+
+    if legacy_icns.exists():
+        legacy_icns.unlink()
+    if legacy_iconset.exists():
+        shutil.rmtree(legacy_iconset)
+
+    shutil.copy2(source_svg, output_svg)
+    electron_binary = root / "desktop" / "node_modules" / ".bin" / "electron"
+    render_script = root / "scripts" / "render_svg_to_png.mjs"
+    if not electron_binary.exists():
+        raise FileNotFoundError(f"Electron binary not found: {electron_binary}")
+    electron_env = os.environ.copy()
+    electron_env.pop("ELECTRON_RUN_AS_NODE", None)
+    run(
+        [str(electron_binary), str(render_script), str(output_svg), str(output_png), "1024"],
+        env=electron_env,
+    )
 
     dimensions = read_png_dimensions(output_png)
     png_is_large_enough = dimensions is not None and dimensions[0] >= 512 and dimensions[1] >= 512
 
-    if png_is_large_enough and output_ico.exists():
-        return
+    if not png_is_large_enough:
+        raise ValueError(f"Desktop icon must be at least 512x512 pixels: {output_png}")
 
-    draw_icon(output_png, output_ico)
+    write_ico_from_png(output_png, output_ico)
 
 
 def copy_uv_binary(build_dir: Path) -> None:
@@ -157,7 +102,7 @@ def main() -> int:
     build_dir = root / "desktop" / "build"
     build_dir.mkdir(parents=True, exist_ok=True)
 
-    ensure_icons(build_dir)
+    ensure_icons(root, build_dir)
     copy_uv_binary(build_dir)
     print(f"Prepared desktop build resources in {build_dir}")
     return 0
