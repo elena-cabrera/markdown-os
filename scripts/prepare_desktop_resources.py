@@ -13,21 +13,45 @@ def run(cmd: list[str], env: dict[str, str] | None = None) -> None:
     subprocess.run(cmd, check=True, env=env)
 
 
-def write_ico_from_png(output_png: Path, output_ico: Path) -> None:
-    png_data = output_png.read_bytes()
-    icon_header = struct.pack("<HHH", 0, 1, 1)
-    icon_dir = struct.pack(
-        "<BBBBHHII",
-        0,
-        0,
-        0,
-        0,
-        1,
-        32,
-        len(png_data),
-        6 + 16,
-    )
-    output_ico.write_bytes(icon_header + icon_dir + png_data)
+def write_ico_from_pngs(png_files: list[Path], output_ico: Path) -> None:
+    if not png_files:
+        raise ValueError("Expected at least one PNG source file to build an ICO.")
+
+    icon_header = struct.pack("<HHH", 0, 1, len(png_files))
+    icon_dirs: list[bytes] = []
+    icon_payloads: list[bytes] = []
+    payload_offset = 6 + (16 * len(png_files))
+
+    for png_file in png_files:
+        png_data = png_file.read_bytes()
+        dimensions = read_png_dimensions(png_file)
+        if dimensions is None:
+            raise ValueError(f"Invalid PNG file while creating ICO: {png_file}")
+
+        width, height = dimensions
+        if width > 256 or height > 256:
+            raise ValueError(f"ICO PNG entries must be <= 256x256 pixels: {png_file}")
+
+        width_byte = 0 if width == 256 else width
+        height_byte = 0 if height == 256 else height
+
+        icon_dirs.append(
+            struct.pack(
+                "<BBBBHHII",
+                width_byte,
+                height_byte,
+                0,
+                0,
+                1,
+                32,
+                len(png_data),
+                payload_offset,
+            )
+        )
+        icon_payloads.append(png_data)
+        payload_offset += len(png_data)
+
+    output_ico.write_bytes(icon_header + b"".join(icon_dirs) + b"".join(icon_payloads))
 
 
 def read_png_dimensions(path: Path) -> tuple[int, int] | None:
@@ -92,10 +116,7 @@ def ensure_icons(root: Path, build_dir: Path) -> None:
     render_script = root / "scripts" / "render_svg_to_png.mjs"
     electron_env = os.environ.copy()
     electron_env.pop("ELECTRON_RUN_AS_NODE", None)
-    run(
-        [str(electron_binary), str(render_script), str(output_svg), str(output_png), "1024"],
-        env=electron_env,
-    )
+    run([str(electron_binary), str(render_script), str(output_svg), str(output_png), "1024"], env=electron_env)
 
     dimensions = read_png_dimensions(output_png)
     png_is_large_enough = dimensions is not None and dimensions[0] >= 512 and dimensions[1] >= 512
@@ -103,7 +124,14 @@ def ensure_icons(root: Path, build_dir: Path) -> None:
     if not png_is_large_enough:
         raise ValueError(f"Desktop icon must be at least 512x512 pixels: {output_png}")
 
-    write_ico_from_png(output_png, output_ico)
+    ico_sizes = [16, 24, 32, 48, 64, 128, 256]
+    ico_png_files: list[Path] = []
+    for size in ico_sizes:
+        ico_png = build_dir / f"icon-{size}.png"
+        run([str(electron_binary), str(render_script), str(output_svg), str(ico_png), str(size)], env=electron_env)
+        ico_png_files.append(ico_png)
+
+    write_ico_from_pngs(ico_png_files, output_ico)
 
 
 def copy_uv_binary(build_dir: Path) -> None:
@@ -113,9 +141,14 @@ def copy_uv_binary(build_dir: Path) -> None:
         return
 
     source = Path(uv_path)
-    destination = build_dir / source.name
-    shutil.copy2(source, destination)
-    destination.chmod(0o755)
+    destination_names = {source.name}
+    if sys.platform == "win32":
+        destination_names.update({"uv.exe", "uv"})
+
+    for destination_name in destination_names:
+        destination = build_dir / destination_name
+        shutil.copy2(source, destination)
+        destination.chmod(0o755)
 
 
 def main() -> int:
