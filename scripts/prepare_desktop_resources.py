@@ -48,6 +48,29 @@ def read_png_dimensions(path: Path) -> tuple[int, int] | None:
     return width, height
 
 
+def resolve_electron_binary(root: Path) -> Path:
+    desktop_dir = root / "desktop"
+    candidates: list[Path]
+
+    if sys.platform == "win32":
+        candidates = [
+            desktop_dir / "node_modules" / ".bin" / "electron.cmd",
+            desktop_dir / "node_modules" / "electron" / "dist" / "electron.exe",
+        ]
+    else:
+        candidates = [
+            desktop_dir / "node_modules" / "electron" / "dist" / "Electron.app" / "Contents" / "MacOS" / "Electron",
+            desktop_dir / "node_modules" / "electron" / "dist" / "electron",
+            desktop_dir / "node_modules" / ".bin" / "electron",
+        ]
+
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+
+    raise FileNotFoundError(f"Electron binary not found in expected locations under {desktop_dir}")
+
+
 def ensure_icons(root: Path, build_dir: Path) -> None:
     source_svg = root / "desktop" / "assets" / "icon.svg"
     if not source_svg.exists():
@@ -65,10 +88,8 @@ def ensure_icons(root: Path, build_dir: Path) -> None:
         shutil.rmtree(legacy_iconset)
 
     shutil.copy2(source_svg, output_svg)
-    electron_binary = root / "desktop" / "node_modules" / ".bin" / "electron"
+    electron_binary = resolve_electron_binary(root)
     render_script = root / "scripts" / "render_svg_to_png.mjs"
-    if not electron_binary.exists():
-        raise FileNotFoundError(f"Electron binary not found: {electron_binary}")
     electron_env = os.environ.copy()
     electron_env.pop("ELECTRON_RUN_AS_NODE", None)
     run(
