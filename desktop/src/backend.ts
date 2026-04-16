@@ -34,9 +34,12 @@ function resolveUvExecutable(): string {
   const isWindows = process.platform === "win32";
 
   if (process.resourcesPath) {
-    const packagedCandidates = [
-      path.join(process.resourcesPath, isWindows ? "uv.exe" : "uv"),
-    ];
+    const packagedCandidates = isWindows
+      ? [
+          path.join(process.resourcesPath, "uv.exe"),
+          path.join(process.resourcesPath, "uv"),
+        ]
+      : [path.join(process.resourcesPath, "uv")];
     for (const candidate of packagedCandidates) {
       if (fileExists(candidate)) {
         return candidate;
@@ -72,10 +75,12 @@ function resolveUvExecutable(): string {
   }
 
   // Fall back to PATH lookup (works in `npm run dev` / terminal runs).
-  const pathCandidate = isWindows ? "uv.exe" : "uv";
-  const probe = spawnSync(pathCandidate, ["--version"], { encoding: "utf-8" });
-  if (!probe.error) {
-    return pathCandidate;
+  const pathCandidates = isWindows ? ["uv.exe", "uv"] : ["uv"];
+  for (const pathCandidate of pathCandidates) {
+    const probe = spawnSync(pathCandidate, ["--version"], { encoding: "utf-8" });
+    if (!probe.error) {
+      return pathCandidate;
+    }
   }
 
   throw new Error(
