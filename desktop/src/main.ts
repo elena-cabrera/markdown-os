@@ -30,6 +30,16 @@ function getBuildIconPath(filename: string): string {
   return path.resolve(__dirname, "..", "build", filename);
 }
 
+function getWindowIconPath(): string | undefined {
+  if (process.platform === "darwin") {
+    return undefined;
+  }
+  if (process.platform === "win32") {
+    return getBuildIconPath("icon.ico");
+  }
+  return getBuildIconPath("icon.png");
+}
+
 function currentWindow(): BrowserWindow {
   if (!mainWindow) {
     throw new Error("Main window has not been created.");
@@ -91,7 +101,7 @@ async function createMainWindow(): Promise<void> {
     height: 900,
     minWidth: 960,
     minHeight: 640,
-    icon: process.platform === "darwin" ? undefined : getBuildIconPath("icon.png"),
+    icon: getWindowIconPath(),
     webPreferences: {
       preload: getPreloadPath(),
       contextIsolation: true,

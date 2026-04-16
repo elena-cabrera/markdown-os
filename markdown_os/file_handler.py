@@ -65,15 +65,13 @@ class FileHandler:
         if not self._filepath.exists():
             raise FileReadError(f"File does not exist: {self._filepath}")
 
-        with self._acquire_lock(exclusive=False):
-            try:
-                return self._filepath.read_text(encoding="utf-8")
-            except UnicodeDecodeError as exc:
-                raise FileReadError(
-                    f"File is not valid UTF-8 text: {self._filepath}"
-                ) from exc
-            except OSError as exc:
-                raise FileReadError(f"Failed to read file: {self._filepath}") from exc
+        try:
+            with self._acquire_lock(exclusive=False):
+                return self._read_text_from_disk()
+        except FileWriteError:
+            # Some network-backed filesystems, including WSL shares opened from
+            # Windows, can reject advisory locks even though normal reads work.
+            return self._read_text_from_disk()
 
     def write(self, content: str) -> bool:
         """
@@ -140,6 +138,26 @@ class FileHandler:
                 self._lock_path.unlink()
         except OSError:
             return
+
+    def _read_text_from_disk(self) -> str:
+        """
+        Read and decode the markdown file from disk without lock handling.
+
+        Args:
+        - None (None): This helper reads the configured file path only.
+
+        Returns:
+        - str: UTF-8 decoded markdown content from disk.
+        """
+
+        try:
+            return self._filepath.read_text(encoding="utf-8")
+        except UnicodeDecodeError as exc:
+            raise FileReadError(
+                f"File is not valid UTF-8 text: {self._filepath}"
+            ) from exc
+        except OSError as exc:
+            raise FileReadError(f"Failed to read file: {self._filepath}") from exc
 
     @contextmanager
     def _acquire_lock(self, exclusive: bool) -> Iterator[None]:

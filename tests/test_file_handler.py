@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import pytest
+import portalocker
 
 from markdown_os.file_handler import FileHandler, FileReadError
 
@@ -150,3 +151,30 @@ def test_cleanup_safe_to_call_twice(tmp_path: Path) -> None:
     file_handler.read()
     file_handler.cleanup()
     file_handler.cleanup()
+
+
+def test_read_falls_back_when_shared_lock_is_unavailable(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Verify reads still work when shared file locking is unavailable.
+
+    Args:
+    - tmp_path (Path): Pytest-managed temporary directory fixture.
+    - monkeypatch (pytest.MonkeyPatch): Pytest monkeypatch fixture.
+
+    Returns:
+    - None: Assertion validates unlocked read fallback behavior.
+    """
+
+    markdown_path = tmp_path / "document.md"
+    markdown_path.write_text("content", encoding="utf-8")
+    file_handler = FileHandler(markdown_path)
+
+    def _fail_lock(*_args: object, **_kwargs: object) -> None:
+        raise portalocker.LockException("locking unavailable")
+
+    monkeypatch.setattr(portalocker, "lock", _fail_lock)
+
+    assert file_handler.read() == "content"

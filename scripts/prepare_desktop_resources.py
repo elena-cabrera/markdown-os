@@ -154,6 +154,7 @@ def ensure_icons(root: Path, build_dir: Path) -> None:
 
     output_png = build_dir / "icon.png"
     output_ico = build_dir / "icon.ico"
+    output_icns = build_dir / "icon.icns"
     output_svg = build_dir / "icon.svg"
     legacy_icns = build_dir / "icon.icns"
     legacy_iconset = build_dir / "icon.iconset"
@@ -184,6 +185,39 @@ def ensure_icons(root: Path, build_dir: Path) -> None:
         ico_png_files.append(ico_png)
 
     write_ico_from_pngs(ico_png_files, output_ico)
+    write_icns_if_supported(output_png, output_icns, legacy_iconset)
+
+
+def write_icns_if_supported(source_png: Path, output_icns: Path, iconset_dir: Path) -> None:
+    if sys.platform != "darwin":
+        return
+
+    iconset_dir.mkdir(parents=True, exist_ok=True)
+    size_map = {
+        "icon_16x16.png": 16,
+        "icon_16x16@2x.png": 32,
+        "icon_32x32.png": 32,
+        "icon_32x32@2x.png": 64,
+        "icon_128x128.png": 128,
+        "icon_128x128@2x.png": 256,
+        "icon_256x256.png": 256,
+        "icon_256x256@2x.png": 512,
+        "icon_512x512.png": 512,
+        "icon_512x512@2x.png": 1024,
+    }
+
+    for filename, size in size_map.items():
+        run([
+            "sips",
+            "-z",
+            str(size),
+            str(size),
+            str(source_png),
+            "--out",
+            str(iconset_dir / filename),
+        ])
+
+    run(["iconutil", "-c", "icns", str(iconset_dir), "-o", str(output_icns)])
 
 
 def build_backend_bundle(root: Path, build_dir: Path, *, target_platform: str) -> Path:
