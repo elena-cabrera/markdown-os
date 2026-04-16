@@ -1,25 +1,12 @@
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
-import {
-  spawn,
-  spawnSync,
-  type ChildProcessWithoutNullStreams,
-} from "node:child_process";
-import os from "node:os";
+import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import path from "node:path";
 
 export type BackendHandle = {
   process: ChildProcessWithoutNullStreams;
   url: string;
 };
-
-type StartBackendOptions = {
-  projectRoot: string;
-};
-
-function buildDesktopRuntimePath(projectRoot: string): string {
-  return path.join(projectRoot, "markdown_os", "desktop_runtime.py");
-}
 
 function fileExists(filePath: string): boolean {
   try {
@@ -30,62 +17,51 @@ function fileExists(filePath: string): boolean {
   }
 }
 
-function resolveUvExecutable(): string {
-  const isWindows = process.platform === "win32";
+function backendBinaryName(): string {
+  return process.platform === "win32"
+    ? "markdown-os-backend.exe"
+    : "markdown-os-backend";
+}
 
-  if (process.resourcesPath) {
-    const packagedCandidates = isWindows
-      ? [
-          path.join(process.resourcesPath, "uv.exe"),
-          path.join(process.resourcesPath, "uv"),
-        ]
-      : [path.join(process.resourcesPath, "uv")];
-    for (const candidate of packagedCandidates) {
-      if (fileExists(candidate)) {
-        return candidate;
-      }
-    }
-  }
+function resolveBackendExecutable(): string {
+  const backendName = backendBinaryName();
 
-  // Allow power users to override.
   const overridden =
-    process.env.MARKDOWN_OS_UV_PATH ||
-    process.env.UV_PATH ||
-    process.env.OVERRIDE_UV_PATH;
+    process.env.MARKDOWN_OS_BACKEND_PATH ||
+    process.env.MARKDOWN_OS_PYTHON_BACKEND_PATH;
   if (overridden && fileExists(overridden)) {
     return overridden;
   }
 
-  // Common locations for uv installed via cargo/brew.
-  const home = os.homedir();
-  const candidates: string[] = [
-    path.join(home, "AppData", "Local", "Programs", "uv", "uv.exe"),
-    path.join(home, ".local", "bin", "uv.exe"),
-    path.join(home, ".cargo", "bin", "uv"),
-    path.join(home, ".cargo", "bin", "uv.exe"),
-    path.join(home, ".local", "bin", "uv"),
-    "/usr/local/bin/uv",
-    "/opt/homebrew/bin/uv",
+  const candidateRoots = [
+    ...(process.resourcesPath
+      ? [
+          path.join(process.resourcesPath, "backend"),
+          path.join(process.resourcesPath, "build", "backend"),
+        ]
+      : []),
+    path.resolve(__dirname, "..", "build", "backend"),
   ];
 
-  for (const candidate of candidates) {
+  for (const root of candidateRoots) {
+    const candidate = path.join(root, backendName);
     if (fileExists(candidate)) {
       return candidate;
     }
   }
 
-  // Fall back to PATH lookup (works in `npm run dev` / terminal runs).
-  const pathCandidates = isWindows ? ["uv.exe", "uv"] : ["uv"];
-  for (const pathCandidate of pathCandidates) {
-    const probe = spawnSync(pathCandidate, ["--version"], { encoding: "utf-8" });
-    if (!probe.error) {
-      return pathCandidate;
-    }
-  }
-
   throw new Error(
-    "Could not find a uv executable. Reinstall the desktop app or set MARKDOWN_OS_UV_PATH to a valid uv binary.",
+    "Could not find the bundled desktop backend. Reinstall the desktop app or set MARKDOWN_OS_BACKEND_PATH.",
   );
+}
+
+function backendWorkingDirectory(backendExecutable: string): string {
+  const isWindows = process.platform === "win32";
+  const backendDir = path.dirname(backendExecutable);
+  if (isWindows || !process.resourcesPath) {
+    return backendDir;
+  }
+  return process.resourcesPath;
 }
 
 async function waitForReadyUrl(
@@ -139,19 +115,15 @@ async function waitForReadyUrl(
   });
 }
 
-export async function startBackend(
-  options: StartBackendOptions,
-): Promise<BackendHandle> {
-  const { projectRoot } = options;
-  const desktopRuntimePath = buildDesktopRuntimePath(projectRoot);
+export async function startBackend(): Promise<BackendHandle> {
   const requestId = randomUUID();
+  const backendExecutable = resolveBackendExecutable();
 
-  const uvExecutable = resolveUvExecutable();
   const child = spawn(
-    uvExecutable,
-    ["run", "python", desktopRuntimePath, "--request-id", requestId],
+    backendExecutable,
+    ["--request-id", requestId],
     {
-      cwd: projectRoot,
+      cwd: backendWorkingDirectory(backendExecutable),
       stdio: ["pipe", "pipe", "pipe"],
       env: {
         ...process.env,
@@ -164,10 +136,8 @@ export async function startBackend(
   return { process: child, url };
 }
 
-export async function waitForBackendReady(
-  projectRoot: string,
-): Promise<BackendHandle> {
-  return startBackend({ projectRoot });
+export async function waitForBackendReady(): Promise<BackendHandle> {
+  return startBackend();
 }
 
 export async function stopBackend(

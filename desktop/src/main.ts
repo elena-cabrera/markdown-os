@@ -142,9 +142,7 @@ async function bootstrap(): Promise<void> {
   }
 
   registerIpcHandlers();
-  backendHandle = await startBackend({
-    projectRoot: path.resolve(__dirname, "..", ".."),
-  });
+  backendHandle = await startBackend();
   await createMainWindow();
 
   app.on("second-instance", async (_event, commandLine) => {

@@ -10,6 +10,8 @@ permissions:
 
 jobs:
   build-desktop:
+    env:
+      MARKDOWN_OS_DESKTOP_TARGET: ${{ matrix.os == 'windows-latest' && 'win32' || 'darwin' }}
     strategy:
       fail-fast: false
       matrix:
@@ -58,7 +60,7 @@ jobs:
         run: npm run build
 
       - name: Run targeted Python tests
-        run: uv run pytest tests/test_cli.py tests/test_server.py tests/test_workspace_session.py tests/test_frontend_navigation_sync.py -q
+        run: uv run pytest tests/test_prepare_desktop_resources.py tests/test_cli.py tests/test_server.py tests/test_workspace_session.py tests/test_frontend_navigation_sync.py -q
 
       - name: Package desktop app
         working-directory: desktop

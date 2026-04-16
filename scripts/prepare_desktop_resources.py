@@ -4,13 +4,65 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
-import sys
 import struct
+import sys
 from pathlib import Path
 
 
-def run(cmd: list[str], env: dict[str, str] | None = None) -> None:
-    subprocess.run(cmd, check=True, env=env)
+BACKEND_BASENAME = "markdown-os-backend"
+PYINSTALLER_HIDDEN_IMPORTS = [
+    "uvicorn.loops.auto",
+    "uvicorn.protocols.http.auto",
+    "uvicorn.protocols.websockets.auto",
+    "uvicorn.lifespan.on",
+    "watchdog.observers.fsevents",
+    "watchdog.observers.inotify",
+    "watchdog.observers.kqueue",
+    "watchdog.observers.polling",
+    "watchdog.observers.read_directory_changes",
+]
+
+
+def run(
+    cmd: list[str],
+    env: dict[str, str] | None = None,
+    cwd: Path | None = None,
+) -> None:
+    subprocess.run(cmd, check=True, env=env, cwd=cwd)
+
+
+def normalize_platform_name(value: str) -> str:
+    normalized = value.strip().lower()
+    aliases = {
+        "windows": "win32",
+        "win": "win32",
+        "win32": "win32",
+        "cygwin": "win32",
+        "msys": "win32",
+        "darwin": "darwin",
+        "mac": "darwin",
+        "macos": "darwin",
+        "osx": "darwin",
+        "linux": "linux",
+    }
+    try:
+        return aliases[normalized]
+    except KeyError as exc:
+        raise ValueError(f"Unsupported desktop target platform: {value}") from exc
+
+
+def resolve_target_platform() -> str:
+    explicit_target = (
+        os.environ.get("MARKDOWN_OS_DESKTOP_TARGET")
+        or os.environ.get("npm_config_platform")
+    )
+    if explicit_target:
+        return normalize_platform_name(explicit_target)
+    return normalize_platform_name(sys.platform)
+
+
+def backend_binary_name(target_platform: str) -> str:
+    return f"{BACKEND_BASENAME}.exe" if target_platform == "win32" else BACKEND_BASENAME
 
 
 def write_ico_from_pngs(png_files: list[Path], output_ico: Path) -> None:
@@ -134,30 +186,61 @@ def ensure_icons(root: Path, build_dir: Path) -> None:
     write_ico_from_pngs(ico_png_files, output_ico)
 
 
-def copy_uv_binary(build_dir: Path) -> None:
-    uv_path = shutil.which("uv")
-    if not uv_path:
-        print("warning: uv not found on PATH; desktop package will rely on system uv", file=sys.stderr)
-        return
+def build_backend_bundle(root: Path, build_dir: Path, *, target_platform: str) -> Path:
+    backend_dir = build_dir / "backend"
+    pyinstaller_work_dir = build_dir / "pyinstaller-work"
+    pyinstaller_spec_dir = build_dir / "pyinstaller-spec"
 
-    source = Path(uv_path)
-    destination_names = {source.name}
-    if sys.platform == "win32":
-        destination_names.update({"uv.exe", "uv"})
+    shutil.rmtree(backend_dir, ignore_errors=True)
+    shutil.rmtree(pyinstaller_work_dir, ignore_errors=True)
+    shutil.rmtree(pyinstaller_spec_dir, ignore_errors=True)
+    backend_dir.mkdir(parents=True, exist_ok=True)
+    pyinstaller_work_dir.mkdir(parents=True, exist_ok=True)
+    pyinstaller_spec_dir.mkdir(parents=True, exist_ok=True)
 
-    for destination_name in destination_names:
-        destination = build_dir / destination_name
-        shutil.copy2(source, destination)
-        destination.chmod(0o755)
+    backend_name = backend_binary_name(target_platform)
+    desktop_runtime = root / "markdown_os" / "desktop_runtime.py"
+    pyinstaller_cmd = [
+        sys.executable,
+        "-m",
+        "PyInstaller",
+        "--noconfirm",
+        "--clean",
+        "--onefile",
+        "--name",
+        BACKEND_BASENAME,
+        "--distpath",
+        str(backend_dir),
+        "--workpath",
+        str(pyinstaller_work_dir),
+        "--specpath",
+        str(pyinstaller_spec_dir),
+        "--collect-all",
+        "markdown_os",
+    ]
+
+    for hidden_import in PYINSTALLER_HIDDEN_IMPORTS:
+        pyinstaller_cmd.extend(["--hidden-import", hidden_import])
+
+    pyinstaller_cmd.append(str(desktop_runtime))
+    run(pyinstaller_cmd, cwd=root)
+
+    backend_binary = backend_dir / backend_name
+    if not backend_binary.exists():
+        raise FileNotFoundError(f"Bundled backend executable was not created: {backend_binary}")
+
+    backend_binary.chmod(0o755)
+    return backend_binary
 
 
 def main() -> int:
     root = Path(__file__).resolve().parents[1]
     build_dir = root / "desktop" / "build"
     build_dir.mkdir(parents=True, exist_ok=True)
+    target_platform = resolve_target_platform()
 
     ensure_icons(root, build_dir)
-    copy_uv_binary(build_dir)
+    build_backend_bundle(root, build_dir, target_platform=target_platform)
     print(f"Prepared desktop build resources in {build_dir}")
     return 0
 

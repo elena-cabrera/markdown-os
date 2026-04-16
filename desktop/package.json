@@ -5,7 +5,7 @@
   "description": "Electron shell for Markdown-OS",
   "main": "dist/main.js",
   "scripts": {
-    "prepare:resources": "python ../scripts/prepare_desktop_resources.py",
+    "prepare:resources": "node ./scripts/run-python-script.mjs ../scripts/prepare_desktop_resources.py",
     "icon:mac": "../scripts/generate_macos_icon.sh",
     "build": "npm run prepare:resources && tsc -p tsconfig.json",
     "dev": "npm run build && env -u ELECTRON_RUN_AS_NODE electron .",

@@ -7,23 +7,15 @@ files:
   - dist/*.js
   - package.json
 extraResources:
-  - from: ../markdown_os
-    to: markdown_os
-    filter:
-      - "**/*"
-  - from: ../README.md
-    to: README.md
-  - from: ../pyproject.toml
-    to: pyproject.toml
-  - from: ../uv.lock
-    to: uv.lock
   - from: build
     to: .
     filter:
       - icon.png
       - icon.ico
-      - uv
-      - uv.exe
+  - from: build/backend
+    to: backend
+    filter:
+      - "**/*"
 asar: true
 mac:
   target:
