@@ -14,6 +14,7 @@ import {
   openReleaseUrl,
   releaseFeedUrl,
 } from "./updater";
+import { shouldInstallApplicationMenu } from "./application-menu";
 
 let mainWindow: BrowserWindow | null = null;
 let backendHandle: BackendHandle | null = null;
@@ -62,7 +63,7 @@ async function sendWorkspaceToRenderer(filePath: string): Promise<void> {
 }
 
 function buildMenu(): Menu | null {
-  if (process.platform === "win32") {
+  if (!shouldInstallApplicationMenu(process.platform)) {
     return null;
   }
 
