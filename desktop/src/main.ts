@@ -61,7 +61,11 @@ async function sendWorkspaceToRenderer(filePath: string): Promise<void> {
   );
 }
 
-function buildMenu(): Menu {
+function buildMenu(): Menu | null {
+  if (process.platform === "win32") {
+    return null;
+  }
+
   return Menu.buildFromTemplate([
     {
       label: "File",
