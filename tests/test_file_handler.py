@@ -178,3 +178,38 @@ def test_read_falls_back_when_shared_lock_is_unavailable(
     monkeypatch.setattr(portalocker, "lock", _fail_lock)
 
     assert file_handler.read() == "content"
+
+
+def test_read_falls_back_when_lock_file_cannot_be_opened(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Verify reads still work when the lock file cannot be opened.
+
+    This models environments like Windows UNC paths (e.g. WSL shares) where creating
+    or opening the advisory lock file can fail even though the markdown file itself
+    remains readable.
+
+    Args:
+    - tmp_path (Path): Pytest-managed temporary directory fixture.
+    - monkeypatch (pytest.MonkeyPatch): Pytest monkeypatch fixture.
+
+    Returns:
+    - None: Assertion validates unlocked read fallback when lock IO fails.
+    """
+
+    markdown_path = tmp_path / "document.md"
+    markdown_path.write_text("content", encoding="utf-8")
+    file_handler = FileHandler(markdown_path)
+
+    original_open = Path.open
+
+    def _fail_lock_open(self: Path, *args: object, **kwargs: object):  # type: ignore[no-untyped-def]
+        if self.name.endswith(".lock"):
+            raise OSError("cannot open lock file")
+        return original_open(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "open", _fail_lock_open, raising=True)
+
+    assert file_handler.read() == "content"
