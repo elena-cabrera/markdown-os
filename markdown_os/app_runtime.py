@@ -12,6 +12,26 @@ from markdown_os.directory_handler import DirectoryHandler
 from markdown_os.file_handler import FileHandler
 
 
+def _normalize_path(path: Path) -> Path:
+    """
+    Normalize a user-supplied path while tolerating share/UNC resolve failures.
+
+    Args:
+    - path (Path): User-supplied path that may point to a local or network share target.
+
+    Returns:
+    - Path: Best-effort absolute path. Prefers ``Path.resolve()`` but falls back to an absolute path when resolving raises ``OSError``.
+    """
+
+    expanded = path.expanduser()
+    try:
+        return expanded.resolve()
+    except OSError:
+        # Windows network shares (including WSL UNC paths like \\wsl.localhost\...)
+        # may raise during resolve() even though the path is valid and accessible.
+        return expanded.absolute()
+
+
 def validate_markdown_file(filepath: Path) -> Path:
     """
     Validate and normalize a markdown file path.
@@ -23,7 +43,7 @@ def validate_markdown_file(filepath: Path) -> Path:
     - Path: Fully resolved markdown file path when validation succeeds.
     """
 
-    resolved_path = filepath.expanduser().resolve()
+    resolved_path = _normalize_path(filepath)
     if not resolved_path.exists():
         raise typer.BadParameter(f"File does not exist: {resolved_path}")
     if not resolved_path.is_file():
@@ -44,7 +64,7 @@ def validate_markdown_directory(directory: Path) -> Path:
     - Path: Fully resolved directory path when validation succeeds.
     """
 
-    resolved_path = directory.expanduser().resolve()
+    resolved_path = _normalize_path(directory)
     if not resolved_path.exists():
         raise typer.BadParameter(f"Path does not exist: {resolved_path}")
     if not resolved_path.is_dir():
@@ -70,7 +90,7 @@ def resolve_target_path(
     - tuple[Path, str]: Resolved path and mode string (`"file"` or `"folder"`).
     """
 
-    resolved_path = path.expanduser().resolve()
+    resolved_path = _normalize_path(path)
     if not resolved_path.exists():
         raise typer.BadParameter(f"Path does not exist: {resolved_path}")
 
