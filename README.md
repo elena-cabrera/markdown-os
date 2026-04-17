@@ -64,8 +64,27 @@ Use `--force` / `-f` to overwrite an existing file without prompting.
 
 ## Publishing (maintainers)
 
-1.  Bump `version` in `pyproject.toml`.
-2.  Commit and push to `master`: `git add pyproject.toml && git commit -m "chore: release X.Y.Z" && git push origin master`
-3.  Tag that commit and push: `git tag -a vX.Y.Z -m "Release X.Y.Z" && git push origin vX.Y.Z`
+Use the release helper from a clean working tree on the branch you want to publish (usually `master`):
+
+```bash
+uv run python scripts/release.py
+```
+
+It reads `[project].version` from `pyproject.toml`, asks whether to bump **major**, **minor**, or **patch**, updates the file, then runs `git add` / `git commit` (only `pyproject.toml`) / `git push -u origin <current-branch>` / annotated `git tag` / `git push origin <tag>`.
+
+Useful options:
+
+- `--dry-run` — print the planned version and git steps without changing files or running git.
+- `-y` / `--yes` — skip the final confirmation prompt.
+- `--version X.Y.Z` — set an exact version string and skip the bump menu.
+- `--branch master` — push a specific branch (defaults to your current branch).
+- `--repo /path/to/checkout` — run against another clone.
+- `--allow-dirty` — proceed when other files are modified (still only commits `pyproject.toml`).
+
+Manual sequence (equivalent when you are on `master`):
+
+1. Bump `version` in `pyproject.toml`.
+2. Commit and push: `git add pyproject.toml && git commit -m "chore: release X.Y.Z" && git push origin master`
+3. Tag and push: `git tag -a vX.Y.Z -m "Release X.Y.Z" && git push origin vX.Y.Z`
 
 The GitHub workflow runs on tag push and publishes to PyPI only when the tag matches the package version.
