@@ -66,6 +66,29 @@ export async function pickWorkspaceFolder(
 export async function pickFileOrFolder(
   window: BrowserWindow,
 ): Promise<string | null> {
+  if (process.platform !== "darwin") {
+    const selection = await dialog.showMessageBox(window, {
+      type: "question",
+      title: "Open",
+      message: "What would you like to open?",
+      detail: "Windows and Linux cannot reliably pick both files and folders in one native dialog.",
+      buttons: ["Markdown File", "Folder", "Cancel"],
+      defaultId: 0,
+      cancelId: 2,
+      noLink: true,
+    });
+
+    if (selection.response === 0) {
+      return pickMarkdownFile(window);
+    }
+
+    if (selection.response === 1) {
+      return pickWorkspaceFolder(window);
+    }
+
+    return null;
+  }
+
   const result = await dialog.showOpenDialog(window, {
     title: "Open file or folder",
     properties: ["openFile", "openDirectory"],
