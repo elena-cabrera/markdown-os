@@ -84,14 +84,13 @@ class FileHandler:
         - bool: True when content is written and moved into place successfully.
         """
 
-        with self._acquire_lock(exclusive=True):
-            temp_path = self._write_temporary_file(content)
-            try:
-                os.replace(temp_path, self._filepath)
-            except OSError as exc:
-                self._safe_remove(temp_path)
-                raise FileWriteError(f"Failed to replace file: {self._filepath}") from exc
-            return True
+        try:
+            with self._acquire_lock(exclusive=True):
+                return self._write_without_lock(content)
+        except FileWriteError:
+            # Some network-backed filesystems, including WSL shares opened from
+            # Windows, can reject advisory locks even though normal writes work.
+            return self._write_without_lock(content)
 
     def get_metadata(self) -> dict[str, Any]:
         """
@@ -159,6 +158,25 @@ class FileHandler:
         except OSError as exc:
             raise FileReadError(f"Failed to read file: {self._filepath}") from exc
 
+    def _write_without_lock(self, content: str) -> bool:
+        """
+        Persist markdown content atomically without acquiring a file lock.
+
+        Args:
+        - content (str): Full markdown document content to save.
+
+        Returns:
+        - bool: True when content is written and moved into place successfully.
+        """
+
+        temp_path = self._write_temporary_file(content)
+        try:
+            os.replace(temp_path, self._filepath)
+        except OSError as exc:
+            self._safe_remove(temp_path)
+            raise FileWriteError(f"Failed to replace file: {self._filepath}") from exc
+        return True
+
     @contextmanager
     def _acquire_lock(self, exclusive: bool) -> Iterator[None]:
         """
@@ -171,8 +189,13 @@ class FileHandler:
         - Iterator[None]: Context manager yielding control while the lock is held.
         """
 
-        self._lock_path.parent.mkdir(parents=True, exist_ok=True)
-        with self._lock_path.open("a+", encoding="utf-8") as lock_file:
+        try:
+            self._lock_path.parent.mkdir(parents=True, exist_ok=True)
+            lock_file_context = self._lock_path.open("a+", encoding="utf-8")
+        except OSError as exc:
+            raise FileWriteError(f"Failed to open lock file: {self._lock_path}") from exc
+
+        with lock_file_context as lock_file:
             self._lock_created = True
             lock_flags = portalocker.LOCK_EX if exclusive else portalocker.LOCK_SH
             try:
