@@ -3,6 +3,7 @@
 from pathlib import Path
 
 from fastapi.testclient import TestClient
+import pytest
 
 from markdown_os.directory_handler import DirectoryHandler
 from markdown_os.file_handler import FileHandler
@@ -415,6 +416,50 @@ def test_get_content_reads_selected_file_in_folder_mode(tmp_path: Path) -> None:
     target.write_text("# Guide", encoding="utf-8")
 
     with _build_folder_client(workspace) as client:
+        response = client.get("/api/content", params={"file": "docs/guide.md"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["content"] == "# Guide"
+    assert payload["metadata"]["relative_path"] == "docs/guide.md"
+
+
+def test_get_content_tolerates_directory_resolve_failure_in_folder_mode(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Verify folder mode still loads content when directory path resolution fails once.
+
+    Args:
+    - tmp_path (Path): Pytest-managed temporary directory fixture.
+    - monkeypatch (pytest.MonkeyPatch): Pytest monkeypatch fixture.
+
+    Returns:
+    - None: Assertions validate share-safe folder-mode content loading.
+    """
+
+    workspace = tmp_path / "workspace"
+    nested = workspace / "docs"
+    nested.mkdir(parents=True, exist_ok=True)
+    target = nested / "guide.md"
+    target.write_text("# Guide", encoding="utf-8")
+
+    resolved_target = target.resolve()
+    original_resolve = Path.resolve
+    resolve_failures_remaining = 1
+
+    def _fail_first_target_resolve(  # type: ignore[no-untyped-def]
+        self: Path, *args: object, **kwargs: object
+    ):
+        nonlocal resolve_failures_remaining
+        if self == resolved_target and resolve_failures_remaining > 0:
+            resolve_failures_remaining -= 1
+            raise OSError("simulated UNC resolve failure")
+        return original_resolve(self, *args, **kwargs)
+
+    with _build_folder_client(workspace) as client:
+        monkeypatch.setattr(Path, "resolve", _fail_first_target_resolve, raising=True)
         response = client.get("/api/content", params={"file": "docs/guide.md"})
 
     assert response.status_code == 200
