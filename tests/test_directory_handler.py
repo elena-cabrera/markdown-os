@@ -34,6 +34,41 @@ def test_list_files_recursive_returns_relative_markdown_paths(tmp_path: Path) ->
     ]
 
 
+def test_list_files_tolerates_resolve_failure_for_workspace_files(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Verify listing still returns workspace files when resolve fails on a share path.
+
+    Args:
+    - tmp_path (Path): Pytest-managed temporary directory fixture.
+    - monkeypatch (pytest.MonkeyPatch): Pytest monkeypatch fixture.
+
+    Returns:
+    - None: Assertions validate lexical fallback in recursive listing.
+    """
+
+    workspace = tmp_path / "workspace"
+    nested = workspace / "docs"
+    nested.mkdir(parents=True, exist_ok=True)
+    target = nested / "guide.md"
+    target.write_text("# Guide", encoding="utf-8")
+    handler = DirectoryHandler(workspace)
+
+    resolved_target = target.resolve()
+    original_resolve = Path.resolve
+
+    def _fail_target_resolve(self: Path, *args: object, **kwargs: object):  # type: ignore[no-untyped-def]
+        if self == resolved_target:
+            raise OSError("simulated UNC resolve failure")
+        return original_resolve(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "resolve", _fail_target_resolve, raising=True)
+
+    assert [path.as_posix() for path in handler.list_files()] == ["docs/guide.md"]
+
+
 def test_get_file_tree_builds_nested_folder_structure(tmp_path: Path) -> None:
     """
     Verify tree payload includes nested folders and file nodes.

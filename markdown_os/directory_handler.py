@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import posixpath
 from pathlib import Path
 from typing import Any
 
@@ -57,8 +58,12 @@ class DirectoryHandler:
                 continue
             if candidate.suffix.lower() not in allowed_extensions:
                 continue
-            if not candidate.resolve().is_relative_to(self._directory):
-                continue
+            try:
+                if not candidate.resolve().is_relative_to(self._directory):
+                    continue
+            except OSError:
+                if not candidate.is_relative_to(self._directory):
+                    continue
             files.append(candidate.relative_to(self._directory))
 
         return sorted(files, key=lambda relative_path: relative_path.as_posix().lower())
@@ -233,35 +238,39 @@ class DirectoryHandler:
         - tuple[str, Path]: Normalized POSIX relative path and absolute path.
         """
 
-        raw_path = Path(relative_path.replace("\\", "/"))
-        if raw_path.is_absolute():
-            raise ValueError("Path must be relative to the workspace directory.")
-
-        absolute_path = (self._directory / raw_path).resolve()
-        if not absolute_path.is_relative_to(self._directory):
-            raise ValueError("Path escapes the workspace directory.")
+        normalized_path, absolute_path = self._resolve_workspace_path(relative_path)
 
         if absolute_path.suffix.lower() not in MARKDOWN_EXTENSIONS:
             raise ValueError(f"Not a markdown file: {absolute_path}")
         if not absolute_path.exists() or not absolute_path.is_file():
             raise FileNotFoundError(f"File does not exist: {absolute_path}")
 
-        normalized_path = absolute_path.relative_to(self._directory).as_posix()
         return normalized_path, absolute_path
 
     def _resolve_workspace_path(self, relative_path: str) -> tuple[str, Path]:
         """Resolve and validate a directory-relative path within the workspace root."""
 
-        raw_path = Path(relative_path.replace("\\", "/"))
-        if raw_path.is_absolute():
+        raw_path = self._normalize_relative_path(relative_path)
+
+        absolute_path = self._directory / raw_path
+        try:
+            if not absolute_path.resolve().is_relative_to(self._directory):
+                raise ValueError("Path escapes the workspace directory.")
+        except OSError:
+            if not absolute_path.is_relative_to(self._directory):
+                raise ValueError("Path escapes the workspace directory.")
+
+        return raw_path.as_posix(), absolute_path
+
+    def _normalize_relative_path(self, relative_path: str) -> Path:
+        """Normalize a user-provided relative path without filesystem resolution."""
+
+        normalized_path = Path(posixpath.normpath(relative_path.replace("\\", "/")))
+        if normalized_path.is_absolute():
             raise ValueError("Path must be relative to the workspace directory.")
-
-        absolute_path = (self._directory / raw_path).resolve()
-        if not absolute_path.is_relative_to(self._directory):
+        if any(part == ".." for part in normalized_path.parts):
             raise ValueError("Path escapes the workspace directory.")
-
-        normalized_path = absolute_path.relative_to(self._directory).as_posix()
-        return normalized_path, absolute_path
+        return normalized_path
 
     def _sort_tree_node(self, node: dict[str, Any]) -> None:
         """
