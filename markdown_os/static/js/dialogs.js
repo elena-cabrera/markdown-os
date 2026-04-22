@@ -147,13 +147,20 @@
 
         settled = true;
         cleanup();
-        hideDialog(elements);
-        hideFields(elements);
 
-        focusWithoutScroll(previousFocus);
-        restoreEditorScrollTop(previousScrollTop);
+        // Defer teardown so the tail of the same pointer gesture (notably the
+        // click following mousedown on Confirm) cannot "fall through" to the
+        // control that opened the dialog once the overlay is removed (Windows
+        // Electron / some browsers).
+        window.setTimeout(() => {
+          hideDialog(elements);
+          hideFields(elements);
 
-        resolve(result);
+          focusWithoutScroll(previousFocus);
+          restoreEditorScrollTop(previousScrollTop);
+
+          resolve(result);
+        }, 0);
       };
 
       const onKeyDown = (event) => {
