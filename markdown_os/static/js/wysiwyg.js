@@ -968,6 +968,20 @@
     return mermaidElement;
   }
 
+  function createMermaidContainerFromSource(sourceContent) {
+    const mermaidContainer = document.createElement("div");
+    mermaidContainer.className = "mermaid-container";
+    mermaidContainer.setAttribute("contenteditable", "false");
+    mermaidContainer.dataset.mermaidSource = sourceContent;
+
+    const canvas = document.createElement("div");
+    canvas.className = "mermaid-canvas";
+    canvas.appendChild(createMermaidSourceNode(sourceContent));
+    mermaidContainer.appendChild(canvas);
+
+    return mermaidContainer;
+  }
+
   function ensureMermaidCanvas(container) {
     let canvas = container.querySelector(".mermaid-canvas");
     if (!canvas) {
@@ -1203,17 +1217,7 @@
       }
 
       const sourceContent = codeElement.textContent || "";
-
-      const mermaidContainer = document.createElement("div");
-      mermaidContainer.className = "mermaid-container";
-      mermaidContainer.setAttribute("contenteditable", "false");
-      mermaidContainer.dataset.mermaidSource = sourceContent;
-
-      const canvas = document.createElement("div");
-      canvas.className = "mermaid-canvas";
-      canvas.appendChild(createMermaidSourceNode(sourceContent));
-      mermaidContainer.appendChild(canvas);
-
+      const mermaidContainer = createMermaidContainerFromSource(sourceContent);
       preElement.replaceWith(mermaidContainer);
     });
 
@@ -1538,6 +1542,50 @@
     document.execCommand("insertHTML", false, html);
   }
 
+  /**
+   * Inserts a rendered Mermaid container at the current selection using DOM APIs so
+   * native undo (Ctrl+Z) can remove the whole insertion in one step. Falls back to
+   * null when the selection is missing or not inside the editable root.
+   *
+   * @param {string} sourceContent
+   * @returns {HTMLElement | null}
+   */
+  function insertMermaidBlockAtCaret(sourceContent) {
+    if (!state.root) {
+      return null;
+    }
+
+    state.root.focus();
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) {
+      return null;
+    }
+
+    const range = selection.getRangeAt(0);
+    const ancestor = range.commonAncestorContainer;
+    const ancestorElement =
+      ancestor.nodeType === Node.TEXT_NODE ? ancestor.parentElement : ancestor;
+    if (
+      !ancestorElement ||
+      !state.root.contains(ancestorElement) ||
+      isWithinNonEditable(ancestor)
+    ) {
+      return null;
+    }
+
+    const mermaidContainer = createMermaidContainerFromSource(sourceContent);
+    const trailingParagraph = document.createElement("p");
+    trailingParagraph.innerHTML = "<br>";
+
+    const fragment = document.createDocumentFragment();
+    fragment.appendChild(mermaidContainer);
+    fragment.appendChild(trailingParagraph);
+
+    range.insertNode(fragment);
+    placeCaretAtEnd(trailingParagraph);
+    return mermaidContainer;
+  }
+
   function closestCodeElement(node) {
     if (!node) {
       return null;
@@ -1791,10 +1839,30 @@
     }
 
     if (command === "mermaid") {
-      insertHtmlAtSelection(
-        '<pre><code class="language-mermaid">graph TD\n  A[Start] --> B[End]</code></pre><p><br></p>',
-      );
-      await renderMermaidDiagrams();
+      const defaultSource = "graph TD\n  A[Start] --> B[End]";
+      const inserted = insertMermaidBlockAtCaret(defaultSource);
+      if (!inserted) {
+        insertHtmlAtSelection(
+          `<pre><code class="language-mermaid">${defaultSource}</code></pre><p><br></p>`,
+        );
+        await renderMermaidDiagrams();
+      } else {
+        ensureMermaidInitialized();
+        const mermaidNode = inserted.querySelector(".mermaid-canvas .mermaid");
+        if (mermaidNode && window.mermaid) {
+          try {
+            await window.mermaid.run({ nodes: [mermaidNode] });
+            fixMermaidSvgDimensions();
+            applyZoomToDiagrams();
+            addMermaidControls(inserted);
+          } catch (error) {
+            console.error("Mermaid render error.", error);
+            renderMermaidError(inserted, inserted.dataset.mermaidSource || "");
+          }
+        } else {
+          addMermaidControls(inserted);
+        }
+      }
       emitChange();
     }
   }
