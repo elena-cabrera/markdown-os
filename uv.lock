@@ -204,7 +204,7 @@ wheels = [
 
 [[package]]
 name = "markdown-os"
-version = "0.9.17"
+version = "0.9.19"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
