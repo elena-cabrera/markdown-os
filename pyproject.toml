@@ -1,6 +1,6 @@
 [project]
 name = "markdown-os"
-version = "0.9.19"
+version = "0.9.20"
 description = "Developer-focused markdown editor served from a local CLI."
 readme = "README.md"
 license = "Apache-2.0"
@@ -44,7 +44,8 @@ dev = [
 markdown-os = "markdown_os.cli:run"
 
 [project.urls]
-Homepage = "https://github.com/elena-cabrera/markdown-os"
+Homepage = "https://markdown-os.elenacabrera.xyz/"
+Documentation = "https://elena-cabrera-markdown-os.mintlify.app/introduction"
 Repository = "https://github.com/elena-cabrera/markdown-os"
 Issues = "https://github.com/elena-cabrera/markdown-os/issues"
 
