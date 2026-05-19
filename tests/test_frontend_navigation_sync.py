@@ -201,6 +201,27 @@ def test_wysiwyg_mermaid_uses_inline_toolbar_for_action_buttons() -> None:
     assert "toolbar.appendChild(fullscreenButton);" in source
 
 
+def test_wysiwyg_normalizes_flowchart_braces_in_square_bracket_labels() -> None:
+    """Verify API path braces in flowchart nodes are quoted before Mermaid render."""
+
+    source = _read_static_js("wysiwyg.js")
+
+    assert "function normalizeMermaidSource(source)" in source
+    assert "/^(flowchart|graph)(\\s|$)/i.test(firstLine.trim())" in source
+    assert "await window.mermaid.run({" in source
+    assert "nodes: [mermaidNode]," in source
+
+
+def test_wysiwyg_mermaid_renders_each_diagram_independently() -> None:
+    """Verify one invalid diagram does not force errors on every Mermaid block."""
+
+    source = _read_static_js("wysiwyg.js")
+
+    assert "for (const container of containers)" in source
+    assert "renderMermaidError(container, rawSource)" in source
+    assert "nodes: [mermaidNode]," in source
+
+
 def test_wysiwyg_mermaid_toolbar_is_separate_from_canvas_layer() -> None:
     """Verify Mermaid controls are outside the zoomable canvas layer."""
 

@@ -582,6 +582,30 @@
     return mermaidThemeByAppTheme[currentAppTheme] || "default";
   }
 
+  /**
+   * Quote flowchart node labels that contain curly braces inside square brackets.
+   * Mermaid treats `{` as a rhombus node delimiter unless the label is quoted.
+   * @param {string} source - Raw Mermaid diagram source from the editor.
+   * @returns {string} - Source safe to pass to the Mermaid renderer.
+   */
+  function normalizeMermaidSource(source) {
+    const trimmed = source.trimStart();
+    const firstLine = trimmed.split(/\r?\n/, 1)[0] || "";
+    if (!/^(flowchart|graph)(\s|$)/i.test(firstLine.trim())) {
+      return source;
+    }
+
+    return source.replace(
+      /\[([^\[\]"']*[\{\}][^\[\]"]*)\]/g,
+      (match, label) => {
+        const escaped = label
+          .replace(/\\/g, "\\\\")
+          .replace(/"/g, '\\"');
+        return `["${escaped}"]`;
+      },
+    );
+  }
+
   function configureMarked() {
     if (!window.marked) {
       return;
@@ -1227,21 +1251,30 @@
       return;
     }
 
-    try {
-      await window.mermaid.run({
-        nodes: mermaidNodes,
-      });
-      fixMermaidSvgDimensions();
-      applyZoomToDiagrams();
-      state.root.querySelectorAll(".mermaid-container").forEach((container) => {
+    const containers = state.root.querySelectorAll(".mermaid-container");
+    for (const container of containers) {
+      const mermaidNode = container.querySelector(".mermaid-canvas .mermaid");
+      if (!mermaidNode) {
+        continue;
+      }
+
+      const rawSource = container.dataset.mermaidSource || mermaidNode.textContent || "";
+      const renderSource = normalizeMermaidSource(rawSource);
+      mermaidNode.textContent = renderSource;
+
+      try {
+        await window.mermaid.run({
+          nodes: [mermaidNode],
+        });
         addMermaidControls(container);
-      });
-    } catch (error) {
-      console.error("Mermaid render error.", error);
-      state.root.querySelectorAll(".mermaid-container").forEach((container) => {
-        renderMermaidError(container, container.dataset.mermaidSource || "");
-      });
+      } catch (error) {
+        console.error("Mermaid render error.", error);
+        renderMermaidError(container, rawSource);
+      }
     }
+
+    fixMermaidSvgDimensions();
+    applyZoomToDiagrams();
   }
 
   function setTaskCheckboxClasses(checkbox) {
@@ -2012,7 +2045,10 @@
       try {
         ensureMermaidInitialized();
         const fullscreenId = `mermaid-fullscreen-${Date.now()}`;
-        const result = await window.mermaid.render(fullscreenId, mermaidSource);
+        const result = await window.mermaid.render(
+          fullscreenId,
+          normalizeMermaidSource(mermaidSource),
+        );
         if (
           renderToken !== state.fullscreenRenderToken ||
           modal.classList.contains("hidden")
