@@ -1008,6 +1008,38 @@
     return canvas;
   }
 
+  async function renderMermaidContainer(container) {
+    const rawSource = container.dataset.mermaidSource || "";
+    if (!rawSource.trim()) {
+      return;
+    }
+
+    if (container._panZoomInstance) {
+      container._panZoomInstance.destroy();
+      container._panZoomInstance = null;
+    }
+
+    const renderSource = normalizeMermaidSource(rawSource);
+    const canvas = ensureMermaidCanvas(container);
+
+    try {
+      const renderId = `mermaid-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      const { svg, bindFunctions } = await window.mermaid.render(
+        renderId,
+        renderSource,
+      );
+      const template = document.createElement("template");
+      template.innerHTML = svg.trim();
+      canvas.replaceChildren(...template.content.childNodes);
+      const svgElement = canvas.querySelector("svg");
+      bindFunctions?.(svgElement);
+      addMermaidControls(container);
+    } catch (error) {
+      console.error("Mermaid render error.", error);
+      renderMermaidError(container, rawSource);
+    }
+  }
+
   function renderMermaidError(container, source) {
     if (container._panZoomInstance) {
       container._panZoomInstance.destroy();
@@ -1241,36 +1273,13 @@
       preElement.replaceWith(mermaidContainer);
     });
 
-    const mermaidNodes = Array.from(
-      state.root.querySelectorAll(
-        ".mermaid-container .mermaid-canvas .mermaid",
-      ),
-    );
-
-    if (mermaidNodes.length === 0) {
+    const containers = state.root.querySelectorAll(".mermaid-container");
+    if (containers.length === 0) {
       return;
     }
 
-    const containers = state.root.querySelectorAll(".mermaid-container");
     for (const container of containers) {
-      const mermaidNode = container.querySelector(".mermaid-canvas .mermaid");
-      if (!mermaidNode) {
-        continue;
-      }
-
-      const rawSource = container.dataset.mermaidSource || mermaidNode.textContent || "";
-      const renderSource = normalizeMermaidSource(rawSource);
-      mermaidNode.textContent = renderSource;
-
-      try {
-        await window.mermaid.run({
-          nodes: [mermaidNode],
-        });
-        addMermaidControls(container);
-      } catch (error) {
-        console.error("Mermaid render error.", error);
-        renderMermaidError(container, rawSource);
-      }
+      await renderMermaidContainer(container);
     }
 
     fixMermaidSvgDimensions();
@@ -1939,10 +1948,9 @@
 
     if (state.blockEditType === "mermaid") {
       state.blockEditTarget.dataset.mermaidSource = source;
-      const canvas = ensureMermaidCanvas(state.blockEditTarget);
-      canvas.replaceChildren(createMermaidSourceNode(source));
-      addMermaidControls(state.blockEditTarget);
-      await renderMermaidDiagrams();
+      await renderMermaidContainer(state.blockEditTarget);
+      fixMermaidSvgDimensions();
+      applyZoomToDiagrams();
       closeBlockEditor();
       emitChange();
       return;
@@ -2733,12 +2741,11 @@
 
     ensureMermaidInitialized();
     const diagrams = state.root.querySelectorAll(".mermaid-container");
-    diagrams.forEach((container) => {
-      const source = container.dataset.mermaidSource || "";
-      const canvas = ensureMermaidCanvas(container);
-      canvas.replaceChildren(createMermaidSourceNode(source));
-    });
-    await renderMermaidDiagrams();
+    for (const container of diagrams) {
+      await renderMermaidContainer(container);
+    }
+    fixMermaidSvgDimensions();
+    applyZoomToDiagrams();
   }
 
   function bindRootEvents() {
