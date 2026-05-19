@@ -222,6 +222,17 @@ def test_wysiwyg_mermaid_renders_each_diagram_independently() -> None:
     assert "renderMermaidError(container, rawSource)" in source
 
 
+def test_wysiwyg_inline_code_has_background_highlight() -> None:
+    """Verify inline code uses a subtle background without a custom text color."""
+
+    styles = _read_static_css("styles.css")
+
+    assert "--inline-code-bg:" in styles
+    assert "#wysiwyg-editor :not(pre) > code" in styles
+    assert "border-radius: 4px" in styles
+    assert "color: inherit" in styles.split("#wysiwyg-editor :not(pre) > code", 1)[1]
+
+
 def test_wysiwyg_mermaid_inline_uses_layout_not_panzoom() -> None:
     """Verify inline diagrams are sized for preview instead of svg-pan-zoom."""
 

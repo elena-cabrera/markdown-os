@@ -27,6 +27,7 @@
   --file-tab-border: #d9dee7;
   --preview-text: #1f2937;
   --code-block-bg: #f8fafc;
+  --inline-code-bg: #e8eaed;
   --code-header-bg: #f3f7ff;
   --copy-border: #bec9dd;
   --copy-border-hover: #9fb0cc;
@@ -1602,6 +1603,16 @@ html.link-open-modifier #wysiwyg-editor a[href] {
     "Liberation Mono",
     "Courier New",
     monospace;
+}
+
+#wysiwyg-editor :not(pre) > code {
+  background: var(--inline-code-bg);
+  border-radius: 4px;
+  padding: 0.15em 0.4em;
+  font-size: 0.875em;
+  color: inherit;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
 }
 
 .code-block {
