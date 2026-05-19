@@ -1226,17 +1226,21 @@
         }
 
         const container = svgElement.closest(".mermaid-container");
-        const instance = window.svgPanZoom(svgElement, {
-          controlIconsEnabled: false,
-          zoomScaleSensitivity: 0.03,
-          minZoom: 0.5,
-          maxZoom: 20,
-          fit: true,
-          center: true,
-        });
-        svgElement.setAttribute(panZoomKey, "true");
-        if (container) {
-          container._panZoomInstance = instance;
+        try {
+          const instance = window.svgPanZoom(svgElement, {
+            controlIconsEnabled: false,
+            zoomScaleSensitivity: 0.03,
+            minZoom: 0.5,
+            maxZoom: 20,
+            fit: true,
+            center: true,
+          });
+          svgElement.setAttribute(panZoomKey, "true");
+          if (container) {
+            container._panZoomInstance = instance;
+          }
+        } catch (error) {
+          console.warn("svg-pan-zoom could not initialize for diagram.", error);
         }
       });
   }
