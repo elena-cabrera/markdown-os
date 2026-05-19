@@ -582,6 +582,30 @@
     return mermaidThemeByAppTheme[currentAppTheme] || "default";
   }
 
+  /**
+   * Quote flowchart node labels that contain curly braces inside square brackets.
+   * Mermaid treats `{` as a rhombus node delimiter unless the label is quoted.
+   * @param {string} source - Raw Mermaid diagram source from the editor.
+   * @returns {string} - Source safe to pass to the Mermaid renderer.
+   */
+  function normalizeMermaidSource(source) {
+    const trimmed = source.trimStart();
+    const firstLine = trimmed.split(/\r?\n/, 1)[0] || "";
+    if (!/^(flowchart|graph)(\s|$)/i.test(firstLine.trim())) {
+      return source;
+    }
+
+    return source.replace(
+      /\[([^\[\]"']*[\{\}][^\[\]"]*)\]/g,
+      (match, label) => {
+        const escaped = label
+          .replace(/\\/g, "\\\\")
+          .replace(/"/g, '\\"');
+        return `["${escaped}"]`;
+      },
+    );
+  }
+
   function configureMarked() {
     if (!window.marked) {
       return;
@@ -984,6 +1008,39 @@
     return canvas;
   }
 
+  async function renderMermaidContainer(container) {
+    const rawSource = container.dataset.mermaidSource || "";
+    if (!rawSource.trim()) {
+      return;
+    }
+
+    if (container._panZoomInstance) {
+      container._panZoomInstance.destroy();
+      container._panZoomInstance = null;
+    }
+
+    const renderSource = normalizeMermaidSource(rawSource);
+    const canvas = ensureMermaidCanvas(container);
+
+    try {
+      const renderId = `mermaid-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      const { svg, bindFunctions } = await window.mermaid.render(
+        renderId,
+        renderSource,
+      );
+      const template = document.createElement("template");
+      template.innerHTML = svg.trim();
+      canvas.replaceChildren(...template.content.childNodes);
+      const svgElement = canvas.querySelector("svg");
+      bindFunctions?.(svgElement);
+      addMermaidControls(container);
+      layoutMermaidDiagram(container);
+    } catch (error) {
+      console.error("Mermaid render error.", error);
+      renderMermaidError(container, rawSource);
+    }
+  }
+
   function renderMermaidError(container, source) {
     if (container._panZoomInstance) {
       container._panZoomInstance.destroy();
@@ -1052,7 +1109,7 @@
       zoomIn.title = "Zoom in";
       zoomIn.textContent = "+";
       zoomIn.addEventListener("click", () => {
-        container._panZoomInstance?.zoomIn();
+        applyInlineMermaidZoom(container, 1.2);
       });
 
       const reset = document.createElement("button");
@@ -1061,15 +1118,7 @@
       reset.title = "Reset view";
       reset.innerHTML = actionIconSvg("reset");
       reset.addEventListener("click", () => {
-        const pz = container._panZoomInstance;
-        if (!pz) {
-          return;
-        }
-
-        pz.resetZoom();
-        pz.resetPan();
-        pz.fit();
-        pz.center();
+        layoutMermaidDiagram(container);
       });
 
       const zoomOut = document.createElement("button");
@@ -1078,7 +1127,7 @@
       zoomOut.title = "Zoom out";
       zoomOut.textContent = "−";
       zoomOut.addEventListener("click", () => {
-        container._panZoomInstance?.zoomOut();
+        applyInlineMermaidZoom(container, 1 / 1.2);
       });
 
       controls.appendChild(zoomIn);
@@ -1103,86 +1152,134 @@
     return Number.isFinite(parsed) ? parsed : 420;
   }
 
-  function fixMermaidSvgDimensions() {
+  function destroyMermaidPanZoom(container) {
+    if (!container?._panZoomInstance) {
+      return;
+    }
+
+    try {
+      container._panZoomInstance.destroy();
+    } catch (_error) {
+      // Ignore teardown failures from invalid pan-zoom state.
+    }
+
+    container._panZoomInstance = null;
+  }
+
+  function clearMermaidSvgTransforms(svg) {
+    if (!svg) {
+      return;
+    }
+
+    svg.style.transform = "";
+    svg.style.transformOrigin = "";
+    svg.removeAttribute(panZoomKey);
+    svg.querySelectorAll("g").forEach((group) => {
+      const transform = group.getAttribute("transform") || "";
+      if (/matrix\(\s*0[\s,]/.test(transform)) {
+        group.removeAttribute("transform");
+      }
+    });
+  }
+
+  function layoutMermaidDiagram(container) {
+    if (!container) {
+      return;
+    }
+
+    destroyMermaidPanZoom(container);
+    container._inlineZoom = 1;
+
+    const canvas = ensureMermaidCanvas(container);
+    const svg = canvas.querySelector("svg");
+    if (!svg) {
+      return;
+    }
+
+    clearMermaidSvgTransforms(svg);
+    svg.style.maxWidth = "";
+    svg.style.width = "";
+    svg.style.height = "";
+    svg.style.marginLeft = "";
+    svg.style.marginRight = "";
+
+    try {
+      const bbox = svg.getBBox();
+      if (bbox.width <= 0 || bbox.height <= 0) {
+        return;
+      }
+
+      if (!svg.getAttribute("viewBox")) {
+        svg.setAttribute(
+          "viewBox",
+          `${bbox.x} ${bbox.y} ${bbox.width} ${bbox.height}`,
+        );
+      }
+
+      const canvasWidth = canvas.clientWidth || canvas.offsetWidth;
+      if (!canvasWidth) {
+        return;
+      }
+
+      const maxHeightValue = getComputedStyle(canvas).getPropertyValue(
+        "--mermaid-max-height",
+      ).trim();
+      const maxHeightPx = parseMermaidMaxHeight(maxHeightValue);
+      const padding = 20;
+      const availableHeight = Math.max(120, maxHeightPx - padding);
+      const contentWidth = canvasWidth - padding;
+      const naturalHeight = contentWidth * (bbox.height / bbox.width);
+
+      let displayWidth;
+      let displayHeight;
+      if (naturalHeight <= availableHeight) {
+        displayWidth = Math.ceil(contentWidth);
+        displayHeight = Math.ceil(naturalHeight);
+      } else {
+        const scale = availableHeight / naturalHeight;
+        displayWidth = Math.ceil(contentWidth * scale);
+        displayHeight = Math.ceil(availableHeight);
+      }
+
+      svg.setAttribute("width", String(displayWidth));
+      svg.setAttribute("height", String(displayHeight));
+      svg.style.width = `${displayWidth}px`;
+      svg.style.height = `${displayHeight}px`;
+      svg.style.marginLeft = "auto";
+      svg.style.marginRight = "auto";
+    } catch (_error) {
+      // Ignore detached or invalid SVG bounds failures.
+    }
+  }
+
+  function layoutMermaidDiagrams() {
     if (!state.root) {
       return;
     }
 
-    state.root
-      .querySelectorAll(".mermaid-container .mermaid-canvas svg")
-      .forEach((svg) => {
-        const canvas = svg.closest(".mermaid-canvas");
-        if (!canvas) {
-          return;
-        }
-
-        svg.style.maxWidth = "";
-        svg.style.width = "";
-        svg.style.height = "";
-        svg.style.marginLeft = "";
-        svg.style.marginRight = "";
-
-        try {
-          const bbox = svg.getBBox();
-          if (bbox.width <= 0) {
-            return;
-          }
-          const containerWidth = canvas.clientWidth || canvas.offsetWidth;
-          if (!containerWidth) {
-            return;
-          }
-          const maxHeightValue = getComputedStyle(canvas).getPropertyValue(
-            "--mermaid-max-height",
-          ).trim();
-          const maxHeightPx = parseMermaidMaxHeight(maxHeightValue);
-          const padding = 20;
-          const availableHeight = Math.max(0, maxHeightPx - padding);
-          const naturalHeight = containerWidth * (bbox.height / bbox.width);
-
-          if (naturalHeight <= availableHeight) {
-            svg.style.width = "100%";
-            svg.style.height = `${Math.ceil(naturalHeight)}px`;
-          } else {
-            const scale = availableHeight / naturalHeight;
-            const fitWidth = Math.ceil(containerWidth * scale);
-            const fitHeight = Math.ceil(availableHeight);
-            svg.style.width = `${fitWidth}px`;
-            svg.style.height = `${fitHeight}px`;
-            svg.style.marginLeft = "auto";
-            svg.style.marginRight = "auto";
-          }
-        } catch (_error) {
-          // Ignore detached or invalid SVG bounds failures.
-        }
-      });
+    state.root.querySelectorAll(".mermaid-container").forEach((container) => {
+      layoutMermaidDiagram(container);
+    });
   }
 
-  function applyZoomToDiagrams() {
-    if (!window.svgPanZoom || !state.root) {
+  function applyInlineMermaidZoom(container, factor) {
+    const currentZoom = container._inlineZoom ?? 1;
+    const nextZoom = Math.min(4, Math.max(0.25, currentZoom * factor));
+    container._inlineZoom = nextZoom;
+
+    const svg = container.querySelector(".mermaid-canvas svg");
+    if (!svg) {
       return;
     }
 
-    state.root
-      .querySelectorAll(".mermaid-container .mermaid-canvas svg")
-      .forEach((svgElement) => {
-        if (svgElement.getAttribute(panZoomKey) === "true") {
-          return;
-        }
+    if (nextZoom === 1) {
+      svg.style.transform = "";
+      svg.style.transformOrigin = "";
+      return;
+    }
 
-        const container = svgElement.closest(".mermaid-container");
-        const instance = window.svgPanZoom(svgElement, {
-          controlIconsEnabled: false,
-          zoomScaleSensitivity: 0.03,
-          minZoom: 0.5,
-          maxZoom: 20,
-          fit: true,
-          center: true,
-        });
-        svgElement.setAttribute(panZoomKey, "true");
-        if (container) {
-          container._panZoomInstance = instance;
-        }
-      });
+    svg.style.transform = `scale(${nextZoom})`;
+    svg.style.transformOrigin = "center top";
   }
 
   async function renderMermaidDiagrams() {
@@ -1217,31 +1314,16 @@
       preElement.replaceWith(mermaidContainer);
     });
 
-    const mermaidNodes = Array.from(
-      state.root.querySelectorAll(
-        ".mermaid-container .mermaid-canvas .mermaid",
-      ),
-    );
-
-    if (mermaidNodes.length === 0) {
+    const containers = state.root.querySelectorAll(".mermaid-container");
+    if (containers.length === 0) {
       return;
     }
 
-    try {
-      await window.mermaid.run({
-        nodes: mermaidNodes,
-      });
-      fixMermaidSvgDimensions();
-      applyZoomToDiagrams();
-      state.root.querySelectorAll(".mermaid-container").forEach((container) => {
-        addMermaidControls(container);
-      });
-    } catch (error) {
-      console.error("Mermaid render error.", error);
-      state.root.querySelectorAll(".mermaid-container").forEach((container) => {
-        renderMermaidError(container, container.dataset.mermaidSource || "");
-      });
+    for (const container of containers) {
+      await renderMermaidContainer(container);
     }
+
+    layoutMermaidDiagrams();
   }
 
   function setTaskCheckboxClasses(checkbox) {
@@ -1906,10 +1988,7 @@
 
     if (state.blockEditType === "mermaid") {
       state.blockEditTarget.dataset.mermaidSource = source;
-      const canvas = ensureMermaidCanvas(state.blockEditTarget);
-      canvas.replaceChildren(createMermaidSourceNode(source));
-      addMermaidControls(state.blockEditTarget);
-      await renderMermaidDiagrams();
+      await renderMermaidContainer(state.blockEditTarget);
       closeBlockEditor();
       emitChange();
       return;
@@ -2012,7 +2091,10 @@
       try {
         ensureMermaidInitialized();
         const fullscreenId = `mermaid-fullscreen-${Date.now()}`;
-        const result = await window.mermaid.render(fullscreenId, mermaidSource);
+        const result = await window.mermaid.render(
+          fullscreenId,
+          normalizeMermaidSource(mermaidSource),
+        );
         if (
           renderToken !== state.fullscreenRenderToken ||
           modal.classList.contains("hidden")
@@ -2697,12 +2779,10 @@
 
     ensureMermaidInitialized();
     const diagrams = state.root.querySelectorAll(".mermaid-container");
-    diagrams.forEach((container) => {
-      const source = container.dataset.mermaidSource || "";
-      const canvas = ensureMermaidCanvas(container);
-      canvas.replaceChildren(createMermaidSourceNode(source));
-    });
-    await renderMermaidDiagrams();
+    for (const container of diagrams) {
+      await renderMermaidContainer(container);
+    }
+    layoutMermaidDiagrams();
   }
 
   function bindRootEvents() {

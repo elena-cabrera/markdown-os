@@ -34,7 +34,7 @@ ASSET_URLS: list[tuple[str, str]] = [
     ),
     (
         "markdown_os/static/vendor/mermaid/mermaid.min.js",
-        "https://cdn.jsdelivr.net/npm/mermaid@10.9.5/dist/mermaid.min.js",
+        "https://cdn.jsdelivr.net/npm/mermaid@11.15.0/dist/mermaid.min.js",
     ),
     (
         "markdown_os/static/vendor/svg-pan-zoom/svg-pan-zoom.min.js",

@@ -27,6 +27,7 @@
   --file-tab-border: #334155;
   --preview-text: #dbe7fb;
   --code-block-bg: #0f172a;
+  --inline-code-bg: #334155;
   --code-header-bg: #1e3a5f;
   --copy-border: #475569;
   --copy-border-hover: #64748b;
@@ -100,6 +101,7 @@
   --file-tab-border: #6272a4;
   --preview-text: #f1f2ee;
   --code-block-bg: #2f3241;
+  --inline-code-bg: #5b6078;
   --code-header-bg: #3a3d4d;
   --copy-border: #707aa0;
   --copy-border-hover: #8a96c0;
@@ -173,6 +175,7 @@
   --file-tab-border: #c7d0df;
   --preview-text: #2f3642;
   --code-block-bg: #edf1f7;
+  --inline-code-bg: #d8dee9;
   --code-header-bg: #d8e3f2;
   --copy-border: #b4bfd1;
   --copy-border-hover: #93a3bd;
@@ -246,6 +249,7 @@
   --file-tab-border: #4c566a;
   --preview-text: #e5e9f0;
   --code-block-bg: #2f3644;
+  --inline-code-bg: #4c566a;
   --code-header-bg: #3d4658;
   --copy-border: #5a657c;
   --copy-border-hover: #6f7f9c;
@@ -319,6 +323,7 @@
   --file-tab-border: #d0d0d0;
   --preview-text: #3f3f3f;
   --code-block-bg: #f6f6f6;
+  --inline-code-bg: #ececec;
   --code-header-bg: #eeeeee;
   --copy-border: #c5c5c5;
   --copy-border-hover: #aaaaaa;

@@ -201,6 +201,53 @@ def test_wysiwyg_mermaid_uses_inline_toolbar_for_action_buttons() -> None:
     assert "toolbar.appendChild(fullscreenButton);" in source
 
 
+def test_wysiwyg_normalizes_flowchart_braces_in_square_bracket_labels() -> None:
+    """Verify API path braces in flowchart nodes are quoted before Mermaid render."""
+
+    source = _read_static_js("wysiwyg.js")
+
+    assert "function normalizeMermaidSource(source)" in source
+    assert "/^(flowchart|graph)(\\s|$)/i.test(firstLine.trim())" in source
+    assert "await window.mermaid.render(" in source
+    assert "function renderMermaidContainer(container)" in source
+
+
+def test_wysiwyg_mermaid_renders_each_diagram_independently() -> None:
+    """Verify one invalid diagram does not force errors on every Mermaid block."""
+
+    source = _read_static_js("wysiwyg.js")
+
+    assert "for (const container of containers)" in source
+    assert "await renderMermaidContainer(container)" in source
+    assert "renderMermaidError(container, rawSource)" in source
+
+
+def test_wysiwyg_inline_code_has_background_highlight() -> None:
+    """Verify inline code uses a subtle background without a custom text color."""
+
+    styles = _read_static_css("styles.css")
+
+    assert "--inline-code-bg:" in styles
+    assert "#wysiwyg-editor :not(pre) > code" in styles
+    assert "border-radius: 4px" in styles
+    assert "color: inherit" in styles.split("#wysiwyg-editor :not(pre) > code", 1)[1]
+
+
+def test_wysiwyg_mermaid_inline_uses_layout_not_panzoom() -> None:
+    """Verify inline diagrams are sized for preview instead of svg-pan-zoom."""
+
+    source = _read_static_js("wysiwyg.js")
+    styles = _read_static_css("styles.css")
+
+    assert "function layoutMermaidDiagram(container)" in source
+    assert "function applyInlineMermaidZoom(container, factor)" in source
+    assert "function applyZoomToDiagrams" not in source
+    assert ".mermaid-canvas {" in styles
+    assert "overflow: auto" in styles.split(".mermaid-canvas {", 1)[1]
+    canvas_svg_rule = styles.split(".mermaid-canvas svg {", 1)[1].split("}", 1)[0]
+    assert "width: 100% !important" not in canvas_svg_rule
+
+
 def test_wysiwyg_mermaid_toolbar_is_separate_from_canvas_layer() -> None:
     """Verify Mermaid controls are outside the zoomable canvas layer."""
 
