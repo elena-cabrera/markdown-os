@@ -370,7 +370,13 @@ def main(argv: list[str] | None = None) -> None:
         raise SystemExit(1)
 
     status = _git_status_porcelain(repo_root)
-    if status and not args.allow_dirty and not args.dry_run:
+    dirty_files = {
+        line[3:].strip()
+        for line in status.splitlines()
+        if line.strip()
+    }
+    dirty_files.discard("uv.lock")
+    if dirty_files and not args.allow_dirty and not args.dry_run:
         print("Working tree is not clean. Commit or stash changes first.", file=sys.stderr)
         print("(Use --allow-dirty to override.)", file=sys.stderr)
         raise SystemExit(1)
@@ -437,24 +443,24 @@ def main(argv: list[str] | None = None) -> None:
     updated_text = _set_project_version_in_pyproject_text(original_text, new_version)
     pyproject.write_text(updated_text, encoding="utf-8")
 
+    subprocess.run(["uv", "sync"], cwd=repo_root, check=True)
+
     commit_message = f"chore: release {new_version}"
     tag_message = f"Release {new_version}"
 
+    lockfile = repo_root / "uv.lock"
+    files_to_commit = [str(pyproject.relative_to(repo_root))]
+    if lockfile.exists():
+        files_to_commit.append("uv.lock")
+
     try:
         subprocess.run(
-            ["git", "add", "--", str(pyproject.relative_to(repo_root))],
+            ["git", "add", "--", *files_to_commit],
             cwd=repo_root,
             check=True,
         )
         subprocess.run(
-            [
-                "git",
-                "commit",
-                "-m",
-                commit_message,
-                "--",
-                str(pyproject.relative_to(repo_root)),
-            ],
+            ["git", "commit", "-m", commit_message, "--", *files_to_commit],
             cwd=repo_root,
             check=True,
         )

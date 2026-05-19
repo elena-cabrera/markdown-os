@@ -27,6 +27,7 @@
   --file-tab-border: #d9dee7;
   --preview-text: #1f2937;
   --code-block-bg: #f8fafc;
+  --inline-code-bg: #e8eaed;
   --code-header-bg: #f3f7ff;
   --copy-border: #bec9dd;
   --copy-border-hover: #9fb0cc;
@@ -1604,6 +1605,16 @@ html.link-open-modifier #wysiwyg-editor a[href] {
     monospace;
 }
 
+#wysiwyg-editor :not(pre) > code {
+  background: var(--inline-code-bg);
+  border-radius: 4px;
+  padding: 0.15em 0.4em;
+  font-size: 0.875em;
+  color: inherit;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
 .code-block {
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -1763,10 +1774,13 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 
 .mermaid-canvas {
   position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
   padding: 10px;
-  min-height: 0;
+  min-height: 120px;
   max-height: var(--mermaid-max-height);
-  overflow: hidden;
+  overflow: auto;
 }
 
 .mermaid-container .mermaid {
@@ -1775,18 +1789,15 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   min-height: 0;
 }
 
-/* Override Mermaid's inline max-width so the SVG fills the container (useMaxWidth sets px max-width). */
+/* Sized by JS from the diagram bounds; keep the preview centered in the canvas. */
 .mermaid-canvas svg {
   display: block;
-  width: 100% !important;
-  max-width: none !important;
+  flex-shrink: 0;
+  max-width: 100%;
   height: auto;
   min-height: 0;
-  cursor: grab;
-}
-
-.mermaid-canvas svg:active {
-  cursor: grabbing;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .mermaid-canvas .mermaid-zoom-controls {
