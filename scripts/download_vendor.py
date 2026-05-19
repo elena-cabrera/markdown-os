@@ -72,6 +72,41 @@ ASSET_URLS: list[tuple[str, str]] = [
 
 CSS_URL_PATTERN = re.compile(r"url\((?P<quote>['\"]?)(?P<url>[^)'\"]+)(?P=quote)\)")
 
+FONT_ASSET_URLS: list[tuple[str, str]] = [
+    (
+        "markdown_os/static/fonts/inter/inter-latin-400-normal.woff2",
+        "https://cdn.jsdelivr.net/npm/@fontsource/inter@5.2.5/files/inter-latin-400-normal.woff2",
+    ),
+    (
+        "markdown_os/static/fonts/inter/inter-latin-500-normal.woff2",
+        "https://cdn.jsdelivr.net/npm/@fontsource/inter@5.2.5/files/inter-latin-500-normal.woff2",
+    ),
+    (
+        "markdown_os/static/fonts/inter/inter-latin-600-normal.woff2",
+        "https://cdn.jsdelivr.net/npm/@fontsource/inter@5.2.5/files/inter-latin-600-normal.woff2",
+    ),
+    (
+        "markdown_os/static/fonts/inter/inter-latin-700-normal.woff2",
+        "https://cdn.jsdelivr.net/npm/@fontsource/inter@5.2.5/files/inter-latin-700-normal.woff2",
+    ),
+    (
+        "markdown_os/static/fonts/inter/LICENSE.txt",
+        "https://raw.githubusercontent.com/rsms/inter/master/LICENSE.txt",
+    ),
+    (
+        "markdown_os/static/fonts/jetbrains-mono/jetbrains-mono-latin-400-normal.woff2",
+        "https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5.2.5/files/jetbrains-mono-latin-400-normal.woff2",
+    ),
+    (
+        "markdown_os/static/fonts/jetbrains-mono/jetbrains-mono-latin-600-normal.woff2",
+        "https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5.2.5/files/jetbrains-mono-latin-600-normal.woff2",
+    ),
+    (
+        "markdown_os/static/fonts/jetbrains-mono/OFL.txt",
+        "https://raw.githubusercontent.com/JetBrains/JetBrainsMono/master/OFL.txt",
+    ),
+]
+
 
 def workspace_root() -> Path:
     """
@@ -207,6 +242,22 @@ def sync_katex_assets() -> None:
         write_binary(asset_target, download_binary(asset_url))
 
 
+def sync_font_assets() -> None:
+    """
+    Download self-hosted UI font files used by the editor.
+
+    Args:
+    - None (None): Uses the font manifest declared in ``FONT_ASSET_URLS``.
+
+    Returns:
+    - None: Inter and JetBrains Mono font files are written under ``markdown_os/static/fonts``.
+    """
+
+    for target_relative_path, source_url in FONT_ASSET_URLS:
+        download_asset(target_relative_path, source_url)
+        print(f"Downloaded {target_relative_path}")
+
+
 def main() -> None:
     """
     Download every configured vendor asset needed for offline editor usage.
@@ -219,6 +270,7 @@ def main() -> None:
     """
 
     sync_katex_assets()
+    sync_font_assets()
     for target_relative_path, source_url in ASSET_URLS:
         if target_relative_path == "markdown_os/static/vendor/katex/katex.min.css":
             continue
