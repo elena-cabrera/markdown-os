@@ -64,6 +64,38 @@ Your local CLI and desktop app still save directly to your filesystem.
     return response.json();
   }
 
+  async function importFilesToHttpWorkspace(fileList) {
+    const mode = await detectMode();
+    const files = Array.from(fileList || []).filter((file) =>
+      isMarkdownPath(file.webkitRelativePath || file.name),
+    );
+    const paths = [];
+
+    if (mode === "file") {
+      const firstFile = files[0];
+      if (!firstFile) {
+        return { paths };
+      }
+      const content = await firstFile.text();
+      await this.saveContent(content, null);
+      return { paths };
+    }
+
+    if (mode !== "folder") {
+      throw new Error("Open a folder workspace before importing markdown files.");
+    }
+
+    for (const file of files) {
+      const targetPath = normalizeWorkspacePath(file.webkitRelativePath || file.name);
+      const content = await file.text();
+      await this.createFile(targetPath);
+      await this.saveContent(content, targetPath);
+      paths.push(targetPath);
+    }
+
+    return { paths };
+  }
+
   function createHttpStorageBackend() {
     return {
       async detectMode() {
@@ -150,8 +182,8 @@ Your local CLI and desktop app still save directly to your filesystem.
         await fetch("/api/reveal-in-explorer", { method: "POST" });
       },
 
-      async importFiles() {
-        return { paths: [] };
+      async importFiles(fileList) {
+        return importFilesToHttpWorkspace.call(this, fileList);
       },
     };
   }

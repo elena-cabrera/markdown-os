@@ -124,6 +124,41 @@ def test_web_storage_backend_imports_markdown_files() -> None:
     assert "async importFiles(fileList)" in source
 
 
+def test_markdown_files_can_be_imported_by_drag_and_drop() -> None:
+    """Verify markdown drops import files before image-drop handling."""
+
+    source = _read_static_js("editor.js")
+
+    assert "function isMarkdownImportFile(file)" in source
+    assert "async function handleMarkdownFileImport(fileList)" in source
+    assert "const markdownFiles = Array.from(files).filter(isMarkdownImportFile);" in source
+    assert "await handleMarkdownFileImport(markdownFiles);" in source
+    assert 'setSaveStatus("Markdown imported", "saved");' in source
+
+
+def test_http_storage_backend_imports_markdown_into_folder_workspace() -> None:
+    """Verify local folder/desktop workspace imports use existing HTTP file APIs."""
+
+    source = _read_static_js("storage-backend.js")
+
+    assert "async function importFilesToHttpWorkspace(fileList)" in source
+    assert "const content = await file.text();" in source
+    assert "await this.createFile(targetPath);" in source
+    assert "await this.saveContent(content, targetPath);" in source
+    assert "return { paths };" in source
+
+
+def test_file_tree_exposes_open_imported_path_helper() -> None:
+    """Verify drag/drop import can open the first imported workspace file."""
+
+    source = _read_static_js("file-tree.js")
+
+    assert "async function openImportedPath(payload)" in source
+    assert "const importedPath = payload?.paths?.[0];" in source
+    assert "await window.fileTabs.openTab(importedPath);" in source
+    assert "openImportedPath," in source
+
+
 def test_shared_frontend_modules_delegate_to_storage_backend() -> None:
     """Verify editor, tabs, and file tree use the storage adapter for persistence."""
 

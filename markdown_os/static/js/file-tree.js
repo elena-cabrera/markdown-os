@@ -588,11 +588,8 @@
 
       try {
         const payload = await window.MarkdownOS?.storage?.importFiles?.(input.files);
-        const tree = await loadFileTree();
-        const firstImportedPath = payload?.paths?.[0] || firstFilePath(tree);
-        if (firstImportedPath && window.fileTabs?.isEnabled?.()) {
-          await window.fileTabs.openTab(firstImportedPath);
-        }
+        await loadFileTree();
+        await openImportedPath(payload);
       } catch (error) {
         console.error("Failed to import markdown files.", error);
       }
@@ -692,6 +689,22 @@
     return null;
   }
 
+  async function openImportedPath(payload) {
+    const importedPath = payload?.paths?.[0];
+    if (!importedPath) {
+      return false;
+    }
+    if (window.fileTabs?.isEnabled?.()) {
+      await window.fileTabs.openTab(importedPath);
+      return true;
+    }
+    if (typeof window.switchFile === "function") {
+      await window.switchFile(importedPath);
+      return true;
+    }
+    return false;
+  }
+
   window.fileTree = {
     initFileTree,
     loadFileTree,
@@ -701,6 +714,7 @@
     hideFolderModeUI,
     setMode,
     firstFilePath,
+    openImportedPath,
   };
 
   document.addEventListener("DOMContentLoaded", async () => {

@@ -568,6 +568,35 @@
     return mimeToExtension[mimeType] || "png";
   }
 
+  function isMarkdownImportFile(file) {
+    const name = file?.webkitRelativePath || file?.name || "";
+    return /\.(md|markdown)$/i.test(name);
+  }
+
+  async function handleMarkdownFileImport(fileList) {
+    const files = Array.from(fileList || []);
+    if (files.length === 0) {
+      return false;
+    }
+
+    setSaveStatus("Importing markdown...", "saving");
+    try {
+      const payload = await window.MarkdownOS?.storage?.importFiles?.(files);
+      if (isWorkspaceMode(editorState.mode)) {
+        await window.fileTree?.loadFileTree?.();
+        await window.fileTree?.openImportedPath?.(payload);
+      } else if (editorState.mode === "file") {
+        await loadContent();
+      }
+      setSaveStatus("Markdown imported", "saved");
+      return true;
+    } catch (error) {
+      console.error("Markdown import failed.", error);
+      setSaveStatus("Markdown import failed", "error");
+      return false;
+    }
+  }
+
   async function handleImageUpload(file) {
     if (!file) {
       return;
@@ -633,10 +662,17 @@
       container.classList.remove("drag-over");
     });
 
-    container.addEventListener("drop", (event) => {
+    container.addEventListener("drop", async (event) => {
       container.classList.remove("drag-over");
       const files = event.dataTransfer?.files;
       if (!files || files.length === 0) {
+        return;
+      }
+
+      const markdownFiles = Array.from(files).filter(isMarkdownImportFile);
+      if (markdownFiles.length > 0) {
+        event.preventDefault();
+        await handleMarkdownFileImport(markdownFiles);
         return;
       }
 
