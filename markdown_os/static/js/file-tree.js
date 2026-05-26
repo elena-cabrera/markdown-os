@@ -575,7 +575,38 @@
     });
   }
 
+  async function handleWebFileImport() {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".md,.markdown,text/markdown,text/plain";
+    input.multiple = true;
+
+    input.addEventListener("change", async () => {
+      if (!input.files || input.files.length === 0) {
+        return;
+      }
+
+      try {
+        const payload = await window.MarkdownOS?.storage?.importFiles?.(input.files);
+        const tree = await loadFileTree();
+        const firstImportedPath = payload?.paths?.[0] || firstFilePath(tree);
+        if (firstImportedPath && window.fileTabs?.isEnabled?.()) {
+          await window.fileTabs.openTab(firstImportedPath);
+        }
+      } catch (error) {
+        console.error("Failed to import markdown files.", error);
+      }
+    });
+
+    input.click();
+  }
+
   async function handleSidebarOpen() {
+    if (fileTreeState.mode === "web") {
+      await handleWebFileImport();
+      return;
+    }
+
     const isDesktop = Boolean(window.electronDesktop);
     if (isDesktop) {
       try {
@@ -598,8 +629,19 @@
     }
   }
 
-  function showOpenButton() {
-    document.getElementById("sidebar-open-btn")?.classList.remove("hidden");
+  function updateOpenButton() {
+    const button = document.getElementById("sidebar-open-btn");
+    if (!(button instanceof HTMLButtonElement)) {
+      return;
+    }
+
+    const label = button.querySelector("span");
+    if (label) {
+      label.textContent = fileTreeState.mode === "web" ? "Import" : "Open";
+    }
+    button.title =
+      fileTreeState.mode === "web" ? "Import markdown files" : "Open file or folder";
+    button.classList.remove("hidden");
   }
 
   function initFileTree() {
@@ -624,12 +666,13 @@
       await handleSidebarOpen();
     });
 
-    showOpenButton();
+    updateOpenButton();
   }
 
   function setMode(mode) {
     if (mode === "empty" || mode === "file" || mode === "folder" || mode === "web") {
       fileTreeState.mode = mode;
+      updateOpenButton();
     }
   }
 

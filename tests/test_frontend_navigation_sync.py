@@ -98,6 +98,32 @@ def test_web_storage_backend_rename_keeps_files_markdown_visible() -> None:
     assert 'throw new Error("Web workspace files must end with .md or .markdown.");' in source
 
 
+def test_web_open_button_imports_markdown_files() -> None:
+    """Verify web mode Open uses a browser file picker import flow."""
+
+    source = _read_static_js("file-tree.js")
+
+    assert "async function handleWebFileImport()" in source
+    assert 'input.type = "file";' in source
+    assert 'input.accept = ".md,.markdown,text/markdown,text/plain";' in source
+    assert "await window.MarkdownOS?.storage?.importFiles?.(input.files);" in source
+    assert 'if (fileTreeState.mode === "web") {' in source
+    assert "await handleWebFileImport();" in source
+    assert 'label.textContent = fileTreeState.mode === "web" ? "Import" : "Open";' in source
+
+
+def test_web_storage_backend_imports_markdown_files() -> None:
+    """Verify IndexedDB backend can import selected markdown files."""
+
+    source = _read_static_js("storage-backend.js")
+
+    assert "async function importBrowserFiles(fileList)" in source
+    assert "await file.text()" in source
+    assert "await writeRecord(targetPath, content);" in source
+    assert "return { paths };" in source
+    assert "async importFiles(fileList)" in source
+
+
 def test_shared_frontend_modules_delegate_to_storage_backend() -> None:
     """Verify editor, tabs, and file tree use the storage adapter for persistence."""
 

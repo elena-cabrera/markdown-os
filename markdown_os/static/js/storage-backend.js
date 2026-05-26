@@ -149,6 +149,10 @@ Your local CLI and desktop app still save directly to your filesystem.
       async revealInExplorer() {
         await fetch("/api/reveal-in-explorer", { method: "POST" });
       },
+
+      async importFiles() {
+        return { paths: [] };
+      },
     };
   }
 
@@ -363,6 +367,25 @@ Your local CLI and desktop app still save directly to your filesystem.
     return `${newPrefix}/${path.slice(oldPrefix.length + 1)}`;
   }
 
+  async function importBrowserFiles(fileList) {
+    const files = Array.from(fileList || []);
+    const paths = [];
+
+    for (const file of files) {
+      const sourcePath = file.webkitRelativePath || file.name;
+      const targetPath = normalizeWorkspacePath(sourcePath);
+      if (!isMarkdownPath(targetPath)) {
+        continue;
+      }
+
+      const content = await file.text();
+      await writeRecord(targetPath, content);
+      paths.push(targetPath);
+    }
+
+    return { paths };
+  }
+
   function createIndexedDbStorageBackend() {
     return {
       async detectMode() {
@@ -481,6 +504,10 @@ Your local CLI and desktop app still save directly to your filesystem.
       async revealInExplorer() {
         return { ok: false };
       },
+
+      async importFiles(fileList) {
+        return importBrowserFiles(fileList);
+      },
     };
   }
 
@@ -521,6 +548,9 @@ Your local CLI and desktop app still save directly to your filesystem.
     },
     async revealInExplorer() {
       return (await currentBackend()).revealInExplorer();
+    },
+    async importFiles(fileList) {
+      return (await currentBackend()).importFiles(fileList);
     },
   };
 })();
