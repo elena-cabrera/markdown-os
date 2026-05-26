@@ -136,7 +136,7 @@ def build_editor_app(
     Build the FastAPI editor application for the selected runtime mode.
 
     Args:
-    - mode (str): Runtime mode (`"empty"`, `"file"`, or `"folder"`).
+    - mode (str): Runtime mode (`"empty"`, `"file"`, `"folder"`, or `"web"`).
     - handler (FileHandler | DirectoryHandler | None): Initial workspace handler.
     - desktop (bool): Whether desktop-specific routes and behavior should be enabled.
 
