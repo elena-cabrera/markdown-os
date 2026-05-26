@@ -1,0 +1,9 @@
+{
+  "name": "markdown-os-site",
+  "version": "1.0.0",
+  "description": "Marketing site for markdown-os",
+  "private": true,
+  "dependencies": {
+    "@vercel/speed-insights": "^1.0.12"
+  }
+}
