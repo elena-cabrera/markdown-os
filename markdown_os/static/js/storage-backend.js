@@ -210,6 +210,8 @@ Your local CLI and desktop app still save directly to your filesystem.
       relative_path: record.path,
       size_bytes: new Blob([record.content || ""]).size,
       modified_at: record.updatedAt,
+      sync_status: record.syncStatus || "browser",
+      read_only: record.readOnly === true,
     };
   }
 
@@ -305,12 +307,17 @@ Your local CLI and desktop app still save directly to your filesystem.
     });
   }
 
-  async function writeRecord(path, content) {
+  async function writeRecord(path, content, options = {}) {
     const normalizedPath = normalizeWorkspacePath(path);
+    const existingRecord = await readRecord(normalizedPath);
     const record = {
+      ...(existingRecord || {}),
       path: normalizedPath,
       content,
       updatedAt: new Date().toISOString(),
+      syncStatus: options.syncStatus || existingRecord?.syncStatus || "browser",
+      readOnly: options.readOnly ?? existingRecord?.readOnly ?? false,
+      fileHandle: options.fileHandle || existingRecord?.fileHandle || null,
     };
     await runFileStoreTransaction("readwrite", (store) => {
       store.put(record);
@@ -399,23 +406,79 @@ Your local CLI and desktop app still save directly to your filesystem.
     return `${newPrefix}/${path.slice(oldPrefix.length + 1)}`;
   }
 
+  async function writeFileHandle(fileHandle, content) {
+    const writable = await fileHandle.createWritable();
+    await writable.write(content);
+    await writable.close();
+  }
+
+  async function importFileWithOptionalHandle(file, fileHandle = null) {
+    const sourcePath = file.webkitRelativePath || file.name;
+    const targetPath = normalizeWorkspacePath(sourcePath);
+    if (!isMarkdownPath(targetPath)) {
+      return null;
+    }
+
+    const content = await file.text();
+    const canSyncToFile = Boolean(fileHandle?.createWritable);
+    await writeRecord(targetPath, content, {
+      fileHandle: canSyncToFile ? fileHandle : null,
+      syncStatus: canSyncToFile ? "synced" : "browser-copy",
+      readOnly: !canSyncToFile,
+    });
+    return targetPath;
+  }
+
   async function importBrowserFiles(fileList) {
     const files = Array.from(fileList || []);
     const paths = [];
 
     for (const file of files) {
-      const sourcePath = file.webkitRelativePath || file.name;
-      const targetPath = normalizeWorkspacePath(sourcePath);
-      if (!isMarkdownPath(targetPath)) {
-        continue;
+      const importedPath = await importFileWithOptionalHandle(file, file.handle || null);
+      if (importedPath) {
+        paths.push(importedPath);
       }
-
-      const content = await file.text();
-      await writeRecord(targetPath, content);
-      paths.push(targetPath);
     }
 
-    return { paths };
+    return { paths, readOnly: paths.length > 0 && files.every((file) => !file.handle) };
+  }
+
+  async function importFileHandles(fileHandles) {
+    const handles = Array.from(fileHandles || []);
+    const paths = [];
+
+    for (const fileHandle of handles) {
+      if (fileHandle.kind && fileHandle.kind !== "file") {
+        continue;
+      }
+      const file = await fileHandle.getFile();
+      const importedPath = await importFileWithOptionalHandle(file, fileHandle);
+      if (importedPath) {
+        paths.push(importedPath);
+      }
+    }
+
+    return { paths, readOnly: false };
+  }
+
+  async function importDataTransferItems(items) {
+    const transferItems = Array.from(items || []);
+    if (!transferItems.some((item) => typeof item.getAsFileSystemHandle === "function")) {
+      return { paths: [], readOnly: true };
+    }
+
+    const fileHandles = [];
+    for (const item of transferItems) {
+      if (typeof item.getAsFileSystemHandle !== "function") {
+        continue;
+      }
+      const fileHandle = await item.getAsFileSystemHandle();
+      if (fileHandle?.kind === "file") {
+        fileHandles.push(fileHandle);
+      }
+    }
+
+    return importFileHandles(fileHandles);
   }
 
   function createIndexedDbStorageBackend() {
@@ -437,7 +500,17 @@ Your local CLI and desktop app still save directly to your filesystem.
       },
 
       async saveContent(content, filePath = DEFAULT_WEB_FILE) {
-        const record = await writeRecord(filePath, content);
+        const existingRecord = await readRecord(filePath);
+        if (existingRecord?.readOnly) {
+          throw new Error("This browser copy is read-only. Import with sync support to write the real file.");
+        }
+        if (existingRecord?.fileHandle?.createWritable) {
+          await writeFileHandle(existingRecord.fileHandle, content);
+        }
+        const record = await writeRecord(filePath, content, {
+          syncStatus: existingRecord?.fileHandle?.createWritable ? "synced" : "browser",
+          readOnly: false,
+        });
         return {
           status: "saved",
           metadata: metadataForFile(record),
@@ -465,7 +538,7 @@ Your local CLI and desktop app still save directly to your filesystem.
         if (await readRecord(normalizedPath)) {
           throw new Error(`File already exists: ${normalizedPath}`);
         }
-        await writeRecord(normalizedPath, "");
+        await writeRecord(normalizedPath, "", { syncStatus: "browser", readOnly: false });
         return { path: normalizedPath };
       },
 
@@ -540,6 +613,14 @@ Your local CLI and desktop app still save directly to your filesystem.
       async importFiles(fileList) {
         return importBrowserFiles(fileList);
       },
+
+      async importFileHandles(fileHandles) {
+        return importFileHandles(fileHandles);
+      },
+
+      async importDataTransferItems(items) {
+        return importDataTransferItems(items);
+      },
     };
   }
 
@@ -583,6 +664,12 @@ Your local CLI and desktop app still save directly to your filesystem.
     },
     async importFiles(fileList) {
       return (await currentBackend()).importFiles(fileList);
+    },
+    async importFileHandles(fileHandles) {
+      return (await currentBackend()).importFileHandles?.(fileHandles) || { paths: [] };
+    },
+    async importDataTransferItems(items) {
+      return (await currentBackend()).importDataTransferItems?.(items) || { paths: [] };
     },
   };
 })();

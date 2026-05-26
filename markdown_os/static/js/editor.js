@@ -8,6 +8,7 @@
     currentFilePath: null,
     mode: "file",
     nextUploadId: 0,
+    isReadOnly: false,
   };
   const tocUpdateState = {
     timeout: null,
@@ -176,6 +177,30 @@
     await window.wysiwyg.setMarkdown(content, options);
   }
 
+  function setEditorReadOnly(isReadOnly) {
+    editorState.isReadOnly = Boolean(isReadOnly);
+    const editor = document.getElementById("wysiwyg-editor");
+    if (editor) {
+      editor.setAttribute("contenteditable", String(!editorState.isReadOnly));
+      editor.classList.toggle("is-read-only", editorState.isReadOnly);
+      editor.setAttribute("aria-readonly", String(editorState.isReadOnly));
+    }
+    if (editorState.isReadOnly) {
+      setSaveStatus("Browser copy only", "neutral");
+    }
+  }
+
+  function saveStatusForPayload(payload) {
+    const syncStatus = payload?.metadata?.sync_status;
+    if (syncStatus === "synced") {
+      return "Synced to file";
+    }
+    if (syncStatus === "browser" || syncStatus === "browser-copy") {
+      return "Stored in browser";
+    }
+    return "Saved";
+  }
+
   async function loadContent(filePath = null) {
     if (isWorkspaceMode(editorState.mode) && window.fileTabs?.isEnabled()) {
       return window.fileTabs.reloadTab(filePath || window.fileTabs.getActiveTabPath());
@@ -222,6 +247,7 @@
       await setMarkdown(initialContent, { silent: true });
       editorState.lastSavedContent = initialContent;
       setEmptyStateCopy("No file selected", "Select a file from the sidebar to open it.");
+      setEditorReadOnly(payload.metadata?.read_only === true);
 
       setPageTitle(payload.metadata);
 
@@ -236,7 +262,7 @@
       if (typeof window.generateTOC === "function") {
         window.generateTOC();
       }
-      setSaveStatus("Loaded", "saved");
+      setSaveStatus(payload.metadata?.read_only ? "Browser copy only" : "Loaded", "saved");
       return true;
     } catch (error) {
       console.error("Failed to load markdown content.", error);
@@ -341,6 +367,11 @@
       return false;
     }
 
+    if (editorState.isReadOnly) {
+      setSaveStatus("Browser copy only", "neutral");
+      return false;
+    }
+
     if (isWorkspaceMode(editorState.mode) && window.fileTabs?.isEnabled()) {
       return window.fileTabs.saveTabContent(window.fileTabs.getActiveTabPath());
     }
@@ -372,7 +403,7 @@
       }
 
       editorState.lastSavedContent = content;
-      setSaveStatus("Saved", "saved");
+      setSaveStatus(saveStatusForPayload(responsePayload), "saved");
       return true;
     } catch (error) {
       console.error("Failed to save markdown content.", error);
@@ -409,6 +440,11 @@
   }
 
   function onEditorInput() {
+    if (editorState.isReadOnly) {
+      setSaveStatus("Browser copy only", "neutral");
+      return;
+    }
+
     const markdown = currentMarkdown();
 
     if (isWorkspaceMode(editorState.mode) && window.fileTabs?.isEnabled()) {
@@ -588,7 +624,7 @@
       } else if (editorState.mode === "file") {
         await loadContent();
       }
-      setSaveStatus("Markdown imported", "saved");
+      setSaveStatus(payload?.readOnly ? "Browser copy only" : "Markdown imported", "saved");
       return true;
     } catch (error) {
       console.error("Markdown import failed.", error);
@@ -643,6 +679,16 @@
     event.preventDefault();
     event.stopPropagation();
     setDragOverState(false);
+
+    const handlePayload =
+      await window.MarkdownOS?.storage?.importDataTransferItems?.(event.dataTransfer?.items);
+    if (handlePayload?.paths?.length > 0) {
+      await window.fileTree?.loadFileTree?.();
+      await window.fileTree?.openImportedPath?.(handlePayload);
+      setSaveStatus("Synced to file", "saved");
+      return;
+    }
+
     await handleMarkdownFileImport(markdownFiles);
   }
 
@@ -793,6 +839,8 @@
     });
   }
 
+  window.setEditorReadOnly = setEditorReadOnly;
+  window.saveStatusForPayload = saveStatusForPayload;
   window.switchFile = switchFile;
   window.loadContent = loadContent;
   window.checkForExternalChanges = checkForExternalChanges;

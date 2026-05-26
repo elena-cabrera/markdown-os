@@ -100,6 +100,8 @@
       saveTimeout: null,
       isSaving: false,
       hasExternalConflict: false,
+      metadata: null,
+      readOnly: false,
     };
   }
 
@@ -112,6 +114,10 @@
 
   function getActiveTab() {
     return getTabData(tabsState.activeTabPath);
+  }
+
+  function saveStatusForPayload(payload) {
+    return saveStatusForPayload(payload);
   }
 
   function isWorkspaceMode(mode) {
@@ -324,6 +330,8 @@
       const payload = await window.MarkdownOS?.storage?.getContent?.(filePath);
       tabData.content = payload.content || "";
       tabData.lastSavedContent = tabData.content;
+      tabData.metadata = payload.metadata || null;
+      tabData.readOnly = payload.metadata?.read_only === true;
       tabData.isDirty = false;
       tabData.hasExternalConflict = false;
       tabData.isLoaded = true;
@@ -344,6 +352,7 @@
     }
 
     await window.wysiwyg?.setMarkdown?.(tabData.content, { silent: true });
+    window.setEditorReadOnly?.(tabData.readOnly === true);
     window.wysiwyg?.setScrollTop?.(tabData.scrollTop);
     window.generateTOC?.();
     return true;
@@ -377,6 +386,11 @@
       return false;
     }
 
+    if (tabData.readOnly) {
+      tabData.isDirty = false;
+      renderTabBar();
+      return false;
+    }
     if (targetPath === tabsState.activeTabPath) {
       tabData.content = window.wysiwyg?.getMarkdown?.() || tabData.content;
     }
@@ -392,13 +406,18 @@
       return false;
     }
 
+    if (tabData.readOnly) {
+      setSaveStatus("Browser copy only", "neutral");
+      return false;
+    }
+
     if (targetPath === tabsState.activeTabPath) {
       tabData.content = window.wysiwyg?.getMarkdown?.() || tabData.content;
     }
 
     tabData.isDirty = tabData.content !== tabData.lastSavedContent;
     if (!tabData.isDirty) {
-      setSaveStatus("Saved", "saved");
+      setSaveStatus(saveStatusForPayload({ metadata: tabData.metadata }), "saved");
       return true;
     }
 
@@ -421,6 +440,8 @@
       }
 
       nextTabData.lastSavedContent = nextTabData.content;
+      nextTabData.metadata = payload.metadata || nextTabData.metadata;
+      nextTabData.readOnly = payload.metadata?.read_only === true;
       nextTabData.isDirty = false;
       nextTabData.hasExternalConflict = false;
 
@@ -430,7 +451,7 @@
       }
 
       renderTabBar();
-      setSaveStatus("Saved", "saved");
+      setSaveStatus(saveStatusForPayload(payload), "saved");
       return true;
     } catch (error) {
       console.error("Failed to save tab content.", error);

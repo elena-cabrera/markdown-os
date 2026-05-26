@@ -106,7 +106,7 @@ def test_web_open_button_imports_markdown_files() -> None:
     assert "async function handleWebFileImport()" in source
     assert 'input.type = "file";' in source
     assert 'input.accept = ".md,.markdown,text/markdown,text/plain";' in source
-    assert "await window.MarkdownOS?.storage?.importFiles?.(input.files);" in source
+    assert "await importAndOpenFiles(() => window.MarkdownOS?.storage?.importFiles?.(input.files));" in source
     assert 'if (fileTreeState.mode === "web") {' in source
     assert "await handleWebFileImport();" in source
     assert 'label.textContent = fileTreeState.mode === "web" ? "Import" : "Open";' in source
@@ -119,7 +119,7 @@ def test_web_storage_backend_imports_markdown_files() -> None:
 
     assert "async function importBrowserFiles(fileList)" in source
     assert "await file.text()" in source
-    assert "await writeRecord(targetPath, content);" in source
+    assert "await writeRecord(targetPath, content, {" in source
     assert "return { paths };" in source
     assert "async importFiles(fileList)" in source
 
@@ -133,7 +133,7 @@ def test_markdown_files_can_be_imported_by_drag_and_drop() -> None:
     assert "async function handleMarkdownFileImport(fileList)" in source
     assert "const markdownFiles = markdownFilesFromFileList(files);" in source
     assert "await handleMarkdownFileImport(markdownFiles);" in source
-    assert 'setSaveStatus("Markdown imported", "saved");' in source
+    assert 'setSaveStatus(payload?.readOnly ? "Browser copy only" : "Markdown imported", "saved");' in source
     assert "function bindMarkdownDropEvents()" in source
     assert 'document.addEventListener("dragenter", handleMarkdownDragOver, true);' in source
     assert 'document.addEventListener("dragover", handleMarkdownDragOver, true);' in source
@@ -161,6 +161,79 @@ def test_file_tree_exposes_open_imported_path_helper() -> None:
     assert "const importedPath = payload?.paths?.[0];" in source
     assert "await window.fileTabs.openTab(importedPath);" in source
     assert "openImportedPath," in source
+
+
+def test_web_storage_marks_browser_copy_files_read_only() -> None:
+    """Verify imported files without writable handles are not presented as saved."""
+
+    source = _read_static_js("storage-backend.js")
+
+    assert 'sync_status: record.syncStatus || "browser"' in source
+    assert 'syncStatus: canSyncToFile ? "synced" : "browser-copy"' in source
+    assert 'read_only: record.readOnly === true' in source
+    assert 'readOnly: !canSyncToFile' in source
+    assert 'throw new Error("This browser copy is read-only. Import with sync support to write the real file.");' in source
+
+
+def test_web_storage_syncs_real_files_when_browser_provides_handle() -> None:
+    """Verify web mode can write real files when File System Access handles exist."""
+
+    source = _read_static_js("storage-backend.js")
+
+    assert "async function importFileWithOptionalHandle(file, fileHandle = null)" in source
+    assert "async function writeFileHandle(fileHandle, content)" in source
+    assert "const writable = await fileHandle.createWritable();" in source
+    assert 'syncStatus: canSyncToFile ? "synced" : "browser-copy"' in source
+    assert 'readOnly: false' in source
+
+
+def test_web_editor_uses_honest_sync_status_labels() -> None:
+    """Verify web mode does not show generic Saved for browser-copy files."""
+
+    editor_source = _read_static_js("editor.js")
+    tabs_source = _read_static_js("tabs.js")
+
+    assert "function saveStatusForPayload(payload)" in editor_source
+    assert 'return "Synced to file";' in editor_source
+    assert 'return "Stored in browser";' in editor_source
+    assert 'setSaveStatus(saveStatusForPayload(responsePayload), "saved");' in editor_source
+    assert 'setSaveStatus(saveStatusForPayload(payload), "saved");' in tabs_source
+
+
+def test_web_read_only_imports_disable_editing() -> None:
+    """Verify browser-copy imports are displayed read-only instead of autosaved."""
+
+    editor_source = _read_static_js("editor.js")
+
+    assert "function setEditorReadOnly(isReadOnly)" in editor_source
+    assert "editorState.isReadOnly = Boolean(isReadOnly);" in editor_source
+    assert 'setSaveStatus("Browser copy only", "neutral");' in editor_source
+    assert "if (editorState.isReadOnly)" in editor_source
+
+
+def test_web_import_button_uses_file_system_access_when_available() -> None:
+    """Verify web Import can request writable file handles in supported browsers."""
+
+    file_tree_source = _read_static_js("file-tree.js")
+    storage_source = _read_static_js("storage-backend.js")
+
+    assert "window.showOpenFilePicker" in file_tree_source
+    assert "await window.showOpenFilePicker({" in file_tree_source
+    assert "await window.MarkdownOS?.storage?.importFileHandles?.(fileHandles);" in file_tree_source
+    assert "async importFileHandles(fileHandles)" in storage_source
+    assert "const file = await fileHandle.getFile();" in storage_source
+
+
+def test_drag_drop_uses_file_system_handles_when_available() -> None:
+    """Verify drag/drop tries writable file handles before read-only file snapshots."""
+
+    editor_source = _read_static_js("editor.js")
+    storage_source = _read_static_js("storage-backend.js")
+
+    assert "await window.MarkdownOS?.storage?.importDataTransferItems?.(event.dataTransfer?.items);" in editor_source
+    assert "async importDataTransferItems(items)" in storage_source
+    assert "await item.getAsFileSystemHandle()" in storage_source
+    assert "await importFileWithOptionalHandle(file, fileHandle);" in storage_source
 
 
 def test_shared_frontend_modules_delegate_to_storage_backend() -> None:

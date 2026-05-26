@@ -575,7 +575,33 @@
     });
   }
 
+  async function importAndOpenFiles(importer) {
+    try {
+      const payload = await importer();
+      await loadFileTree();
+      await openImportedPath(payload);
+    } catch (error) {
+      console.error("Failed to import markdown files.", error);
+    }
+  }
+
   async function handleWebFileImport() {
+    if (window.showOpenFilePicker) {
+      await importAndOpenFiles(async () => {
+        const fileHandles = await window.showOpenFilePicker({
+          multiple: true,
+          types: [
+            {
+              description: "Markdown files",
+              accept: { "text/markdown": [".md", ".markdown"], "text/plain": [".md", ".markdown"] },
+            },
+          ],
+        });
+        return await window.MarkdownOS?.storage?.importFileHandles?.(fileHandles);
+      });
+      return;
+    }
+
     const input = document.createElement("input");
     input.type = "file";
     input.accept = ".md,.markdown,text/markdown,text/plain";
@@ -586,13 +612,7 @@
         return;
       }
 
-      try {
-        const payload = await window.MarkdownOS?.storage?.importFiles?.(input.files);
-        await loadFileTree();
-        await openImportedPath(payload);
-      } catch (error) {
-        console.error("Failed to import markdown files.", error);
-      }
+      await importAndOpenFiles(() => window.MarkdownOS?.storage?.importFiles?.(input.files));
     });
 
     input.click();
