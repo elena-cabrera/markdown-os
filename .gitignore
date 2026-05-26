@@ -12,9 +12,10 @@ wheels/
 # Virtual environments
 .venv
 
-# lock files except uv.lock
+# lock files except uv.lock and package-lock.json
 *.lock
 !uv.lock
+!package-lock.json
 
 # images directory
 /images
@@ -28,4 +29,8 @@ example.md
 .claude/
 
 # superseded landing page
-landing.htmldesktop/node_modules/
+landing.html
+
+# node_modules
+desktop/node_modules/
+site/node_modules/
