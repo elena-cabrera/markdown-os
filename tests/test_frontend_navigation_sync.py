@@ -124,6 +124,31 @@ def test_web_storage_backend_imports_markdown_files() -> None:
     assert "async importFiles(fileList)" in source
 
 
+def test_drag_drop_uses_whole_app_overlay() -> None:
+    """Verify file drag feedback covers the whole app with icon and copy."""
+
+    root = Path(__file__).resolve().parents[1]
+    html_source = root.joinpath("markdown_os", "static", "index.html").read_text(encoding="utf-8")
+    css_source = _read_static_css("styles.css")
+    editor_source = _read_static_js("editor.js")
+
+    assert 'id="drop-file-overlay"' in html_source
+    assert 'class="drop-file-overlay hidden"' in html_source
+    assert 'Drop File' in html_source
+    assert 'M4 12v2.544' in html_source
+
+    assert ".drop-file-overlay {" in css_source
+    assert "position: fixed" in css_source.split(".drop-file-overlay {", 1)[1]
+    assert "inset: 24px" in css_source.split(".drop-file-overlay {", 1)[1]
+    assert "border: 2px dashed var(--accent)" in css_source
+    assert ".drop-file-card" in css_source
+
+    assert 'const overlay = document.getElementById("drop-file-overlay");' in editor_source
+    assert 'overlay?.classList.toggle("hidden", !isActive);' in editor_source
+    assert 'document.body.classList.toggle("file-drop-active", isActive);' in editor_source
+    assert 'document.getElementById("editor-container")?.classList.toggle("drag-over", isActive);' not in editor_source
+
+
 def test_markdown_files_can_be_imported_by_drag_and_drop() -> None:
     """Verify markdown drops import files before image-drop handling."""
 

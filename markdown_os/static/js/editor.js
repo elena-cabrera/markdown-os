@@ -646,7 +646,10 @@
   }
 
   function setDragOverState(isActive) {
-    document.getElementById("editor-container")?.classList.toggle("drag-over", isActive);
+    const overlay = document.getElementById("drop-file-overlay");
+    overlay?.classList.toggle("hidden", !isActive);
+    overlay?.setAttribute("aria-hidden", String(!isActive));
+    document.body.classList.toggle("file-drop-active", isActive);
   }
 
   function handleMarkdownDragOver(event) {

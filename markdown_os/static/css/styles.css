@@ -1367,10 +1367,44 @@ body {
   scroll-padding-bottom: calc(24px + var(--editor-end-scroll-padding) + 8px);
 }
 
-#editor-container.drag-over {
-  outline: 2px dashed var(--accent);
-  outline-offset: -4px;
-  background: var(--drag-over-bg);
+.drop-file-overlay {
+  position: fixed;
+  inset: 24px;
+  z-index: 2500;
+  display: grid;
+  place-items: center;
+  border: 2px dashed var(--accent);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--drag-over-bg) 86%, transparent);
+  color: var(--accent);
+  pointer-events: none;
+  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.16);
+}
+
+.drop-file-overlay.hidden {
+  display: none !important;
+}
+
+.drop-file-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border-radius: 14px;
+  background: var(--editor-bg);
+  color: var(--editor-text);
+  font-size: 18px;
+  font-weight: 700;
+  box-shadow: var(--modal-shadow);
+}
+
+.drop-file-icon {
+  color: var(--accent);
+  flex: 0 0 auto;
+}
+
+body.file-drop-active #app-container {
+  filter: saturate(0.85);
 }
 
 .wysiwyg-wrapper {
