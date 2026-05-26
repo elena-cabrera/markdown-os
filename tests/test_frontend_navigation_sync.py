@@ -198,6 +198,7 @@ def test_web_editor_uses_honest_sync_status_labels() -> None:
     assert 'return "Stored in browser";' in editor_source
     assert 'setSaveStatus(saveStatusForPayload(responsePayload), "saved");' in editor_source
     assert 'setSaveStatus(saveStatusForPayload(payload), "saved");' in tabs_source
+    assert 'setSaveStatus(tabData.readOnly ? "Browser copy only" : "Loaded", "saved");' in tabs_source
 
 
 def test_web_read_only_imports_disable_editing() -> None:

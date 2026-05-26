@@ -557,7 +557,7 @@
     await restoreTabToEditor(filePath);
     setPageTitle(filePath);
     window.fileTree?.setCurrentFile?.(filePath);
-    setSaveStatus("Loaded", "saved");
+    setSaveStatus(tabData.readOnly ? "Browser copy only" : "Loaded", "saved");
     renderTabBar();
     return true;
   }
