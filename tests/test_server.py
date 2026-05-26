@@ -55,6 +55,21 @@ def _build_desktop_client() -> TestClient:
     return TestClient(app)
 
 
+def _build_web_client() -> TestClient:
+    """
+    Create a TestClient instance bound to web runtime mode.
+
+    Args:
+    - None (None): Web mode starts without a filesystem workspace.
+
+    Returns:
+    - TestClient: FastAPI test client configured for browser-storage web mode.
+    """
+
+    app = create_app(None, mode="web")
+    return TestClient(app)
+
+
 def test_get_content_returns_file_payload(tmp_path: Path) -> None:
     """
     Verify GET /api/content returns markdown and metadata.
@@ -115,6 +130,24 @@ def test_get_mode_returns_empty_in_desktop_empty_mode() -> None:
 
     assert response.status_code == 200
     assert response.json() == {"mode": "empty"}
+
+
+def test_get_mode_returns_web_in_browser_storage_mode() -> None:
+    """
+    Verify mode endpoint reports web mode for browser-storage runtime.
+
+    Args:
+    - None (None): Web client starts without a filesystem handler.
+
+    Returns:
+    - None: Assertion validates /api/mode response payload.
+    """
+
+    with _build_web_client() as client:
+        response = client.get("/api/mode")
+
+    assert response.status_code == 200
+    assert response.json() == {"mode": "web"}
 
 
 def test_health_endpoint_reports_desktop_metadata() -> None:
@@ -214,6 +247,42 @@ def test_empty_mode_rejects_save_requests() -> None:
 
     assert response.status_code == 409
     assert response.json()["detail"] == "No workspace loaded."
+
+
+def test_web_mode_rejects_filesystem_content_requests() -> None:
+    """
+    Verify web mode does not expose filesystem content APIs.
+
+    Args:
+    - None (None): Web client starts without a filesystem handler.
+
+    Returns:
+    - None: Assertions validate browser-storage route guarding.
+    """
+
+    with _build_web_client() as client:
+        response = client.get("/api/content")
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Web mode uses browser storage."
+
+
+def test_web_mode_rejects_filesystem_save_requests() -> None:
+    """
+    Verify web mode rejects server-side save attempts.
+
+    Args:
+    - None (None): Web client starts without a filesystem handler.
+
+    Returns:
+    - None: Assertions validate browser-storage save guarding.
+    """
+
+    with _build_web_client() as client:
+        response = client.post("/api/save", json={"content": "updated"})
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Web mode uses browser storage."
 
 
 def test_file_tree_endpoint_returns_nested_structure_in_folder_mode(tmp_path: Path) -> None:

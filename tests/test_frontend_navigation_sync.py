@@ -39,6 +39,64 @@ def test_folder_tabs_use_wysiwyg_markdown_and_scroll_state() -> None:
     assert "setActiveMode" not in source
 
 
+def test_static_shell_loads_storage_backend_before_runtime_modules() -> None:
+    """Verify the storage adapter is available before websocket and editor modules."""
+
+    html_source = Path(__file__).resolve().parents[1].joinpath(
+        "markdown_os",
+        "static",
+        "index.html",
+    ).read_text(encoding="utf-8")
+
+    storage_index = html_source.index('/static/js/storage-backend.js')
+    websocket_index = html_source.index('/static/js/websocket.js')
+    editor_index = html_source.index('/static/js/editor.js')
+
+    assert storage_index < websocket_index
+    assert storage_index < editor_index
+
+
+def test_web_storage_backend_supports_static_browser_workspace() -> None:
+    """Verify web runtime persistence is implemented behind a shared adapter."""
+
+    source = _read_static_js("storage-backend.js")
+
+    assert "const WEB_DATABASE_NAME = \"markdown-os-web\";" in source
+    assert "function createHttpStorageBackend" in source
+    assert "function createIndexedDbStorageBackend" in source
+    assert "async function detectMode()" in source
+    assert "window.MarkdownOS.storage" in source
+    assert "Welcome.md" in source
+    assert "FileReader" in source
+
+
+def test_shared_frontend_modules_delegate_to_storage_backend() -> None:
+    """Verify editor, tabs, and file tree use the storage adapter for persistence."""
+
+    editor_source = _read_static_js("editor.js")
+    tabs_source = _read_static_js("tabs.js")
+    file_tree_source = _read_static_js("file-tree.js")
+    websocket_source = _read_static_js("websocket.js")
+
+    assert "window.MarkdownOS?.storage?.detectMode" in editor_source
+    assert "window.MarkdownOS?.storage?.getContent" in editor_source
+    assert "window.MarkdownOS?.storage?.saveContent" in editor_source
+    assert "window.MarkdownOS?.storage?.uploadImage" in editor_source
+    assert "mode === \"folder\" || mode === \"web\"" in editor_source
+
+    assert "window.MarkdownOS?.storage?.getContent" in tabs_source
+    assert "window.MarkdownOS?.storage?.saveContent" in tabs_source
+    assert "mode === \"folder\" || mode === \"web\"" in tabs_source
+
+    assert "window.MarkdownOS?.storage?.getFileTree" in file_tree_source
+    assert "window.MarkdownOS?.storage?.createFile" in file_tree_source
+    assert "window.MarkdownOS?.storage?.renamePath" in file_tree_source
+    assert "window.MarkdownOS?.storage?.deletePath" in file_tree_source
+    assert "mode === \"folder\" || mode === \"web\"" in file_tree_source
+
+    assert "mode === \"web\"" in websocket_source
+
+
 def test_folder_mode_sidebar_can_be_collapsed_and_restored() -> None:
     """Verify folder mode exposes whole-sidebar collapse and restore controls."""
 

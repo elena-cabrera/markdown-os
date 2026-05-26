@@ -21,7 +21,13 @@
     );
   }
 
-  function connectWebSocket() {
+  async function connectWebSocket() {
+    const mode = await window.MarkdownOS?.storage?.detectMode?.();
+    if (mode === "web") {
+      notifyConnectionStatus("disabled");
+      return;
+    }
+
     websocketState.manualClose = false;
     websocketState.socket = new WebSocket(websocketUrl());
     notifyConnectionStatus("connecting");

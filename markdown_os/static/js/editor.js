@@ -123,17 +123,11 @@
   }
 
   async function detectMode() {
-    try {
-      const response = await fetch("/api/mode");
-      if (!response.ok) {
-        return "file";
-      }
-      const payload = await response.json();
-      return payload.mode || "file";
-    } catch (error) {
-      console.error("Failed to detect mode.", error);
-      return "file";
-    }
+    return window.MarkdownOS?.storage?.detectMode?.() || "file";
+  }
+
+  function isWorkspaceMode(mode) {
+    return mode === "folder" || mode === "web";
   }
 
   function setEmptyStateCopy(title, subtitle) {
@@ -183,7 +177,7 @@
   }
 
   async function loadContent(filePath = null) {
-    if (editorState.mode === "folder" && window.fileTabs?.isEnabled()) {
+    if (isWorkspaceMode(editorState.mode) && window.fileTabs?.isEnabled()) {
       return window.fileTabs.reloadTab(filePath || window.fileTabs.getActiveTabPath());
     }
 
@@ -204,8 +198,8 @@
       return false;
     }
 
-    const requestUrl = buildContentUrl(filePath);
-    if (!requestUrl) {
+    const targetPath = filePath || editorState.currentFilePath;
+    if (isWorkspaceMode(editorState.mode) && !targetPath) {
       await setMarkdown("", { silent: true });
       editorState.lastSavedContent = "";
       setSaveStatus("Select a file");
@@ -223,12 +217,7 @@
     }
 
     try {
-      const response = await fetch(requestUrl);
-      if (!response.ok) {
-        throw new Error(`Failed to load content (${response.status})`);
-      }
-
-      const payload = await response.json();
+      const payload = await window.MarkdownOS?.storage?.getContent?.(targetPath);
       const initialContent = payload.content || "";
       await setMarkdown(initialContent, { silent: true });
       editorState.lastSavedContent = initialContent;
@@ -236,7 +225,7 @@
 
       setPageTitle(payload.metadata);
 
-      if (editorState.mode === "folder") {
+      if (isWorkspaceMode(editorState.mode)) {
         const relativePath = payload.metadata?.relative_path || filePath || null;
         editorState.currentFilePath = relativePath;
         if (relativePath && window.fileTree?.setCurrentFile) {
@@ -267,28 +256,20 @@
       return false;
     }
 
-    if (editorState.mode === "folder" && window.fileTabs?.isEnabled()) {
+    if (isWorkspaceMode(editorState.mode) && window.fileTabs?.isEnabled()) {
       return window.fileTabs.checkForExternalChanges(filePath || window.fileTabs.getActiveTabPath());
     }
 
-    const requestUrl = buildContentUrl(filePath);
-    if (!requestUrl) {
+    if (editorState.mode === "web") {
       return false;
     }
 
-    try {
-      const response = await fetch(requestUrl);
-      if (!response.ok) {
-        return false;
-      }
-
-      const payload = await response.json();
-      const diskContent = payload.content || "";
-      return diskContent !== editorState.lastSavedContent;
-    } catch (error) {
-      console.error("Failed to check for external changes.", error);
-      return false;
-    }
+    return (
+      (await window.MarkdownOS?.storage?.checkForExternalChanges?.(
+        filePath,
+        editorState.lastSavedContent,
+      )) || false
+    );
   }
 
   async function showConflictDialog() {
@@ -360,7 +341,7 @@
       return false;
     }
 
-    if (editorState.mode === "folder" && window.fileTabs?.isEnabled()) {
+    if (isWorkspaceMode(editorState.mode) && window.fileTabs?.isEnabled()) {
       return window.fileTabs.saveTabContent(window.fileTabs.getActiveTabPath());
     }
 
@@ -368,7 +349,7 @@
       return false;
     }
 
-    if (editorState.mode === "folder" && !editorState.currentFilePath) {
+    if (isWorkspaceMode(editorState.mode) && !editorState.currentFilePath) {
       setSaveStatus("Select a file", "error");
       return false;
     }
@@ -378,25 +359,11 @@
     setSaveStatus("Saving...", "saving");
 
     try {
-      const payload = { content };
-      if (editorState.mode === "folder") {
-        payload.file = editorState.currentFilePath;
-      }
-
-      const response = await fetch("/api/save", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Save failed (${response.status})`);
-      }
-
-      const responsePayload = await response.json();
-      if (editorState.mode === "folder") {
+      const responsePayload = await window.MarkdownOS?.storage?.saveContent?.(
+        content,
+        editorState.currentFilePath,
+      );
+      if (isWorkspaceMode(editorState.mode)) {
         const relativePath = responsePayload.metadata?.relative_path || editorState.currentFilePath;
         editorState.currentFilePath = relativePath;
         if (relativePath && window.fileTree?.setCurrentFile) {
@@ -422,7 +389,7 @@
     }
 
     editorState.saveTimeout = window.setTimeout(() => {
-      if (editorState.mode === "folder" && !editorState.currentFilePath) {
+      if (isWorkspaceMode(editorState.mode) && !editorState.currentFilePath) {
         return;
       }
       saveContent();
@@ -444,7 +411,7 @@
   function onEditorInput() {
     const markdown = currentMarkdown();
 
-    if (editorState.mode === "folder" && window.fileTabs?.isEnabled()) {
+    if (isWorkspaceMode(editorState.mode) && window.fileTabs?.isEnabled()) {
       const activePath = window.fileTabs.getActiveTabPath();
       if (!activePath) {
         setSaveStatus("Select a file", "error");
@@ -466,7 +433,7 @@
       return;
     }
 
-    if (editorState.mode === "folder" && !editorState.currentFilePath) {
+    if (isWorkspaceMode(editorState.mode) && !editorState.currentFilePath) {
       setSaveStatus("Select a file", "error");
       return;
     }
@@ -480,7 +447,7 @@
   }
 
   async function handleExternalChange(detail) {
-    if (editorState.mode === "folder" && window.fileTabs?.isEnabled()) {
+    if (isWorkspaceMode(editorState.mode) && window.fileTabs?.isEnabled()) {
       await window.fileTabs.handleExternalChange(detail);
       return;
     }
@@ -489,7 +456,7 @@
       return;
     }
 
-    if (editorState.mode === "folder" && detail.file !== editorState.currentFilePath) {
+    if (isWorkspaceMode(editorState.mode) && detail.file !== editorState.currentFilePath) {
       return;
     }
 
@@ -535,16 +502,16 @@
       return false;
     }
 
-    if (editorState.mode !== "folder") {
+    if (!isWorkspaceMode(editorState.mode)) {
       editorState.mode = await detectMode();
-      if (editorState.mode !== "folder") {
+      if (!isWorkspaceMode(editorState.mode)) {
         return false;
       }
     }
 
-    if (editorState.mode === "folder" && window.fileTabs) {
+    if (isWorkspaceMode(editorState.mode) && window.fileTabs) {
       if (!window.fileTabs.isEnabled()) {
-        window.fileTabs.init("folder");
+        window.fileTabs.init(editorState.mode);
       }
       return window.fileTabs.openTab(filePath);
     }
@@ -609,25 +576,13 @@
     editorState.nextUploadId += 1;
     setSaveStatus("Uploading image...", "saving");
 
-    const formData = new FormData();
     const extension = file.name?.includes(".")
       ? file.name.split(".").pop().toLowerCase()
       : extensionFromMimeType(file.type);
     const filename = file.name || `paste-${editorState.nextUploadId}.${extension}`;
-    formData.append("file", file, filename);
 
     try {
-      const response = await fetch("/api/images", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorPayload = await response.json().catch(() => ({}));
-        throw new Error(errorPayload.detail || `Upload failed (${response.status})`);
-      }
-
-      const payload = await response.json();
+      const payload = await window.MarkdownOS?.storage?.uploadImage?.(file, filename);
       await window.wysiwyg?.insertImage?.(payload.path, "image");
       setSaveStatus("Image uploaded", "saved");
     } catch (error) {
@@ -790,7 +745,20 @@
 
     window.fileTabs?.init(editorState.mode);
     setLoadingState(false);
-    if (editorState.mode === "folder") {
+    if (isWorkspaceMode(editorState.mode)) {
+      window.fileTree?.setMode?.(editorState.mode);
+      window.fileTree?.setFolderModeUI?.();
+      const tree = await window.fileTree?.loadFileTree?.();
+      if (editorState.mode === "web") {
+        const initialFile = new URLSearchParams(window.location.search).get("file");
+        const firstFile = window.fileTree?.firstFilePath?.(tree);
+        const fileToOpen = initialFile || firstFile;
+        if (fileToOpen) {
+          await window.fileTabs?.openTab?.(fileToOpen);
+          window.desktopPicker?.setPickerVisibility?.(false);
+          return;
+        }
+      }
       setSaveStatus("Select a file");
       window.fileTabs?.setEmptyState?.(true);
       window.desktopPicker?.setPickerVisibility?.(false);

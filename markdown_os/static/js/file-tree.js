@@ -174,7 +174,7 @@
   }
 
   function updateUrl(filePath) {
-    if (fileTreeState.mode !== "folder") {
+    if (!isWorkspaceMode(fileTreeState.mode)) {
       return;
     }
 
@@ -205,17 +205,11 @@
   }
 
   async function getMode() {
-    try {
-      const response = await fetch("/api/mode");
-      if (!response.ok) {
-        return "file";
-      }
-      const payload = await response.json();
-      return payload.mode || "file";
-    } catch (error) {
-      console.error("Failed to detect app mode.", error);
-      return "file";
-    }
+    return window.MarkdownOS?.storage?.detectMode?.() || "file";
+  }
+
+  function isWorkspaceMode(mode) {
+    return mode === "folder" || mode === "web";
   }
 
   function filterTreeNode(node, query) {
@@ -316,10 +310,7 @@
     const targetPath = parentPath ? `${parentPath}/${trimmedName}` : trimmedName;
 
     try {
-      const payload = await apiJson("/api/files/create", {
-        method: "POST",
-        body: JSON.stringify({ path: targetPath }),
-      });
+      const payload = await window.MarkdownOS?.storage?.createFile?.(targetPath);
       await loadFileTree();
       const createdPath = payload.path;
       if (window.fileTabs?.isEnabled?.()) {
@@ -346,10 +337,7 @@
     }
 
     try {
-      const payload = await apiJson("/api/files/rename", {
-        method: "POST",
-        body: JSON.stringify({ path, new_name: nextName.trim() }),
-      });
+      const payload = await window.MarkdownOS?.storage?.renamePath?.(path, nextName.trim());
       await loadFileTree();
       window.fileTabs?.renameTab?.(path, payload.path);
       if (fileTreeState.currentFile === path) {
@@ -374,10 +362,7 @@
     }
 
     try {
-      await apiJson("/api/files/delete", {
-        method: "DELETE",
-        body: JSON.stringify({ path }),
-      });
+      await window.MarkdownOS?.storage?.deletePath?.(path);
       await loadFileTree();
       await window.fileTabs?.closeTab?.(path, { skipDirtyCheck: true });
       if (fileTreeState.currentFile === path) {
@@ -552,16 +537,13 @@
 
   async function loadFileTree() {
     try {
-      const response = await fetch("/api/file-tree");
-      if (!response.ok) {
-        throw new Error(`Failed to load file tree (${response.status})`);
-      }
-
-      const payload = await response.json();
+      const payload = await window.MarkdownOS?.storage?.getFileTree?.();
       fileTreeState.fileTreeData = payload;
       renderTree();
+      return payload;
     } catch (error) {
       console.error("Failed to load file tree.", error);
+      return null;
     }
   }
 
@@ -610,7 +592,7 @@
     }
 
     try {
-      await fetch("/api/reveal-in-explorer", { method: "POST" });
+      await window.MarkdownOS?.storage?.revealInExplorer?.();
     } catch (error) {
       console.error("Failed to open file explorer.", error);
     }
@@ -646,9 +628,25 @@
   }
 
   function setMode(mode) {
-    if (mode === "empty" || mode === "file" || mode === "folder") {
+    if (mode === "empty" || mode === "file" || mode === "folder" || mode === "web") {
       fileTreeState.mode = mode;
     }
+  }
+
+  function firstFilePath(node = fileTreeState.fileTreeData) {
+    if (!node) {
+      return null;
+    }
+    if (node.type === "file") {
+      return node.path;
+    }
+    for (const child of node.children || []) {
+      const filePath = firstFilePath(child);
+      if (filePath) {
+        return filePath;
+      }
+    }
+    return null;
   }
 
   window.fileTree = {
@@ -659,17 +657,21 @@
     setFolderModeUI,
     hideFolderModeUI,
     setMode,
+    firstFilePath,
   };
 
   document.addEventListener("DOMContentLoaded", async () => {
     fileTreeState.mode = await getMode();
     initFileTree();
-    if (fileTreeState.mode !== "folder") {
+    if (!isWorkspaceMode(fileTreeState.mode)) {
       return;
     }
 
     setFolderModeUI();
     await loadFileTree();
+    if (fileTreeState.mode === "web") {
+      return;
+    }
 
     const initialFile = new URLSearchParams(window.location.search).get("file");
     if (initialFile && typeof window.switchFile === "function") {

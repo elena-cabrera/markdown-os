@@ -114,6 +114,10 @@
     return getTabData(tabsState.activeTabPath);
   }
 
+  function isWorkspaceMode(mode) {
+    return mode === "folder" || mode === "web";
+  }
+
   function replaceTabPath(oldPath, newPath) {
     if (!oldPath || !newPath || oldPath === newPath) {
       return oldPath;
@@ -296,12 +300,7 @@
     }
 
     try {
-      const response = await fetch(`/api/content?file=${encodeURIComponent(targetPath)}`);
-      if (!response.ok) {
-        return false;
-      }
-
-      const payload = await response.json();
+      const payload = await window.MarkdownOS?.storage?.getContent?.(targetPath);
       return (payload.content || "") !== tabData.lastSavedContent;
     } catch (error) {
       console.error("Failed to check for external changes.", error);
@@ -322,12 +321,7 @@
 
     setContentLoadingState(true);
     try {
-      const response = await fetch(`/api/content?file=${encodeURIComponent(filePath)}`);
-      if (!response.ok) {
-        throw new Error(`Failed to load content (${response.status})`);
-      }
-
-      const payload = await response.json();
+      const payload = await window.MarkdownOS?.storage?.getContent?.(filePath);
       tabData.content = payload.content || "";
       tabData.lastSavedContent = tabData.content;
       tabData.isDirty = false;
@@ -417,22 +411,7 @@
     setSaveStatus("Saving...", "saving");
 
     try {
-      const response = await fetch("/api/save", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          content: tabData.content,
-          file: targetPath,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Save failed (${response.status})`);
-      }
-
-      const payload = await response.json();
+      const payload = await window.MarkdownOS?.storage?.saveContent?.(tabData.content, targetPath);
       const relativePath = payload.metadata?.relative_path || targetPath;
       targetPath = replaceTabPath(targetPath, relativePath);
 
@@ -791,7 +770,7 @@
   }
 
   function init(mode) {
-    tabsState.enabled = mode === "folder";
+    tabsState.enabled = isWorkspaceMode(mode);
     if (!tabsState.enabled) {
       tabsState.tabs.clear();
       tabsState.tabOrder = [];
