@@ -597,6 +597,61 @@
     }
   }
 
+  function hasDraggedFiles(event) {
+    return Array.from(event.dataTransfer?.types || []).includes("Files");
+  }
+
+  function markdownFilesFromFileList(fileList) {
+    return Array.from(fileList || []).filter(isMarkdownImportFile);
+  }
+
+  function imageFilesFromFileList(fileList) {
+    return Array.from(fileList || []).filter((file) => file.type.startsWith("image/"));
+  }
+
+  function setDragOverState(isActive) {
+    document.getElementById("editor-container")?.classList.toggle("drag-over", isActive);
+  }
+
+  function handleMarkdownDragOver(event) {
+    if (!hasDraggedFiles(event)) {
+      return;
+    }
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+    setDragOverState(true);
+  }
+
+  function handleMarkdownDragLeave(event) {
+    if (event.relatedTarget instanceof Node && document.body.contains(event.relatedTarget)) {
+      return;
+    }
+    setDragOverState(false);
+  }
+
+  async function handleMarkdownDrop(event) {
+    if (!hasDraggedFiles(event)) {
+      return;
+    }
+
+    const files = event.dataTransfer?.files;
+    const markdownFiles = markdownFilesFromFileList(files);
+    if (markdownFiles.length === 0) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    setDragOverState(false);
+    await handleMarkdownFileImport(markdownFiles);
+  }
+
+  function bindMarkdownDropEvents() {
+    window.addEventListener("dragover", handleMarkdownDragOver);
+    window.addEventListener("dragleave", handleMarkdownDragLeave);
+    window.addEventListener("drop", handleMarkdownDrop);
+  }
+
   async function handleImageUpload(file) {
     if (!file) {
       return;
@@ -650,33 +705,25 @@
     });
 
     container.addEventListener("dragover", (event) => {
-      const hasFiles = Array.from(event.dataTransfer?.types || []).includes("Files");
-      if (!hasFiles) {
+      if (!hasDraggedFiles(event)) {
         return;
       }
       event.preventDefault();
-      container.classList.add("drag-over");
+      setDragOverState(true);
     });
 
     container.addEventListener("dragleave", () => {
-      container.classList.remove("drag-over");
+      setDragOverState(false);
     });
 
-    container.addEventListener("drop", async (event) => {
-      container.classList.remove("drag-over");
+    container.addEventListener("drop", (event) => {
+      setDragOverState(false);
       const files = event.dataTransfer?.files;
-      if (!files || files.length === 0) {
+      if (!files || files.length === 0 || markdownFilesFromFileList(files).length > 0) {
         return;
       }
 
-      const markdownFiles = Array.from(files).filter(isMarkdownImportFile);
-      if (markdownFiles.length > 0) {
-        event.preventDefault();
-        await handleMarkdownFileImport(markdownFiles);
-        return;
-      }
-
-      const imageFiles = Array.from(files).filter((file) => file.type.startsWith("image/"));
+      const imageFiles = imageFilesFromFileList(files);
       if (imageFiles.length === 0) {
         return;
       }
@@ -690,6 +737,7 @@
 
   function bindEvents() {
     bindImageEvents();
+    bindMarkdownDropEvents();
     bindQuickActionsMenu();
 
     document.getElementById("export-pdf-button")?.addEventListener("click", () => {

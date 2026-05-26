@@ -131,9 +131,12 @@ def test_markdown_files_can_be_imported_by_drag_and_drop() -> None:
 
     assert "function isMarkdownImportFile(file)" in source
     assert "async function handleMarkdownFileImport(fileList)" in source
-    assert "const markdownFiles = Array.from(files).filter(isMarkdownImportFile);" in source
+    assert "const markdownFiles = markdownFilesFromFileList(files);" in source
     assert "await handleMarkdownFileImport(markdownFiles);" in source
     assert 'setSaveStatus("Markdown imported", "saved");' in source
+    assert "function bindMarkdownDropEvents()" in source
+    assert 'window.addEventListener("dragover", handleMarkdownDragOver);' in source
+    assert 'window.addEventListener("drop", handleMarkdownDrop);' in source
 
 
 def test_http_storage_backend_imports_markdown_into_folder_workspace() -> None:
