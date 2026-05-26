@@ -15,7 +15,6 @@ Your local CLI and desktop app still save directly to your filesystem.
 `;
 
   const namespace = (window.MarkdownOS = window.MarkdownOS || {});
-  let detectedModePromise = null;
   let storageBackendPromise = null;
 
   function runtimeForcesWebMode() {
@@ -45,10 +44,7 @@ Your local CLI and desktop app still save directly to your filesystem.
   }
 
   async function detectMode() {
-    if (!detectedModePromise) {
-      detectedModePromise = readServerMode();
-    }
-    return detectedModePromise;
+    return readServerMode();
   }
 
   function contentUrlForMode(mode, filePath = null) {
@@ -393,8 +389,12 @@ Your local CLI and desktop app still save directly to your filesystem.
         };
       },
 
-      async checkForExternalChanges() {
-        return false;
+      async checkForExternalChanges(filePath, lastSavedContent) {
+        if (!filePath) {
+          return false;
+        }
+        const record = await readRecord(filePath);
+        return (record?.content || "") !== lastSavedContent;
       },
 
       async getFileTree() {
@@ -430,6 +430,13 @@ Your local CLI and desktop app still save directly to your filesystem.
         if (matchingRecords.length === 0) {
           throw new Error(`Path does not exist: ${oldPath}`);
         }
+
+        const isSingleFileRename =
+          matchingRecords.length === 1 && matchingRecords[0].path === oldPath;
+        if (isSingleFileRename && !isMarkdownPath(newPath)) {
+          throw new Error("Web workspace files must end with .md or .markdown.");
+        }
+
         if (
           records.some(
             (record) => record.path === newPath || record.path.startsWith(`${newPath}/`),

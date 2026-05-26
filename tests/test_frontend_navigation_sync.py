@@ -70,6 +70,34 @@ def test_web_storage_backend_supports_static_browser_workspace() -> None:
     assert "FileReader" in source
 
 
+def test_web_storage_backend_does_not_cache_http_runtime_mode() -> None:
+    """Verify desktop workspace changes can refresh mode after empty startup."""
+
+    source = _read_static_js("storage-backend.js")
+
+    assert "let detectedModePromise" not in source
+    assert "async function detectMode() {\n    return readServerMode();\n  }" in source
+    assert "const mode = await detectMode();" in source
+
+
+def test_web_storage_backend_checks_browser_file_conflicts() -> None:
+    """Verify web mode compares stored content before overwriting open tabs."""
+
+    source = _read_static_js("storage-backend.js")
+
+    assert "async checkForExternalChanges(filePath, lastSavedContent) {" in source
+    assert 'return (record?.content || "") !== lastSavedContent;' in source
+
+
+def test_web_storage_backend_rename_keeps_files_markdown_visible() -> None:
+    """Verify web file rename cannot hide markdown records from the file tree."""
+
+    source = _read_static_js("storage-backend.js")
+
+    assert "if (isSingleFileRename && !isMarkdownPath(newPath)) {" in source
+    assert 'throw new Error("Web workspace files must end with .md or .markdown.");' in source
+
+
 def test_shared_frontend_modules_delegate_to_storage_backend() -> None:
     """Verify editor, tabs, and file tree use the storage adapter for persistence."""
 
