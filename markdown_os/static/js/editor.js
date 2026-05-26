@@ -647,9 +647,10 @@
   }
 
   function bindMarkdownDropEvents() {
-    window.addEventListener("dragover", handleMarkdownDragOver);
-    window.addEventListener("dragleave", handleMarkdownDragLeave);
-    window.addEventListener("drop", handleMarkdownDrop);
+    document.addEventListener("dragenter", handleMarkdownDragOver, true);
+    document.addEventListener("dragover", handleMarkdownDragOver, true);
+    document.addEventListener("dragleave", handleMarkdownDragLeave, true);
+    document.addEventListener("drop", handleMarkdownDrop, true);
   }
 
   async function handleImageUpload(file) {

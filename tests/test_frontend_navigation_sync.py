@@ -135,8 +135,9 @@ def test_markdown_files_can_be_imported_by_drag_and_drop() -> None:
     assert "await handleMarkdownFileImport(markdownFiles);" in source
     assert 'setSaveStatus("Markdown imported", "saved");' in source
     assert "function bindMarkdownDropEvents()" in source
-    assert 'window.addEventListener("dragover", handleMarkdownDragOver);' in source
-    assert 'window.addEventListener("drop", handleMarkdownDrop);' in source
+    assert 'document.addEventListener("dragenter", handleMarkdownDragOver, true);' in source
+    assert 'document.addEventListener("dragover", handleMarkdownDragOver, true);' in source
+    assert 'document.addEventListener("drop", handleMarkdownDrop, true);' in source
 
 
 def test_http_storage_backend_imports_markdown_into_folder_workspace() -> None:
