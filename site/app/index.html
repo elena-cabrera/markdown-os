@@ -1,0 +1,623 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Markdown-OS</title>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+    <script>
+      (() => {
+        const THEME_KEY = "markdown-os-theme";
+        const VALID_THEME_IDS = new Set([
+          "light",
+          "dark",
+          "dracula",
+          "nord-light",
+          "nord-dark",
+          "lofi",
+        ]);
+        const root = document.documentElement;
+        root.classList.add("loading");
+
+        let savedTheme = null;
+        try {
+          savedTheme = window.localStorage.getItem(THEME_KEY);
+        } catch (error) {
+          savedTheme = null;
+        }
+
+        const nextTheme = VALID_THEME_IDS.has(savedTheme)
+          ? savedTheme
+          : window.matchMedia("(prefers-color-scheme: dark)").matches
+            ? "dark"
+            : "light";
+        root.setAttribute("data-theme", nextTheme);
+      })();
+    </script>
+    <link rel="stylesheet" href="/static/css/fonts.css" />
+    <link rel="stylesheet" href="/static/css/styles.css" />
+    <link rel="stylesheet" href="/static/css/themes.css" />
+    <link rel="stylesheet" href="/static/vendor/katex/katex.min.css" />
+    <link
+      id="highlight-theme"
+      rel="stylesheet"
+      href="/static/vendor/highlightjs/styles/github.min.css"
+    />
+    <script src="/static/vendor/dompurify/purify.min.js"></script>
+    <script src="/static/vendor/marked/marked.min.js"></script>
+    <script src="/static/vendor/turndown/turndown.js"></script>
+    <script src="/static/vendor/turndown-plugin-gfm/turndown-plugin-gfm.js"></script>
+    <script src="/static/vendor/mermaid/mermaid.min.js"></script>
+    <script src="/static/vendor/katex/katex.min.js"></script>
+    <script src="/static/vendor/svg-pan-zoom/svg-pan-zoom.min.js"></script>
+    <script src="/static/vendor/highlightjs/highlight.min.js"></script>
+    <script src="/static/vendor/html2pdf/html2pdf.bundle.min.js"></script>
+  </head>
+  <body>
+    <div id="drop-file-overlay" class="drop-file-overlay hidden" aria-hidden="true">
+      <div class="drop-file-card">
+        <svg class="drop-file-icon" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M4 12v2.544c0 3.245 0 4.868.886 5.967a4 4 0 0 0 .603.603C6.59 22 8.211 22 11.456 22c.705 0 1.058 0 1.381-.114q.1-.036.197-.082c.31-.148.559-.397 1.058-.896l4.736-4.736c.579-.578.867-.867 1.02-1.235c.152-.368.152-.776.152-1.594V10c0-3.771 0-5.657-1.172-6.828S15.771 2 12 2m1 19.5V21c0-2.828 0-4.243.879-5.121C14.757 15 16.172 15 19 15h.5"/><path d="M10 5c-.59-.607-2.16-3-3-3S4.59 4.393 4 5m3-2v7"/></g></svg>
+        <span>Drop File</span>
+      </div>
+    </div>
+    <div id="app-loading" class="loading-banner">Loading markdown document...</div>
+    <div class="container hidden" id="app-container">
+      <aside id="sidebar">
+        <button id="sidebar-open-btn" class="sidebar-open-btn hidden" type="button" title="Open file or folder">
+          <svg class="sidebar-open-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" aria-hidden="true"><path d="M3.75 9.776q.168-.026.344-.026h15.812q.176 0 .344.026m-16.5 0a2.25 2.25 0 0 0-1.883 2.542l.857 6a2.25 2.25 0 0 0 2.227 1.932H19.05a2.25 2.25 0 0 0 2.227-1.932l.857-6a2.25 2.25 0 0 0-1.883-2.542m-16.5 0V6A2.25 2.25 0 0 1 6 3.75h3.879a1.5 1.5 0 0 1 1.06.44l2.122 2.12a1.5 1.5 0 0 0 1.06.44H18A2.25 2.25 0 0 1 20.25 9v.776"/></svg>
+          <span>Open</span>
+        </button>
+        <div id="file-tree-container" class="hidden">
+          <button
+            id="file-tree-toggle"
+            class="sidebar-section-toggle"
+            type="button"
+            aria-expanded="true"
+          >
+            <svg
+              class="toggle-chevron"
+              width="12"
+              height="12"
+              viewBox="0 0 12 12"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polyline points="4 2 8 6 4 10"></polyline>
+            </svg>
+            <span>Files</span>
+          </button>
+          <div id="file-tree-collapsible" class="sidebar-collapsible">
+            <div class="sidebar-header">
+              <div class="file-tree-search-wrapper">
+                <svg
+                  class="file-tree-search-icon"
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <g
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                  >
+                    <path d="m21 21l-4.34-4.34" />
+                    <circle cx="11" cy="11" r="8" />
+                  </g>
+                </svg>
+                <input
+                  type="text"
+                  id="file-tree-search"
+                  placeholder="Search files..."
+                  class="file-tree-search"
+                  aria-label="Search files"
+                />
+              </div>
+              <button
+                id="file-tree-refresh"
+                class="sidebar-action-btn"
+                type="button"
+                title="Update files"
+                aria-label="Update files"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+                  <g
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                  >
+                    <path d="M21 12a9 9 0 0 0-9-9a9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                    <path
+                      d="M3 3v5h5m-5 4a9 9 0 0 0 9 9a9.75 9.75 0 0 0 6.74-2.74L21 16"
+                    />
+                    <path d="M16 16h5v5" />
+                  </g>
+                </svg>
+              </button>
+              <button
+                id="file-tree-new-file"
+                class="sidebar-action-btn"
+                type="button"
+                title="New file"
+                aria-label="New file"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M12.001 5v14.002m7.001-7H5"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </button>
+            </div>
+            <nav id="file-tree" role="tree"></nav>
+          </div>
+        </div>
+
+        <div id="toc-container">
+          <button id="toc-toggle" class="sidebar-section-toggle" type="button" aria-expanded="true">
+            <svg
+              class="toggle-chevron"
+              width="12"
+              height="12"
+              viewBox="0 0 12 12"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polyline points="4 2 8 6 4 10"></polyline>
+            </svg>
+            <span>Contents</span>
+          </button>
+          <div id="toc-collapsible" class="sidebar-collapsible">
+            <nav id="toc" role="navigation"></nav>
+          </div>
+        </div>
+      </aside>
+
+      <main id="main-content">
+        <div class="tab-nav">
+          <div class="nav-left-group">
+            <button
+              id="sidebar-toggle-button"
+              class="history-button hidden"
+              type="button"
+              title="Hide sidebar"
+              aria-label="Hide sidebar"
+              aria-controls="sidebar"
+              aria-expanded="true"
+            >
+              <svg
+                id="sidebar-toggle-icon"
+                xmlns="http://www.w3.org/2000/svg"
+                width="32"
+                height="32"
+                viewBox="0 0 24 24"
+              >
+                <g fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.5">
+                  <path d="M2 12c0-3.75 0-5.625.955-6.939A5 5 0 0 1 4.06 3.955C5.375 3 7.251 3 11 3h2c3.75 0 5.625 0 6.939.955a5 5 0 0 1 1.106 1.106C22 6.375 22 8.251 22 12s0 5.625-.955 6.939a5 5 0 0 1-1.106 1.106C18.625 21 16.749 21 13 21h-2c-3.75 0-5.625 0-6.939-.955a5 5 0 0 1-1.106-1.106C2 17.625 2 15.749 2 12Zm7.5-8.5v17" />
+                  <path stroke-linecap="round" d="M5 7h1.5M5 11h1.5M17 10l-1.226 1.057c-.516.445-.774.667-.774.943s.258.498.774.943L17 14" />
+                </g>
+              </svg>
+            </button>
+            <div class="undo-redo-group" aria-label="Edit history controls">
+              <button
+                id="undo-button"
+                class="history-button"
+                type="button"
+                title="Undo (Ctrl+Z)"
+                aria-label="Undo"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M3 8h12a6 6 0 0 1 0 12h-4"/><path d="m7 4l-1.154.877C3.95 6.318 3 7.039 3 8s.949 1.682 2.846 3.124L7 12"/></g></svg>
+              </button>
+              <button
+                id="redo-button"
+                class="history-button"
+                type="button"
+                title="Redo (Ctrl+Shift+Z)"
+                aria-label="Redo"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M21 8H9a6 6 0 0 0 0 12h4"/><path d="m17 4l1.154.877C20.05 6.318 21 7.039 21 8s-.949 1.682-2.846 3.124L17 12"/></g></svg>
+              </button>
+            </div>
+            <span id="save-status" aria-live="polite">Idle</span>
+          </div>
+          <div id="current-file-path" class="current-file-path hidden">
+            <span id="current-file-text"></span>
+          </div>
+          <div class="tab-controls">
+            <div class="quick-actions-menu" id="quick-actions-menu">
+              <button
+                class="quick-actions-toggle"
+                id="quick-actions-toggle"
+                type="button"
+                title="Actions"
+                aria-label="Open options menu"
+                aria-haspopup="menu"
+                aria-expanded="false"
+              >
+                <span>Options</span>
+                <svg class="dropdown-chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </button>
+              <div id="quick-actions-dropdown" class="quick-actions-dropdown" role="menu" hidden>
+                <button id="export-pdf-button" class="quick-actions-item" type="button" role="menuitem">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5">
+                      <path d="M20 14v-3.343c0-.818 0-1.226-.152-1.594c-.152-.367-.441-.657-1.02-1.235l-4.736-4.736c-.499-.499-.748-.748-1.058-.896a2 2 0 0 0-.197-.082C12.514 2 12.161 2 11.456 2c-3.245 0-4.868 0-5.967.886a4 4 0 0 0-.603.603C4 4.59 4 6.211 4 9.456V14c0 3.771 0 5.657 1.172 6.828S8.229 22 12 22m1-19.5V3c0 2.828 0 4.243.879 5.121C14.757 9 16.172 9 19 9h.5"/>
+                      <path d="M17 22c.607-.59 3-2.16 3-3s-2.393-2.41-3-3m2 3h-7"/>
+                    </g>
+                  </svg>
+                  <span>Export to PDF</span>
+                </button>
+                <div class="theme-dropdown quick-actions-theme" id="theme-dropdown">
+                  <button
+                    class="quick-actions-item quick-actions-theme-toggle"
+                    id="theme-dropdown-toggle"
+                    type="button"
+                    role="menuitem"
+                    aria-label="Select theme"
+                    aria-haspopup="listbox"
+                    aria-expanded="false"
+                  >
+                    <span class="theme-dots" id="theme-dots"></span>
+                    <span class="quick-actions-item-label" id="theme-current-name"></span>
+                    <svg class="dropdown-chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                  </button>
+                  <ul class="theme-dropdown-menu" id="theme-dropdown-menu" role="listbox" aria-label="Theme selection" hidden></ul>
+                </div>
+                <button id="focus-mode-button" class="quick-actions-item" type="button" role="menuitem">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+                      <path d="M3 7V5a2 2 0 0 1 2-2h2m10 0h2a2 2 0 0 1 2 2v2m0 10v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/>
+                      <rect width="10" height="8" x="7" y="8" rx="1"/>
+                    </g>
+                  </svg>
+                  <span>Focus mode</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="file-tabs-bar" class="file-tabs-bar hidden" role="tablist" aria-label="Open files"></div>
+
+        <div class="view-area">
+          <nav id="focus-toc" class="focus-toc" role="navigation" aria-label="Contents"></nav>
+          <div id="desktop-update-banner" class="desktop-update-banner hidden" role="status" aria-live="polite">
+            <span id="desktop-update-text"></span>
+            <div class="desktop-update-actions">
+              <button id="desktop-update-download" class="desktop-banner-button" type="button">
+                Download
+              </button>
+              <button id="desktop-update-dismiss" class="desktop-banner-button desktop-banner-button-secondary" type="button">
+                Dismiss
+              </button>
+            </div>
+          </div>
+          <section id="editor-container" class="view active">
+            <div id="wysiwyg-wrapper" class="wysiwyg-wrapper">
+              <article id="wysiwyg-editor" contenteditable="true" aria-label="Markdown WYSIWYG editor"></article>
+            </div>
+          </section>
+
+          <div id="search-bar" class="search-bar hidden" role="search" aria-label="Find in document">
+            <input
+              type="text"
+              id="search-input"
+              class="search-bar-input"
+              placeholder="Find..."
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <span id="search-match-count" class="search-match-count" aria-live="polite"></span>
+            <button id="search-prev-btn" class="search-nav-btn" type="button" title="Previous (Shift+Enter)">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <path
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="1.5"
+                  d="M12 5.5V19m6-8s-4.419-6-6-6s-6 6-6 6"
+                />
+              </svg>
+            </button>
+            <button id="search-next-btn" class="search-nav-btn" type="button" title="Next (Enter)">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <path
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="1.5"
+                  d="M12 18.502v-13.5m6 8s-4.419 6-6 6s-6-6-6-6"
+                />
+              </svg>
+            </button>
+            <button id="search-close-btn" class="search-close-btn" type="button" title="Close (Esc)">
+              &#x2715;
+            </button>
+          </div>
+
+          <div id="floating-toolbar" class="floating-toolbar" role="toolbar" aria-label="Formatting toolbar">
+            <div class="toolbar-group">
+              <button class="toolbar-button" type="button" data-command="bold" title="Bold (Ctrl+B)" aria-label="Bold">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M5 6c0-1.414 0-2.121.44-2.56C5.878 3 6.585 3 8 3h4.579C15.02 3 17 5.015 17 7.5S15.02 12 12.579 12H5z" clip-rule="evenodd"/><path d="M12.429 12h1.238C16.06 12 18 14.015 18 16.5S16.06 21 13.667 21H8c-1.414 0-2.121 0-2.56-.44C5 20.122 5 19.415 5 18v-6"/></g></svg>
+              </button>
+              <button class="toolbar-button" type="button" data-command="italic" title="Italic (Ctrl+I)" aria-label="Italic">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="M12 4h7M8 20l8-16M5 20h7"/></svg>
+              </button>
+              <button class="toolbar-button" type="button" data-command="strike" title="Strikethrough (Ctrl+Shift+X)" aria-label="Strikethrough">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"><path stroke-linejoin="round" d="M4 12h16"/><path d="M17.5 7.667C17.5 5.089 15.038 3 12 3S6.5 5.09 6.5 7.667c0 .486.053.93.167 1.333M6 16.333C6 18.911 8.686 21 12 21s6-1.333 6-4.667c0-2.393-1.03-3.755-3.092-4.333"/></g></svg>
+              </button>
+            </div>
+
+            <div class="toolbar-divider" aria-hidden="true"></div>
+
+            <div class="toolbar-group">
+              <button class="toolbar-button" type="button" data-command="h1" title="Heading 1 (Ctrl+Alt+1)" aria-label="Heading 1">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 5v14M14 5v14m3 0h1.5m1.5 0h-1.5m0 0v-8L17 12M4 12h10"/></svg>
+              </button>
+              <button class="toolbar-button" type="button" data-command="h2" title="Heading 2 (Ctrl+Alt+2)" aria-label="Heading 2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3.5 5v14m10-14v14m7 0h-4v-.31c0-.438 0-.657.087-.852c.086-.194.249-.34.575-.634l2.605-2.344c.467-.42.733-1.018.733-1.646V13a2 2 0 1 0-4 0v.4M3.5 12h10"/></svg>
+              </button>
+              <button class="toolbar-button" type="button" data-command="h3" title="Heading 3 (Ctrl+Alt+3)" aria-label="Heading 3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3.5 5v14m10-14v14m3-2a2 2 0 1 0 2-2a2 2 0 1 0-2-2m-13-1h10"/></svg>
+              </button>
+            </div>
+
+            <div class="toolbar-divider" aria-hidden="true"></div>
+
+            <div class="toolbar-group">
+              <button class="toolbar-button" type="button" data-command="bulletList" title="Bulleted list (Ctrl+Shift+8)" aria-label="Bulleted list">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round"><path stroke-width="1.5" d="M8 5h12"/><path stroke-linejoin="round" stroke-width="2" d="M4 5h.009M4 12h.009M4 19h.009"/><path stroke-width="1.5" d="M8 12h12M8 19h12"/></g></svg>
+              </button>
+              <button class="toolbar-button" type="button" data-command="orderedList" title="Numbered list (Ctrl+Shift+7)" aria-label="Numbered list">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"><path d="M11 6h10m-10 6h10m-10 6h10"/><path stroke-linejoin="round" d="M3 15h1.5c.279 0 .418 0 .534.023a1.2 1.2 0 0 1 .943.943C6 16.082 6 16.22 6 16.5s0 .418-.023.534a1.2 1.2 0 0 1-.943.943C4.918 18 4.78 18 4.5 18s-.418 0-.534.023a1.2 1.2 0 0 0-.943.943C3 19.082 3 19.22 3 19.5v.9c0 .283 0 .424.088.512s.23.088.512.088H6M3 3h1.2a.3.3 0 0 1 .3.3V9m0 0H3m1.5 0H6"/></g></svg>
+              </button>
+              <button class="toolbar-button" type="button" data-command="taskList" title="Task list" aria-label="Task list">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"><path d="M11 6h10m-10 6h10m-10 6h10"/><path stroke-linejoin="round" d="M3 7.393S4 8.045 4.5 9C4.5 9 6 5.25 8 4M3 18.393S4 19.045 4.5 20c0 0 1.5-3.75 3.5-5"/></g></svg>
+              </button>
+              <button class="toolbar-button" type="button" data-command="math" title="Math equation" aria-label="Math equation">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.5 12c0-4.478 0-6.718 1.391-8.109S7.521 2.5 12 2.5c4.478 0 6.718 0 8.109 1.391S21.5 7.521 21.5 12c0 4.478 0 6.718-1.391 8.109S16.479 21.5 12 21.5c-4.478 0-6.718 0-8.109-1.391S2.5 16.479 2.5 12Z"/><path stroke-linecap="round" stroke-linejoin="round" d="m5.5 12.5l.475-.316c.473-.316.71-.474.938-.404c.227.071.333.335.545.864L9 16.5l2.088-6.265c.44-1.32.66-1.98 1.184-2.357s1.22-.378 2.611-.378H18.5M17 12l-1.5 1.5m0 0L14 15m1.5-1.5L17 15m-1.5-1.5L14 12"/></g></svg>
+              </button>
+              <button class="toolbar-button" type="button" data-command="codeBlock" title="Code block" aria-label="Code block">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m16 10l1.227 1.057c.515.445.773.667.773.943s-.258.498-.773.943L16 14m-8-4l-1.227 1.057C6.258 11.502 6 11.724 6 12s.258.498.773.943L8 14m5-5l-2 6"/><path d="M2.5 12c0-4.478 0-6.718 1.391-8.109S7.521 2.5 12 2.5c4.478 0 6.718 0 8.109 1.391S21.5 7.521 21.5 12c0 4.478 0 6.718-1.391 8.109S16.479 21.5 12 21.5c-4.478 0-6.718 0-8.109-1.391S2.5 16.479 2.5 12Z"/></g></svg>
+              </button>
+              <button class="toolbar-button" type="button" data-command="blockquote" title="Block quote" aria-label="Block quote">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"><path d="M9 6h8m-8 6h10M9 18h8"/><path stroke-linejoin="round" d="M5 3v18"/></g></svg>
+              </button>
+              <button class="toolbar-button" type="button" data-command="link" title="Link (Ctrl+K)" aria-label="Link">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"><path d="M10 13.229q.213.349.504.654a3.56 3.56 0 0 0 4.454.59q.391-.24.73-.59l3.239-3.372c1.43-1.49 1.43-3.904 0-5.394a3.564 3.564 0 0 0-5.183 0l-.714.743"/><path d="m10.97 18.14l-.713.743a3.564 3.564 0 0 1-5.184 0c-1.43-1.49-1.43-3.905 0-5.394l3.24-3.372a3.564 3.564 0 0 1 5.183 0q.291.305.504.654"/></g></svg>
+              </button>
+            </div>
+
+            <div class="toolbar-divider" aria-hidden="true"></div>
+
+            <div class="toolbar-group format-group">
+              <button
+                id="format-menu-toggle"
+                class="toolbar-button toolbar-button-label"
+                type="button"
+                aria-haspopup="menu"
+                aria-expanded="false"
+                title="Insert block"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.891 20.109C2.5 18.717 2.5 16.479 2.5 12c0-4.478 0-6.718 1.391-8.109S7.521 2.5 12 2.5c4.478 0 6.718 0 8.109 1.391S21.5 7.521 21.5 12c0 4.478 0 6.718-1.391 8.109S16.479 21.5 12 21.5c-4.478 0-6.718 0-8.109-1.391"/><path d="M2.5 9h19m-19 4h19m-19 4h19"/><path stroke-linecap="round" d="M12 21.5V9"/></g></svg>
+                <span>Format</span>
+              </button>
+              <div id="format-menu" class="format-menu hidden" role="menu">
+                <button class="format-menu-item" type="button" data-command="table" role="menuitem">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.891 20.109C2.5 18.717 2.5 16.479 2.5 12c0-4.478 0-6.718 1.391-8.109S7.521 2.5 12 2.5c4.478 0 6.718 0 8.109 1.391S21.5 7.521 21.5 12c0 4.478 0 6.718-1.391 8.109S16.479 21.5 12 21.5c-4.478 0-6.718 0-8.109-1.391"/><path d="M2.5 9h19m-19 4h19m-19 4h19"/><path stroke-linecap="round" d="M12 21.5V9"/></g></svg>
+                  <span>Table</span>
+                </button>
+                <button class="format-menu-item" type="button" data-command="image" role="menuitem">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M14 3h-4C6.229 3 4.343 3 3.172 4.172S2 7.229 2 11v2c0 3.771 0 5.657 1.172 6.828S6.229 21 10 21h4c3.771 0 5.657 0 6.828-1.172S22 16.771 22 13v-2c0-3.771 0-5.657-1.172-6.828S17.771 3 14 3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21.5 17l-5.152-5.62a1.17 1.17 0 0 0-1.69-.037L10 16l-2.16-2.16a1.16 1.16 0 0 0-1.686.049L2.5 18"/></g></svg>
+                  <span>Image</span>
+                </button>
+                <button class="format-menu-item" type="button" data-command="horizontalRule" role="menuitem">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 12h18"/></svg>
+                  <span>Divider</span>
+                </button>
+                <button class="format-menu-item" type="button" data-command="mermaid" role="menuitem">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h6l2 3h6"/><path d="M5 16h6l2-3h6"/><circle cx="4" cy="8" r="1"/><circle cx="4" cy="16" r="1"/><circle cx="20" cy="8" r="1"/><circle cx="20" cy="16" r="1"/></svg>
+                  <span>Mermaid</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div id="empty-state" class="empty-state hidden">
+            <div class="empty-state-content">
+              <h2 class="empty-state-title">No file selected</h2>
+              <p class="empty-state-subtitle">Select a file from the sidebar to open it.</p>
+              <button id="empty-state-primary-action" class="btn btn-primary hidden" type="button"></button>
+            </div>
+          </div>
+
+          <div id="content-loading" class="content-loading-overlay hidden" aria-hidden="true">
+            <div class="content-loading-spinner"></div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <div id="conflict-overlay" class="modal-overlay hidden"></div>
+    <div id="conflict-modal" class="modal hidden" role="dialog" aria-modal="true">
+      <div class="modal-content">
+        <h3 class="modal-title">File Modified Externally</h3>
+        <p class="modal-message">
+          This file was changed externally and you have unsaved changes in the editor. What
+          would you like to do?
+        </p>
+        <div class="modal-actions">
+          <button id="conflict-save" class="btn btn-primary" type="button">Save My Changes</button>
+          <button id="conflict-discard" class="btn btn-secondary" type="button">
+            Discard My Changes
+          </button>
+          <button id="conflict-cancel" class="btn btn-tertiary" type="button">Cancel</button>
+        </div>
+        <p class="modal-hint">Press ESC or click outside to cancel</p>
+      </div>
+    </div>
+
+    <div id="mermaid-fullscreen-overlay" class="modal-overlay hidden"></div>
+    <div
+      id="mermaid-fullscreen-modal"
+      class="mermaid-fullscreen-modal hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Fullscreen diagram viewer"
+    >
+      <div class="mermaid-fullscreen-toolbar">
+        <button
+          id="mermaid-fullscreen-close"
+          class="mermaid-fullscreen-btn mermaid-fullscreen-close-btn"
+          type="button"
+          title="Close (ESC)"
+        >
+          ✕
+        </button>
+      </div>
+      <div class="mermaid-fullscreen-canvas">
+        <div id="mermaid-fullscreen-content" class="mermaid-fullscreen-content"></div>
+        <div class="mermaid-zoom-controls">
+          <button id="mermaid-zoom-in" class="mermaid-fullscreen-btn" type="button" title="Zoom in">
+            +
+          </button>
+          <button
+            id="mermaid-zoom-reset"
+            class="mermaid-fullscreen-btn"
+            type="button"
+            title="Reset view"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="m21 21l-6-6M3.268 12.043A7.02 7.02 0 0 0 9.902 17a7.01 7.01 0 0 0 7.043-6.131a7 7 0 0 0-5.314-7.672A7.02 7.02 0 0 0 3.39 7.6"/><path d="M3 4v4h4"/></g></svg>
+          </button>
+          <button
+            id="mermaid-zoom-out"
+            class="mermaid-fullscreen-btn"
+            type="button"
+            title="Zoom out"
+          >
+            −
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="close-tab-overlay" class="modal-overlay hidden"></div>
+    <div id="close-tab-modal" class="modal hidden" role="dialog" aria-modal="true">
+      <div class="modal-content">
+        <h3 class="modal-title">Unsaved Changes</h3>
+        <p id="close-tab-message" class="modal-message"></p>
+        <div class="modal-actions">
+          <button id="close-tab-save" class="btn btn-primary" type="button">Save &amp; Close</button>
+          <button id="close-tab-discard" class="btn btn-secondary" type="button">
+            Discard &amp; Close
+          </button>
+          <button id="close-tab-cancel" class="btn btn-tertiary" type="button">Cancel</button>
+        </div>
+        <p class="modal-hint">Press ESC or click outside to cancel</p>
+      </div>
+    </div>
+
+    <div id="custom-dialog-overlay" class="modal-overlay hidden"></div>
+    <div id="custom-dialog-modal" class="modal hidden" role="dialog" aria-modal="true">
+      <div class="modal-content">
+        <h3 id="custom-dialog-title" class="modal-title">Confirm action</h3>
+        <p id="custom-dialog-message" class="modal-message hidden"></p>
+        <div id="custom-dialog-fields" class="block-edit-fields hidden">
+          <label id="custom-dialog-input1-label" class="block-edit-label hidden" for="custom-dialog-input1"
+            >Value</label
+          >
+          <input
+            id="custom-dialog-input1"
+            class="block-edit-input hidden"
+            type="text"
+            autocomplete="off"
+          />
+          <label id="custom-dialog-input2-label" class="block-edit-label hidden" for="custom-dialog-input2"
+            >Value</label
+          >
+          <input
+            id="custom-dialog-input2"
+            class="block-edit-input hidden"
+            type="text"
+            autocomplete="off"
+          />
+        </div>
+        <div class="modal-actions">
+          <button id="custom-dialog-confirm" class="btn btn-primary" type="button">Confirm</button>
+          <button id="custom-dialog-cancel" class="btn btn-tertiary" type="button">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="block-edit-overlay" class="modal-overlay hidden"></div>
+    <div id="block-edit-modal" class="modal hidden" role="dialog" aria-modal="true">
+      <div class="modal-content">
+        <h3 id="block-edit-title" class="modal-title">Edit block</h3>
+        <div class="block-edit-fields">
+          <label id="block-edit-language-label" class="block-edit-label hidden" for="block-edit-language">Language</label>
+          <input id="block-edit-language" class="block-edit-input hidden" type="text" placeholder="e.g. javascript" />
+          <label class="block-edit-label" for="block-edit-source">Source</label>
+          <textarea id="block-edit-source" class="block-edit-textarea" spellcheck="false"></textarea>
+        </div>
+        <div class="modal-actions">
+          <button id="block-edit-apply" class="btn btn-primary" type="button">Apply</button>
+          <button id="block-edit-cancel" class="btn btn-tertiary" type="button">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="desktop-picker-overlay" class="modal-overlay hidden" aria-hidden="true"></div>
+    <div
+      id="desktop-picker-modal"
+      class="modal desktop-picker-modal hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="desktop-picker-title"
+    >
+      <div class="modal-content desktop-picker-modal-content">
+        <h3 id="desktop-picker-title" class="modal-title">Open a file or folder</h3>
+        <p class="modal-message desktop-picker-lead">
+          Open a markdown file or a workspace folder to get started.
+        </p>
+        <div class="modal-actions">
+          <button id="desktop-open-file-or-folder" class="btn btn-primary" type="button">Open...</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="/static/js/shared-utils.js"></script>
+    <script src="/static/js/theme.js"></script>
+    <script src="/static/js/storage-backend.js"></script>
+    <script src="/static/js/websocket.js"></script>
+    <script src="/static/js/dialogs.js"></script>
+    <script src="/static/js/wysiwyg.js"></script>
+    <script src="/static/js/wysiwyg-toolbar.js"></script>
+    <script src="/static/js/search.js"></script>
+    <script src="/static/js/toc.js"></script>
+    <script src="/static/js/file-tree.js"></script>
+    <script src="/static/js/tabs.js"></script>
+    <script src="/static/js/pdf-export.js"></script>
+    <script src="/static/js/focus-mode.js"></script>
+    <script src="/static/js/desktop-shell.js"></script>
+    <script src="/static/js/desktop-picker.js"></script>
+    <script src="/static/js/desktop-updates.js"></script>
+    <script src="/static/js/editor.js"></script>
+  </body>
+</html>
