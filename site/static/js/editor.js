@@ -170,6 +170,40 @@
     return window.wysiwyg?.getMarkdown?.() || "";
   }
 
+  function currentDownloadPath() {
+    return (
+      window.fileTabs?.getActiveTabPath?.() ||
+      editorState.currentFilePath ||
+      "markdown-os.md"
+    );
+  }
+
+  function downloadFilename() {
+    const rawPath = currentDownloadPath();
+    const name = rawPath.split("/").filter(Boolean).pop() || "markdown-os.md";
+    return /\.(md|markdown)$/i.test(name) ? name : `${name}.md`;
+  }
+
+  function updateWebDownloadButton() {
+    const downloadButton = document.getElementById("web-download-button");
+    if (!(downloadButton instanceof HTMLButtonElement)) {
+      return;
+    }
+    downloadButton.classList.toggle("hidden", editorState.mode !== "web");
+  }
+
+  function downloadCurrentMarkdown() {
+    const blob = new Blob([currentMarkdown()], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = downloadFilename();
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
   async function setMarkdown(content, options = {}) {
     if (!window.wysiwyg?.setMarkdown) {
       return;
@@ -787,6 +821,8 @@
     bindMarkdownDropEvents();
     bindQuickActionsMenu();
 
+    document.getElementById("web-download-button")?.addEventListener("click", downloadCurrentMarkdown);
+
     document.getElementById("export-pdf-button")?.addEventListener("click", () => {
       window.MarkdownOS?.pdfExport?.exportToPdf?.();
       closeQuickActionsMenu();
@@ -811,6 +847,7 @@
       const nextMode = snapshot.mode || editorState.mode;
       editorState.mode = nextMode;
       syncDesktopBodyClass();
+      updateWebDownloadButton();
 
       if (nextMode === "empty") {
         window.fileTree?.setMode?.("empty");
@@ -865,10 +902,12 @@
     const initialMode = editorState.mode;
     bindEvents();
     syncDesktopBodyClass();
+    updateWebDownloadButton();
 
     if (window.MarkdownOS?.desktopShell?.isDesktop?.()) {
       await window.MarkdownOS.desktopShell.fetchDesktopState?.();
       editorState.mode = await detectMode();
+      updateWebDownloadButton();
     }
 
     if (editorState.mode === "file") {

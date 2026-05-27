@@ -635,6 +635,11 @@ body {
   outline-offset: 2px;
 }
 
+.web-download-button svg {
+  width: 16px;
+  height: 16px;
+}
+
 .quick-actions-menu.open .quick-actions-toggle .dropdown-chevron {
   transform: rotate(180deg);
 }

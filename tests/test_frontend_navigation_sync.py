@@ -98,6 +98,29 @@ def test_web_storage_backend_rename_keeps_files_markdown_visible() -> None:
     assert 'throw new Error("Web workspace files must end with .md or .markdown.");' in source
 
 
+def test_web_mode_exposes_markdown_download_button() -> None:
+    """Verify web mode has a Download button before Options for current markdown."""
+
+    root = Path(__file__).resolve().parents[1]
+    html_source = root.joinpath("markdown_os", "static", "index.html").read_text(encoding="utf-8")
+    editor_source = _read_static_js("editor.js")
+    css_source = _read_static_css("styles.css")
+
+    download_index = html_source.index('id="web-download-button"')
+    options_index = html_source.index('id="quick-actions-menu"')
+    assert download_index < options_index
+    assert 'class="quick-actions-toggle web-download-button hidden"' in html_source
+    assert 'M3 17c0 .93 0 1.395.102 1.777' in html_source
+    assert '<span>Download</span>' in html_source[download_index:options_index]
+
+    assert "function updateWebDownloadButton()" in editor_source
+    assert 'downloadButton.classList.toggle("hidden", editorState.mode !== "web");' in editor_source
+    assert "function downloadCurrentMarkdown()" in editor_source
+    assert 'new Blob([currentMarkdown()], { type: "text/markdown;charset=utf-8" })' in editor_source
+    assert 'document.getElementById("web-download-button")?.addEventListener("click", downloadCurrentMarkdown);' in editor_source
+    assert ".web-download-button svg" in css_source
+
+
 def test_web_open_button_imports_markdown_files() -> None:
     """Verify web mode Open uses a browser file picker import flow."""
 
