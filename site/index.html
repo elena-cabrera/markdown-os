@@ -193,6 +193,26 @@
                 border-color: var(--color-text);
             }
 
+            .btn-tertiary {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                color: var(--color-text);
+                font-size: 14px;
+                font-weight: 500;
+                text-decoration: none;
+                text-underline-offset: 4px;
+            }
+
+            .btn-tertiary:hover {
+                text-decoration: underline;
+            }
+
+            .btn-tertiary svg {
+                width: 18px;
+                height: 18px;
+            }
+
             .btn-white {
                 background: white;
                 color: var(--color-dark);
@@ -338,88 +358,6 @@
 
             .hero-cta {
                 margin-bottom: 16px;
-            }
-
-            /* Install widget — white box, gray border, less rounded */
-            .install-widget {
-                max-width: 380px;
-                background: #fff;
-                border: 1px solid var(--color-border);
-                border-radius: 6px;
-                overflow: hidden;
-            }
-
-            .install-tabs {
-                display: flex;
-                gap: 0;
-                padding: 0 12px;
-                border-bottom: 1px solid var(--color-border);
-            }
-
-            .install-tab {
-                padding: 10px 12px 8px;
-                font-size: 13px;
-                font-family: var(--font-sans);
-                background: transparent;
-                border: none;
-                border-bottom: 2px solid transparent;
-                cursor: pointer;
-                color: var(--color-text-secondary);
-                transition: all 0.15s;
-            }
-
-            .install-tab.active {
-                color: var(--color-text);
-                border-bottom-color: var(--color-text);
-                font-weight: 500;
-            }
-
-            .install-tab:hover:not(.active) {
-                color: var(--color-text);
-            }
-
-            .install-command {
-                display: none;
-                align-items: center;
-                justify-content: space-between;
-                padding: 12px 16px;
-                font-family: var(--font-mono);
-                font-size: 13px;
-            }
-
-            .install-command.active {
-                display: flex;
-            }
-
-            .install-command code {
-                color: var(--color-text);
-            }
-
-            .copy-btn {
-                background: none;
-                border: 1px solid var(--color-border);
-                border-radius: 4px;
-                padding: 4px 8px;
-                font-size: 12px;
-                cursor: pointer;
-                color: var(--color-text-secondary);
-                font-family: var(--font-sans);
-                transition: all 0.15s;
-                flex-shrink: 0;
-            }
-
-            .copy-btn:hover {
-                border-color: var(--color-text-secondary);
-                color: var(--color-text);
-            }
-
-            .copy-btn.copied {
-                color: #198754;
-                border-color: #198754;
-            }
-
-            .copy-btn.copied svg {
-                stroke: #198754;
             }
 
             /* Hero: single column, content only (app mock is below in own section) */
@@ -1620,9 +1558,6 @@
                     font-size: 15px;
                 }
 
-                .install-widget {
-                    max-width: 100%;
-                }
 
                 .features-section {
                     padding: 40px 20px 60px;
@@ -1694,7 +1629,9 @@
                     </svg>
                     markdown-os
                 </a>
-                <nav class="header-nav" aria-label="Primary"></nav>
+                <nav class="header-nav" aria-label="Primary">
+                    <a href="/app" class="btn btn-primary header-try-online">Try online</a>
+                </nav>
             </div>
         </header>
 
@@ -1710,18 +1647,19 @@
                     </p>
 
                     <div class="hero-cta" style="display: flex; gap: 12px; flex-wrap: wrap">
+                        <a href="/app" class="btn btn-primary">Try online</a>
                         <div class="download-dropdown" id="desktop-download-dropdown">
                             <a
                                 id="desktop-download-btn"
                                 href="/downloads"
-                                class="btn btn-primary download-main-btn"
+                                class="btn btn-secondary download-main-btn"
                             >
                                 <span class="download-btn-icon" id="desktop-download-icon"></span>
                                 <span>Download</span>
                             </a>
                             <button
                                 id="desktop-download-toggle"
-                                class="btn btn-primary download-toggle-btn"
+                                class="btn btn-secondary download-toggle-btn"
                                 type="button"
                                 aria-haspopup="menu"
                                 aria-expanded="false"
@@ -1748,14 +1686,15 @@
                                 aria-label="Desktop download options"
                             ></div>
                         </div>
-                        <a href="/app" class="btn btn-secondary">Try Web App</a>
                         <a
                             href="https://github.com/elena-cabrera/markdown-os"
-                            class="btn btn-secondary"
+                            class="btn-tertiary github-tertiary-link"
                             target="_blank"
                             rel="noopener"
-                            >View on GitHub</a
                         >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M10 20.568c-3.429 1.157-6.286 0-8-3.568"/><path d="M10 22v-3.242c0-.598.184-1.118.48-1.588c.204-.322.064-.78-.303-.88C7.134 15.452 5 14.107 5 9.645c0-1.16.38-2.25 1.048-3.2c.166-.236.25-.354.27-.46c.02-.108-.015-.247-.085-.527c-.283-1.136-.264-2.343.16-3.43c0 0 .877-.287 2.874.96c.456.285.684.428.885.46s.469-.035 1.005-.169A9.5 9.5 0 0 1 13.5 3a9.6 9.6 0 0 1 2.343.28c.536.134.805.2 1.006.169c.2-.032.428-.175.884-.46c1.997-1.247 2.874-.96 2.874-.96c.424 1.087.443 2.294.16 3.43c-.07.28-.104.42-.084.526s.103.225.269.461c.668.95 1.048 2.04 1.048 3.2c0 4.462-2.134 5.807-5.177 6.643c-.367.101-.507.559-.303.88c.296.47.48.99.48 1.589V22"/></g></svg>
+                            <span>View on GitHub</span>
+                        </a>
                     </div>
                     <p
                         id="desktop-download-meta"
@@ -1766,79 +1705,9 @@
                             font-size: 13px;
                         "
                     >
-                        Native desktop builds for macOS and Windows. CLI install remains available below.
+                        Native desktop builds for macOS and Windows.
                     </p>
 
-                    <div class="install-widget">
-                        <div class="install-tabs">
-                            <button class="install-tab active" data-tab="uv">
-                                uv
-                            </button>
-                            <button class="install-tab" data-tab="pip">
-                                pip
-                            </button>
-                        </div>
-                        <div class="install-command active" id="tab-uv">
-                            <code>uv tool install markdown-os</code>
-                            <button
-                                class="copy-btn"
-                                data-copy="uv tool install markdown-os"
-                                aria-label="Copy install command"
-                            >
-                                <svg
-                                    width="14"
-                                    height="14"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-width="2"
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                >
-                                    <rect
-                                        x="9"
-                                        y="9"
-                                        width="13"
-                                        height="13"
-                                        rx="2"
-                                    />
-                                    <path
-                                        d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
-                                    />
-                                </svg>
-                            </button>
-                        </div>
-                        <div class="install-command" id="tab-pip">
-                            <code>pip install markdown-os</code>
-                            <button
-                                class="copy-btn"
-                                data-copy="pip install markdown-os"
-                                aria-label="Copy install command"
-                            >
-                                <svg
-                                    width="14"
-                                    height="14"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-width="2"
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                >
-                                    <rect
-                                        x="9"
-                                        y="9"
-                                        width="13"
-                                        height="13"
-                                        rx="2"
-                                    />
-                                    <path
-                                        d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
-                                    />
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
                 </div>
             </div>
         </section>
@@ -2403,7 +2272,7 @@
                     <h2>Start using markdown-os</h2>
                     <p>The desktop app and CLI ship from the same release tags.</p>
                     <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap">
-                        <a href="/app" class="btn btn-white">Try Web App</a>
+                        <a href="/app" class="btn btn-white">Try online</a>
                         <a href="/downloads" class="btn btn-secondary" style="background: transparent; color: white; border-color: rgba(255,255,255,0.35)">Download desktop app</a>
                         <a
                             href="https://github.com/elena-cabrera/markdown-os"
@@ -2450,54 +2319,6 @@
 
         <!-- ===== JavaScript ===== -->
         <script>
-            // ---- Install tab switching ----
-            document.querySelectorAll(".install-tab").forEach((tab) => {
-                tab.addEventListener("click", () => {
-                    const target = tab.dataset.tab;
-                    document
-                        .querySelectorAll(".install-tab")
-                        .forEach((t) => t.classList.remove("active"));
-                    document
-                        .querySelectorAll(".install-command")
-                        .forEach((c) => c.classList.remove("active"));
-                    tab.classList.add("active");
-                    document
-                        .getElementById(`tab-${target}`)
-                        .classList.add("active");
-                });
-            });
-
-            // ---- Copy to clipboard (hero install commands) ----
-            const copyIconSvg =
-                '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
-            const checkIconSvg =
-                '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
-            document.querySelectorAll(".copy-btn").forEach((btn) => {
-                btn.addEventListener("click", async () => {
-                    const text = btn.dataset.copy;
-                    if (!text) return;
-                    if (btn.dataset._copyTid)
-                        clearTimeout(Number(btn.dataset._copyTid));
-                    try {
-                        await navigator.clipboard.writeText(text);
-                        btn.innerHTML = checkIconSvg;
-                        btn.classList.add("copied");
-                        btn.setAttribute("aria-label", "Copied");
-                        const tid = setTimeout(() => {
-                            btn.innerHTML = copyIconSvg;
-                            btn.classList.remove("copied");
-                            btn.setAttribute(
-                                "aria-label",
-                                "Copy install command",
-                            );
-                            delete btn.dataset._copyTid;
-                        }, 2500);
-                        btn.dataset._copyTid = String(tid);
-                    } catch (e) {
-                        btn.setAttribute("aria-label", "Copy failed");
-                    }
-                });
-            });
 
             // ---- Syntax demo: copy button click + auto loop (press → Copied) ----
             // writeClipboard: only true on real user click; false for auto-demo to avoid permission prompt
@@ -2760,7 +2581,7 @@
                         downloadMeta.textContent =
                             asset?.name
                                 ? `Desktop ${version} is ready for ${platform === "macos" ? "macOS" : "Windows"}. CLI install remains available below.`
-                                : "Native desktop builds for macOS and Windows. CLI install remains available below.";
+                                : "Native desktop builds for macOS and Windows.";
                     }
                 }
 

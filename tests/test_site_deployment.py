@@ -73,4 +73,31 @@ def test_landing_links_to_web_app() -> None:
     index = (_repo_root() / "site" / "index.html").read_text(encoding="utf-8")
 
     assert 'href="/app"' in index
-    assert "Try Web App" in index
+    assert "Try online" in index
+
+
+def test_landing_nav_has_try_online_primary_button() -> None:
+    """Verify navbar has a right-aligned primary app link."""
+
+    index = (_repo_root() / "site" / "index.html").read_text(encoding="utf-8")
+
+    assert '<nav class="header-nav" aria-label="Primary">' in index
+    assert 'class="btn btn-primary header-try-online"' in index
+    assert '>Try online</a>' in index
+
+
+def test_landing_hero_cta_hierarchy() -> None:
+    """Verify hero uses Try online primary, Download secondary, and GitHub tertiary."""
+
+    index = (_repo_root() / "site" / "index.html").read_text(encoding="utf-8")
+
+    hero = index.split('<div class="hero-cta"', 1)[1].split('</div>', 1)[0]
+    assert 'href="/app" class="btn btn-primary"' in hero
+    assert '>Try online</a>' in hero
+    assert 'class="btn btn-secondary download-main-btn"' in hero
+    assert 'class="btn btn-secondary download-toggle-btn"' in hero
+    assert 'github-tertiary-link' in index
+    assert 'M10 20.568c-3.429 1.157-6.286 0-8-3.568' in index
+    assert 'class="install-widget"' not in index
+    assert 'install-command' not in index
+    assert 'data-tab="uv"' not in index
