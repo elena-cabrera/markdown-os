@@ -267,18 +267,20 @@ def create_app(
 
     Args:
     - handler (FileHandler | DirectoryHandler | None): File or folder access service, or ``None`` in empty mode.
-    - mode (str): Editor mode, either "empty", "file", or "folder".
+    - mode (str): Editor mode, either "empty", "file", "folder", or "web".
     - desktop (bool): Whether to enable desktop-only routes and behavior.
 
     Returns:
     - FastAPI: Configured application with routes, static assets, and websocket support.
     """
 
-    if mode not in {"empty", "file", "folder"}:
-        raise ValueError("mode must be either 'empty', 'file', or 'folder'.")
+    if mode not in {"empty", "file", "folder", "web"}:
+        raise ValueError("mode must be one of 'empty', 'file', 'folder', or 'web'.")
     if mode == "empty" and handler is not None:
         raise ValueError("empty mode must not receive an initial handler.")
-    if mode != "empty" and handler is None:
+    if mode == "web" and handler is not None:
+        raise ValueError("web mode must not receive an initial handler.")
+    if mode in {"file", "folder"} and handler is None:
         raise ValueError("file and folder modes require an initial handler.")
 
     static_dir = Path(__file__).parent / "static"
@@ -480,6 +482,8 @@ def create_app(
 
         if app.state.mode == "empty":
             raise HTTPException(status_code=409, detail="No workspace loaded.")
+        if app.state.mode == "web":
+            raise HTTPException(status_code=409, detail="Web mode uses browser storage.")
         if app.state.mode != "folder":
             raise HTTPException(
                 status_code=400,
@@ -503,6 +507,8 @@ def create_app(
 
         if app.state.mode == "empty":
             raise HTTPException(status_code=409, detail="No workspace loaded.")
+        if app.state.mode == "web":
+            raise HTTPException(status_code=409, detail="Web mode uses browser storage.")
         if app.state.mode == "file":
             file_handler = _require_file_handler(app)
             try:
@@ -558,6 +564,8 @@ def create_app(
 
         if app.state.mode == "empty":
             raise HTTPException(status_code=409, detail="No workspace loaded.")
+        if app.state.mode == "web":
+            raise HTTPException(status_code=409, detail="Web mode uses browser storage.")
         if app.state.mode == "file":
             file_handler = _require_file_handler(app)
             try:
@@ -893,6 +901,9 @@ def _get_images_dir(app: FastAPI) -> Path:
 
     if app.state.mode == "empty":
         raise HTTPException(status_code=409, detail="No workspace loaded.")
+
+    if app.state.mode == "web":
+        raise HTTPException(status_code=409, detail="Web mode uses browser storage.")
 
     directory_handler = _require_directory_handler(app)
     return directory_handler.directory / "images"

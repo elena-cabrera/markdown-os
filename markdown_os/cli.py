@@ -183,6 +183,44 @@ def open_markdown_file(
     uvicorn.run(application, host=host, port=selected_port)
 
 
+@app.command("web")
+def open_web_editor(
+    host: Annotated[
+        str,
+        typer.Option(
+            "--host",
+            help="Host interface to bind.",
+        ),
+    ] = "127.0.0.1",
+    port: Annotated[
+        int,
+        typer.Option(
+            "--port",
+            help="Preferred start port; auto-increments when occupied.",
+        ),
+    ] = 8000,
+) -> None:
+    """
+    Start the free browser-storage web editor.
+
+    Args:
+    - host (str): Host interface used by the FastAPI/Uvicorn server.
+    - port (int): Preferred start port for auto-increment probing.
+
+    Returns:
+    - None: Function starts a blocking uvicorn server until interrupted.
+    """
+
+    selected_port = find_available_port(host=host, start_port=port)
+    editor_url = f"http://{host}:{selected_port}"
+
+    typer.echo(f"Opening web editor at {editor_url}")
+    _open_browser(editor_url)
+
+    application = build_editor_app(mode="web", handler=None)
+    uvicorn.run(application, host=host, port=selected_port)
+
+
 @app.command("example")
 def generate_example(
     output: Path = typer.Argument(
