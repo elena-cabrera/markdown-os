@@ -84,6 +84,8 @@ def test_landing_nav_has_try_online_primary_button() -> None:
     assert '<nav class="header-nav" aria-label="Primary">' in index
     assert 'class="btn btn-primary header-try-online"' in index
     assert '>Try online</a>' in index
+    assert ".header-nav .btn-primary" in index
+    assert "color: white" in index.split(".header-nav .btn-primary", 1)[1].split("}", 1)[0]
 
 
 def test_landing_hero_cta_hierarchy() -> None:
@@ -91,13 +93,19 @@ def test_landing_hero_cta_hierarchy() -> None:
 
     index = (_repo_root() / "site" / "index.html").read_text(encoding="utf-8")
 
-    hero = index.split('<div class="hero-cta"', 1)[1].split('</div>', 1)[0]
-    assert 'href="/app" class="btn btn-primary"' in hero
-    assert '>Try online</a>' in hero
-    assert 'class="btn btn-secondary download-main-btn"' in hero
-    assert 'class="btn btn-secondary download-toggle-btn"' in hero
-    assert 'github-tertiary-link' in index
-    assert 'M10 20.568c-3.429 1.157-6.286 0-8-3.568' in index
+    hero_section = index.split('<section class="hero">', 1)[1].split('</section>', 1)[0]
+    hero_cta = hero_section.split('<div class="hero-cta"', 1)[1].split('<div class="hero-github-row">', 1)[0]
+    assert 'href="/app" class="btn btn-primary"' in hero_cta
+    assert '>Try online</a>' in hero_cta
+    assert 'class="btn btn-secondary download-main-btn"' in hero_cta
+    assert 'class="btn btn-secondary download-toggle-btn"' in hero_cta
+    assert 'github-tertiary-link' not in hero_cta
+    assert '</div>\n                    <div class="hero-github-row">' in hero_section
+    assert 'github-tertiary-link' in hero_section
+    assert hero_section.index('class="hero-github-row"') > hero_section.index('class="hero-cta"')
+    assert 'M10 20.568c-3.429 1.157-6.286 0-8-3.568' in hero_section
+    assert 'id="desktop-download-meta"' not in hero_section
+    assert 'Native desktop builds' not in hero_section
     assert 'class="install-widget"' not in index
     assert 'install-command' not in index
     assert 'data-tab="uv"' not in index

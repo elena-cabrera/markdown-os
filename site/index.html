@@ -157,6 +157,17 @@
                 color: var(--color-text);
             }
 
+            .header-nav .btn-primary {
+                color: white;
+                background: var(--color-dark);
+                border-color: var(--color-dark);
+            }
+
+            .header-nav .btn-primary:hover {
+                color: white;
+                background: var(--color-dark-hover);
+            }
+
             /* ========== Buttons ========== */
             .btn {
                 display: inline-flex;
@@ -357,7 +368,12 @@
             }
 
             .hero-cta {
-                margin-bottom: 16px;
+                margin-bottom: 12px;
+            }
+
+            .hero-github-row {
+                display: flex;
+                align-items: center;
             }
 
             /* Hero: single column, content only (app mock is below in own section) */
@@ -1686,6 +1702,8 @@
                                 aria-label="Desktop download options"
                             ></div>
                         </div>
+                    </div>
+                    <div class="hero-github-row">
                         <a
                             href="https://github.com/elena-cabrera/markdown-os"
                             class="btn-tertiary github-tertiary-link"
@@ -1696,17 +1714,7 @@
                             <span>View on GitHub</span>
                         </a>
                     </div>
-                    <p
-                        id="desktop-download-meta"
-                        style="
-                            margin-top: -4px;
-                            margin-bottom: 20px;
-                            color: var(--color-text-secondary);
-                            font-size: 13px;
-                        "
-                    >
-                        Native desktop builds for macOS and Windows.
-                    </p>
+
 
                 </div>
             </div>
@@ -2406,10 +2414,6 @@
                 );
                 const dropdownMenu =
                     document.getElementById("desktop-download-menu");
-                const downloadMeta = document.getElementById(
-                    "desktop-download-meta",
-                );
-
                 const downloadsHref = "/downloads";
                 const releaseApi =
                     "https://api.github.com/repos/elena-cabrera/markdown-os/releases/latest";
@@ -2576,13 +2580,6 @@
                         downloadIcon.innerHTML = defaultIconForPlatform(platform);
                     }
 
-                    if (downloadMeta) {
-                        const version = latestRelease?.tag_name || "latest";
-                        downloadMeta.textContent =
-                            asset?.name
-                                ? `Desktop ${version} is ready for ${platform === "macos" ? "macOS" : "Windows"}. CLI install remains available below.`
-                                : "Native desktop builds for macOS and Windows.";
-                    }
                 }
 
                 const platform = detectPlatform();
