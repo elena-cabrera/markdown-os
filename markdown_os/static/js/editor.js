@@ -191,14 +191,11 @@
   }
 
   function saveStatusForPayload(payload) {
-    const syncStatus = payload?.metadata?.sync_status;
-    if (syncStatus === "synced") {
-      return "Synced to file";
-    }
-    if (syncStatus === "browser" || syncStatus === "browser-copy") {
+    const storageStatus = payload?.metadata?.storage_status;
+    if (storageStatus === "browser" || storageStatus === "browser-copy") {
       return "Stored in browser";
     }
-    return "Saved";
+    return "Stored in browser";
   }
 
   async function loadContent(filePath = null) {
@@ -688,7 +685,7 @@
     if (handlePayload?.paths?.length > 0) {
       await window.fileTree?.loadFileTree?.();
       await window.fileTree?.openImportedPath?.(handlePayload);
-      setSaveStatus("Synced to file", "saved");
+      setSaveStatus("Stored in browser", "saved");
       return;
     }
 

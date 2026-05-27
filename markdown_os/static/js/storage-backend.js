@@ -210,7 +210,7 @@ Your local CLI and desktop app still save directly to your filesystem.
       relative_path: record.path,
       size_bytes: new Blob([record.content || ""]).size,
       modified_at: record.updatedAt,
-      sync_status: record.syncStatus || "browser",
+      storage_status: record.storageStatus || "browser",
       read_only: record.readOnly === true,
     };
   }
@@ -315,9 +315,8 @@ Your local CLI and desktop app still save directly to your filesystem.
       path: normalizedPath,
       content,
       updatedAt: new Date().toISOString(),
-      syncStatus: options.syncStatus || existingRecord?.syncStatus || "browser",
+      storageStatus: options.storageStatus || existingRecord?.storageStatus || "browser",
       readOnly: options.readOnly ?? existingRecord?.readOnly ?? false,
-      fileHandle: options.fileHandle || existingRecord?.fileHandle || null,
     };
     await runFileStoreTransaction("readwrite", (store) => {
       store.put(record);
@@ -406,13 +405,7 @@ Your local CLI and desktop app still save directly to your filesystem.
     return `${newPrefix}/${path.slice(oldPrefix.length + 1)}`;
   }
 
-  async function writeFileHandle(fileHandle, content) {
-    const writable = await fileHandle.createWritable();
-    await writable.write(content);
-    await writable.close();
-  }
-
-  async function importFileWithOptionalHandle(file, fileHandle = null) {
+  async function importFileWithOptionalHandle(file, _fileHandle = null) {
     const sourcePath = file.webkitRelativePath || file.name;
     const targetPath = normalizeWorkspacePath(sourcePath);
     if (!isMarkdownPath(targetPath)) {
@@ -420,11 +413,9 @@ Your local CLI and desktop app still save directly to your filesystem.
     }
 
     const content = await file.text();
-    const canSyncToFile = Boolean(fileHandle?.createWritable);
     await writeRecord(targetPath, content, {
-      fileHandle: canSyncToFile ? fileHandle : null,
-      syncStatus: canSyncToFile ? "synced" : "browser-copy",
-      readOnly: !canSyncToFile,
+      storageStatus: "browser-copy",
+      readOnly: true,
     });
     return targetPath;
   }
@@ -458,7 +449,7 @@ Your local CLI and desktop app still save directly to your filesystem.
       }
     }
 
-    return { paths, readOnly: false };
+    return { paths, readOnly: paths.length > 0 };
   }
 
   async function importDataTransferItems(items) {
@@ -502,13 +493,10 @@ Your local CLI and desktop app still save directly to your filesystem.
       async saveContent(content, filePath = DEFAULT_WEB_FILE) {
         const existingRecord = await readRecord(filePath);
         if (existingRecord?.readOnly) {
-          throw new Error("This browser copy is read-only. Import with sync support to write the real file.");
-        }
-        if (existingRecord?.fileHandle?.createWritable) {
-          await writeFileHandle(existingRecord.fileHandle, content);
+          throw new Error("This browser copy is read-only. Changes are not written to the original file.");
         }
         const record = await writeRecord(filePath, content, {
-          syncStatus: existingRecord?.fileHandle?.createWritable ? "synced" : "browser",
+          storageStatus: "browser",
           readOnly: false,
         });
         return {
@@ -538,7 +526,7 @@ Your local CLI and desktop app still save directly to your filesystem.
         if (await readRecord(normalizedPath)) {
           throw new Error(`File already exists: ${normalizedPath}`);
         }
-        await writeRecord(normalizedPath, "", { syncStatus: "browser", readOnly: false });
+        await writeRecord(normalizedPath, "", { storageStatus: "browser", readOnly: false });
         return { path: normalizedPath };
       },
 

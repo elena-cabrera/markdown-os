@@ -193,34 +193,34 @@ def test_web_storage_marks_browser_copy_files_read_only() -> None:
 
     source = _read_static_js("storage-backend.js")
 
-    assert 'sync_status: record.syncStatus || "browser"' in source
-    assert 'syncStatus: canSyncToFile ? "synced" : "browser-copy"' in source
+    assert 'storage_status: record.storageStatus || "browser"' in source
+    assert 'storageStatus: "browser-copy"' in source
     assert 'read_only: record.readOnly === true' in source
-    assert 'readOnly: !canSyncToFile' in source
-    assert 'throw new Error("This browser copy is read-only. Import with sync support to write the real file.");' in source
+    assert 'readOnly: true' in source
+    assert 'throw new Error("This browser copy is read-only. Changes are not written to the original file.");' in source
 
 
-def test_web_storage_syncs_real_files_when_browser_provides_handle() -> None:
-    """Verify web mode can write real files when File System Access handles exist."""
+def test_web_storage_uses_browser_storage_not_file_sync() -> None:
+    """Verify online mode does not expose real-file sync metadata or write handles."""
 
     source = _read_static_js("storage-backend.js")
 
-    assert "async function importFileWithOptionalHandle(file, fileHandle = null)" in source
-    assert "async function writeFileHandle(fileHandle, content)" in source
-    assert "const writable = await fileHandle.createWritable();" in source
-    assert 'syncStatus: canSyncToFile ? "synced" : "browser-copy"' in source
-    assert 'readOnly: false' in source
+    assert "sync_status" not in source
+    assert "syncStatus" not in source
+    assert '"synced"' not in source
+    assert "createWritable" not in source
+    assert "writeFileHandle" not in source
+    assert "storage_status" in source
 
-
-def test_web_editor_uses_honest_sync_status_labels() -> None:
-    """Verify web mode does not show generic Saved for browser-copy files."""
+def test_web_editor_uses_browser_storage_status_labels() -> None:
+    """Verify online mode status text does not claim file sync."""
 
     editor_source = _read_static_js("editor.js")
     tabs_source = _read_static_js("tabs.js")
 
     assert "function saveStatusForPayload(payload)" in editor_source
-    assert 'return "Synced to file";' in editor_source
     assert 'return "Stored in browser";' in editor_source
+    assert "Synced to file" not in editor_source
     assert 'setSaveStatus(saveStatusForPayload(responsePayload), "saved");' in editor_source
     assert 'setSaveStatus(saveStatusForPayload(payload), "saved");' in tabs_source
     assert 'setSaveStatus(tabData.readOnly ? "Browser copy only" : "Loaded", "saved");' in tabs_source
@@ -237,8 +237,8 @@ def test_web_read_only_imports_disable_editing() -> None:
     assert "if (editorState.isReadOnly)" in editor_source
 
 
-def test_web_import_button_uses_file_system_access_when_available() -> None:
-    """Verify web Import can request writable file handles in supported browsers."""
+def test_web_import_button_uses_file_handles_for_read_only_imports_when_available() -> None:
+    """Verify web Import can read file handles without claiming file sync."""
 
     file_tree_source = _read_static_js("file-tree.js")
     storage_source = _read_static_js("storage-backend.js")
@@ -248,6 +248,7 @@ def test_web_import_button_uses_file_system_access_when_available() -> None:
     assert "await window.MarkdownOS?.storage?.importFileHandles?.(fileHandles);" in file_tree_source
     assert "async importFileHandles(fileHandles)" in storage_source
     assert "const file = await fileHandle.getFile();" in storage_source
+    assert "createWritable" not in storage_source
 
 
 def test_drag_drop_uses_file_system_handles_when_available() -> None:
