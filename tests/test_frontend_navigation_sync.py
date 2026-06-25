@@ -39,6 +39,293 @@ def test_folder_tabs_use_wysiwyg_markdown_and_scroll_state() -> None:
     assert "setActiveMode" not in source
 
 
+def test_static_shell_loads_storage_backend_before_runtime_modules() -> None:
+    """Verify the storage adapter is available before websocket and editor modules."""
+
+    html_source = Path(__file__).resolve().parents[1].joinpath(
+        "markdown_os",
+        "static",
+        "index.html",
+    ).read_text(encoding="utf-8")
+
+    storage_index = html_source.index('/static/js/storage-backend.js')
+    websocket_index = html_source.index('/static/js/websocket.js')
+    editor_index = html_source.index('/static/js/editor.js')
+
+    assert storage_index < websocket_index
+    assert storage_index < editor_index
+
+
+def test_web_storage_backend_supports_static_browser_workspace() -> None:
+    """Verify web runtime persistence is implemented behind a shared adapter."""
+
+    source = _read_static_js("storage-backend.js")
+
+    assert "const WEB_DATABASE_NAME = \"markdown-os-web\";" in source
+    assert "function createHttpStorageBackend" in source
+    assert "function createIndexedDbStorageBackend" in source
+    assert "async function detectMode()" in source
+    assert "window.MarkdownOS.storage" in source
+    assert "Welcome.md" in source
+    assert "FileReader" in source
+
+
+def test_web_storage_backend_does_not_cache_http_runtime_mode() -> None:
+    """Verify desktop workspace changes can refresh mode after empty startup."""
+
+    source = _read_static_js("storage-backend.js")
+
+    assert "let detectedModePromise" not in source
+    assert "async function detectMode() {\n    return readServerMode();\n  }" in source
+    assert "const mode = await detectMode();" in source
+
+
+def test_web_storage_backend_checks_browser_file_conflicts() -> None:
+    """Verify web mode compares stored content before overwriting open tabs."""
+
+    source = _read_static_js("storage-backend.js")
+
+    assert "async checkForExternalChanges(filePath, lastSavedContent) {" in source
+    assert 'return (record?.content || "") !== lastSavedContent;' in source
+
+
+def test_web_storage_backend_rename_keeps_files_markdown_visible() -> None:
+    """Verify web file rename cannot hide markdown records from the file tree."""
+
+    source = _read_static_js("storage-backend.js")
+
+    assert "if (isSingleFileRename && !isMarkdownPath(newPath)) {" in source
+    assert 'throw new Error("Web workspace files must end with .md or .markdown.");' in source
+
+
+def test_web_mode_exposes_markdown_download_button() -> None:
+    """Verify web mode has a Download button before Options for current markdown."""
+
+    root = Path(__file__).resolve().parents[1]
+    html_source = root.joinpath("markdown_os", "static", "index.html").read_text(encoding="utf-8")
+    editor_source = _read_static_js("editor.js")
+    css_source = _read_static_css("styles.css")
+
+    download_index = html_source.index('id="web-download-button"')
+    options_index = html_source.index('id="quick-actions-menu"')
+    assert download_index < options_index
+    assert 'class="quick-actions-toggle web-download-button hidden"' in html_source
+    assert 'M3 17c0 .93 0 1.395.102 1.777' in html_source
+    assert '<span>Download</span>' in html_source[download_index:options_index]
+
+    assert "function updateWebDownloadButton()" in editor_source
+    assert 'downloadButton.classList.toggle("hidden", editorState.mode !== "web");' in editor_source
+    assert "function downloadCurrentMarkdown()" in editor_source
+    assert 'new Blob([currentMarkdown()], { type: "text/markdown;charset=utf-8" })' in editor_source
+    assert 'document.getElementById("web-download-button")?.addEventListener("click", downloadCurrentMarkdown);' in editor_source
+    assert ".web-download-button svg" in css_source
+
+
+def test_web_open_button_imports_markdown_files() -> None:
+    """Verify web mode Open uses a browser file picker import flow."""
+
+    source = _read_static_js("file-tree.js")
+
+    assert "async function handleWebFileImport()" in source
+    assert 'input.type = "file";' in source
+    assert 'input.accept = ".md,.markdown,text/markdown,text/plain";' in source
+    assert "await importAndOpenFiles(() => window.MarkdownOS?.storage?.importFiles?.(input.files));" in source
+    assert 'if (fileTreeState.mode === "web") {' in source
+    assert "await handleWebFileImport();" in source
+    assert 'label.textContent = fileTreeState.mode === "web" ? "Import" : "Open";' in source
+
+
+def test_web_storage_backend_imports_markdown_files() -> None:
+    """Verify IndexedDB backend can import selected markdown files."""
+
+    source = _read_static_js("storage-backend.js")
+
+    assert "async function importBrowserFiles(fileList)" in source
+    assert "await file.text()" in source
+    assert "await writeRecord(targetPath, content, {" in source
+    assert "return { paths };" in source
+    assert "async importFiles(fileList)" in source
+
+
+def test_drag_drop_uses_whole_app_overlay() -> None:
+    """Verify file drag feedback covers the whole app with icon and copy."""
+
+    root = Path(__file__).resolve().parents[1]
+    html_source = root.joinpath("markdown_os", "static", "index.html").read_text(encoding="utf-8")
+    css_source = _read_static_css("styles.css")
+    editor_source = _read_static_js("editor.js")
+
+    assert 'id="drop-file-overlay"' in html_source
+    assert 'class="drop-file-overlay hidden"' in html_source
+    assert 'Drop File' in html_source
+    assert 'M4 12v2.544' in html_source
+
+    assert ".drop-file-overlay {" in css_source
+    assert "position: fixed" in css_source.split(".drop-file-overlay {", 1)[1]
+    assert "inset: 24px" in css_source.split(".drop-file-overlay {", 1)[1]
+    assert "border: 2px dashed var(--accent)" in css_source
+    assert ".drop-file-card" in css_source
+
+    assert 'const overlay = document.getElementById("drop-file-overlay");' in editor_source
+    assert 'overlay?.classList.toggle("hidden", !isActive);' in editor_source
+    assert 'document.body.classList.toggle("file-drop-active", isActive);' in editor_source
+    assert 'document.getElementById("editor-container")?.classList.toggle("drag-over", isActive);' not in editor_source
+
+
+def test_markdown_files_can_be_imported_by_drag_and_drop() -> None:
+    """Verify markdown drops import files before image-drop handling."""
+
+    source = _read_static_js("editor.js")
+
+    assert "function isMarkdownImportFile(file)" in source
+    assert "async function handleMarkdownFileImport(fileList)" in source
+    assert "const markdownFiles = markdownFilesFromFileList(files);" in source
+    assert "await handleMarkdownFileImport(markdownFiles);" in source
+    assert 'setSaveStatus(payload?.readOnly ? "Browser copy only" : "Markdown imported", "saved");' in source
+    assert "function bindMarkdownDropEvents()" in source
+    assert 'document.addEventListener("dragenter", handleMarkdownDragOver, true);' in source
+    assert 'document.addEventListener("dragover", handleMarkdownDragOver, true);' in source
+    assert 'document.addEventListener("drop", handleMarkdownDrop, true);' in source
+
+
+def test_http_storage_backend_imports_markdown_into_folder_workspace() -> None:
+    """Verify local folder/desktop workspace imports use existing HTTP file APIs."""
+
+    source = _read_static_js("storage-backend.js")
+
+    assert "async function importFilesToHttpWorkspace(fileList)" in source
+    assert "const content = await file.text();" in source
+    assert "await this.createFile(targetPath);" in source
+    assert "await this.saveContent(content, targetPath);" in source
+    assert "return { paths };" in source
+
+
+def test_file_tree_exposes_open_imported_path_helper() -> None:
+    """Verify drag/drop import can open the first imported workspace file."""
+
+    source = _read_static_js("file-tree.js")
+
+    assert "async function openImportedPath(payload)" in source
+    assert "const importedPath = payload?.paths?.[0];" in source
+    assert "await window.fileTabs.openTab(importedPath, { skipCurrentSave: true });" in source
+    assert "openImportedPath," in source
+
+
+def test_import_open_skips_blocking_save_on_previous_tab() -> None:
+    """Verify import switches tabs without blocking on the previous tab save."""
+
+    tabs_source = _read_static_js("tabs.js")
+
+    assert "async function openTab(filePath, options = {})" in tabs_source
+    assert "return switchTab(filePath, options);" in tabs_source
+    assert "if (currentTab) {" in tabs_source
+    assert "saveCurrentTabState(currentPath);" in tabs_source
+    assert "if (!skipCurrentSave && currentTab.isDirty)" in tabs_source
+    assert "return window.saveStatusForPayload(payload);" in tabs_source
+
+
+def test_web_storage_marks_imported_files_editable_in_browser() -> None:
+    """Verify imported files are stored as editable browser workspace files."""
+
+    source = _read_static_js("storage-backend.js")
+
+    assert 'storage_status: record.storageStatus || "browser"' in source
+    assert 'storageStatus: "browser"' in source
+    assert 'read_only: record.readOnly === true' in source
+    assert "readOnly: false" in source
+    assert 'return { paths, readOnly: false };' in source
+
+
+def test_web_storage_uses_browser_storage_not_file_sync() -> None:
+    """Verify online mode does not expose real-file sync metadata or write handles."""
+
+    source = _read_static_js("storage-backend.js")
+
+    assert "sync_status" not in source
+    assert "syncStatus" not in source
+    assert '"synced"' not in source
+    assert "createWritable" not in source
+    assert "writeFileHandle" not in source
+    assert "storage_status" in source
+
+def test_web_editor_uses_browser_storage_status_labels() -> None:
+    """Verify online mode status text does not claim file sync."""
+
+    editor_source = _read_static_js("editor.js")
+    tabs_source = _read_static_js("tabs.js")
+
+    assert "function saveStatusForPayload(payload)" in editor_source
+    assert 'return "Stored in browser";' in editor_source
+    assert "Synced to file" not in editor_source
+    assert 'setSaveStatus(saveStatusForPayload(responsePayload), "saved");' in editor_source
+    assert 'setSaveStatus(saveStatusForPayload(payload), "saved");' in tabs_source
+    assert 'setSaveStatus(activeTab?.readOnly ? "Browser copy only" : "Loaded", "saved");' in tabs_source
+
+
+def test_web_read_only_metadata_still_disables_editing() -> None:
+    """Verify files marked read-only in metadata stay non-editable."""
+
+    editor_source = _read_static_js("editor.js")
+
+    assert "function setEditorReadOnly(isReadOnly)" in editor_source
+    assert "editorState.isReadOnly = Boolean(isReadOnly);" in editor_source
+    assert 'setSaveStatus("Browser copy only", "neutral");' in editor_source
+    assert "if (editorState.isReadOnly)" in editor_source
+
+
+def test_web_import_button_uses_file_handles_for_read_only_imports_when_available() -> None:
+    """Verify web Import can read file handles without claiming file sync."""
+
+    file_tree_source = _read_static_js("file-tree.js")
+    storage_source = _read_static_js("storage-backend.js")
+
+    assert "window.showOpenFilePicker" in file_tree_source
+    assert "await window.showOpenFilePicker({" in file_tree_source
+    assert "await window.MarkdownOS?.storage?.importFileHandles?.(fileHandles);" in file_tree_source
+    assert "async importFileHandles(fileHandles)" in storage_source
+    assert "const file = await fileHandle.getFile();" in storage_source
+    assert "createWritable" not in storage_source
+
+
+def test_drag_drop_uses_file_system_handles_when_available() -> None:
+    """Verify drag/drop tries writable file handles before read-only file snapshots."""
+
+    editor_source = _read_static_js("editor.js")
+    storage_source = _read_static_js("storage-backend.js")
+
+    assert "await window.MarkdownOS?.storage?.importDataTransferItems?.(event.dataTransfer?.items);" in editor_source
+    assert "async importDataTransferItems(items)" in storage_source
+    assert "await item.getAsFileSystemHandle()" in storage_source
+    assert "await importFileWithOptionalHandle(file, fileHandle);" in storage_source
+
+
+def test_shared_frontend_modules_delegate_to_storage_backend() -> None:
+    """Verify editor, tabs, and file tree use the storage adapter for persistence."""
+
+    editor_source = _read_static_js("editor.js")
+    tabs_source = _read_static_js("tabs.js")
+    file_tree_source = _read_static_js("file-tree.js")
+    websocket_source = _read_static_js("websocket.js")
+
+    assert "window.MarkdownOS?.storage?.detectMode" in editor_source
+    assert "window.MarkdownOS?.storage?.getContent" in editor_source
+    assert "window.MarkdownOS?.storage?.saveContent" in editor_source
+    assert "window.MarkdownOS?.storage?.uploadImage" in editor_source
+    assert "mode === \"folder\" || mode === \"web\"" in editor_source
+
+    assert "window.MarkdownOS?.storage?.getContent" in tabs_source
+    assert "window.MarkdownOS?.storage?.saveContent" in tabs_source
+    assert "mode === \"folder\" || mode === \"web\"" in tabs_source
+
+    assert "window.MarkdownOS?.storage?.getFileTree" in file_tree_source
+    assert "window.MarkdownOS?.storage?.createFile" in file_tree_source
+    assert "window.MarkdownOS?.storage?.renamePath" in file_tree_source
+    assert "window.MarkdownOS?.storage?.deletePath" in file_tree_source
+    assert "mode === \"folder\" || mode === \"web\"" in file_tree_source
+
+    assert "mode === \"web\"" in websocket_source
+
+
 def test_folder_mode_sidebar_can_be_collapsed_and_restored() -> None:
     """Verify folder mode exposes whole-sidebar collapse and restore controls."""
 

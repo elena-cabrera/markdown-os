@@ -148,7 +148,7 @@ class WorkspaceSession:
         Initialize the session from a pre-built handler during app startup.
 
         Args:
-        - mode (str): Initial runtime mode (`"empty"`, `"file"`, or `"folder"`).
+        - mode (str): Initial runtime mode (`"empty"`, `"file"`, `"folder"`, or `"web"`).
         - handler (FileHandler | DirectoryHandler | None): Pre-built handler for the initial mode.
 
         Returns:
@@ -157,9 +157,12 @@ class WorkspaceSession:
 
         async with self._state_lock:
             await self._close_unlocked()
-            if mode == "empty" or handler is None:
+            if mode == "empty" or mode == "web":
+                self._mode = mode
                 self._sync_app_state()
                 return self.snapshot()
+            if handler is None:
+                raise ValueError("file and folder modes require an initial handler.")
 
             self._handler = handler
             self._mode = mode
@@ -172,7 +175,7 @@ class WorkspaceSession:
                 self._workspace_path = handler.directory
                 self._is_empty_workspace = len(handler.list_files()) == 0
             else:
-                raise ValueError("mode must be one of 'empty', 'file', or 'folder'.")
+                raise ValueError("mode must be one of 'empty', 'file', 'folder', or 'web'.")
 
             self._current_file = None
             self._restart_observer_unlocked()
@@ -370,7 +373,7 @@ class WorkspaceSession:
         """
 
         self._stop_observer_unlocked()
-        if self._mode == "empty" or self._handler is None:
+        if self._mode in {"empty", "web"} or self._handler is None:
             return
 
         observer = Observer()
