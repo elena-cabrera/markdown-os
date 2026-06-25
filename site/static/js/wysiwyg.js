@@ -1696,6 +1696,86 @@
     return textNode;
   }
 
+  /**
+   * Expands a collapsed range to the word boundaries around the caret.
+   *
+   * @param {Range} range
+   * @returns {Range}
+   */
+  function expandCollapsedRangeToWord(range) {
+    if (!range.collapsed) {
+      return range.cloneRange();
+    }
+
+    const { startContainer, startOffset } = range;
+    if (startContainer.nodeType !== Node.TEXT_NODE) {
+      return range.cloneRange();
+    }
+
+    const text = startContainer.textContent || "";
+    let start = startOffset;
+    let end = startOffset;
+
+    while (start > 0 && !/\s/.test(text[start - 1])) {
+      start -= 1;
+    }
+    while (end < text.length && !/\s/.test(text[end])) {
+      end += 1;
+    }
+
+    if (start === end) {
+      return range.cloneRange();
+    }
+
+    const expanded = document.createRange();
+    expanded.setStart(startContainer, start);
+    expanded.setEnd(startContainer, end);
+    return expanded;
+  }
+
+  /**
+   * Applies an inline formatting execCommand, expanding to the current word when the caret is collapsed.
+   *
+   * @param {string} commandName
+   * @returns {void}
+   */
+  function execInlineFormatCommand(commandName) {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) {
+      return;
+    }
+
+    const range = selection.getRangeAt(0);
+    if (!state.root.contains(range.commonAncestorContainer)) {
+      return;
+    }
+
+    const wasCollapsed = range.collapsed;
+    const commandRange = expandCollapsedRangeToWord(range);
+
+    if (wasCollapsed && commandRange.collapsed) {
+      document.execCommand(commandName, false);
+      emitChange();
+      return;
+    }
+
+    selection.removeAllRanges();
+    selection.addRange(commandRange);
+    document.execCommand(commandName, false);
+
+    if (wasCollapsed) {
+      const afterSelection = window.getSelection();
+      if (afterSelection && afterSelection.rangeCount > 0) {
+        const afterRange = afterSelection.getRangeAt(0);
+        afterRange.collapse(false);
+        afterSelection.removeAllRanges();
+        afterSelection.addRange(afterRange);
+      }
+    }
+
+    emitChange();
+  }
+
   async function insertImage(path, alt = "image") {
     insertHtmlAtSelection(
       `<p><img src="${escapeHtmlAttribute(path)}" alt="${escapeHtmlAttribute(alt)}" /></p><p><br></p>`,
@@ -1731,20 +1811,17 @@
     state.root.focus();
 
     if (command === "bold") {
-      document.execCommand("bold", false);
-      emitChange();
+      execInlineFormatCommand("bold");
       return;
     }
 
     if (command === "italic") {
-      document.execCommand("italic", false);
-      emitChange();
+      execInlineFormatCommand("italic");
       return;
     }
 
     if (command === "strike") {
-      document.execCommand("strikeThrough", false);
-      emitChange();
+      execInlineFormatCommand("strikeThrough");
       return;
     }
 

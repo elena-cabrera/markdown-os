@@ -418,6 +418,18 @@ def test_wysiwyg_inline_code_command_toggles_existing_code() -> None:
     assert "if (singleCodeSelection) {" in source
 
 
+def test_wysiwyg_inline_format_expands_word_at_collapsed_caret() -> None:
+    """Verify bold/italic/strike expand to the current word when the caret is collapsed."""
+
+    source = _read_static_js("wysiwyg.js")
+
+    assert "function expandCollapsedRangeToWord(range)" in source
+    assert "function execInlineFormatCommand(commandName)" in source
+    assert "execInlineFormatCommand(\"bold\")" in source
+    assert "execInlineFormatCommand(\"italic\")" in source
+    assert "execInlineFormatCommand(\"strikeThrough\")" in source
+
+
 def test_wysiwyg_mermaid_fullscreen_shows_loading_state() -> None:
     """Verify Mermaid fullscreen opens with a loading spinner before SVG render."""
 
