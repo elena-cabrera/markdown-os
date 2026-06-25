@@ -294,11 +294,17 @@
   document.addEventListener("selectionchange", () => {
     saveEditorSelection();
 
-    const active = document.activeElement;
-    if (!(active instanceof Element) || active.id !== "wysiwyg-editor") {
-      return;
+    const editor = document.getElementById("wysiwyg-editor");
+    const selection = window.getSelection();
+    const selectionInEditor =
+      editor &&
+      selection &&
+      selection.rangeCount > 0 &&
+      editor.contains(selection.getRangeAt(0).commonAncestorContainer);
+
+    if (selectionInEditor || document.activeElement?.id === "wysiwyg-editor") {
+      updateInlineButtonState();
     }
-    updateInlineButtonState();
   });
 
   document.addEventListener("DOMContentLoaded", () => {

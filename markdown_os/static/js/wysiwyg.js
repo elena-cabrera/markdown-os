@@ -1579,6 +1579,7 @@
 
     const markdown = turndownService
       .turndown(cloneRoot)
+      .replace(/\u200b/g, "")
       .replace(/\n{3,}/g, "\n\n")
       .trim();
 
@@ -1697,6 +1698,80 @@
   }
 
   /**
+   * Ensures a collapsed caret sits inside a text node so inline formatting can activate.
+   *
+   * @param {Range} range
+   * @returns {Range}
+   */
+  function ensureCollapsedCaretInTextNode(range) {
+    if (!range.collapsed) {
+      return range.cloneRange();
+    }
+
+    const { startContainer, startOffset } = range;
+    if (startContainer.nodeType === Node.TEXT_NODE) {
+      return range.cloneRange();
+    }
+
+    if (startContainer.nodeType !== Node.ELEMENT_NODE) {
+      return range.cloneRange();
+    }
+
+    const element = startContainer;
+    const childAtOffset = element.childNodes[startOffset];
+    const childBeforeOffset = element.childNodes[startOffset - 1];
+
+    if (
+      element.childNodes.length === 1 &&
+      element.firstChild?.nodeName === "BR"
+    ) {
+      const textNode = document.createTextNode("\u200b");
+      element.replaceChild(textNode, element.firstChild);
+      const normalized = document.createRange();
+      normalized.setStart(textNode, 0);
+      normalized.collapse(true);
+      return normalized;
+    }
+
+    if (childAtOffset?.nodeName === "BR") {
+      const textNode = document.createTextNode("\u200b");
+      element.insertBefore(textNode, childAtOffset);
+      const normalized = document.createRange();
+      normalized.setStart(textNode, 0);
+      normalized.collapse(true);
+      return normalized;
+    }
+
+    if (childBeforeOffset?.nodeType === Node.TEXT_NODE) {
+      const normalized = document.createRange();
+      normalized.setStart(
+        childBeforeOffset,
+        childBeforeOffset.textContent?.length || 0,
+      );
+      normalized.collapse(true);
+      return normalized;
+    }
+
+    if (childAtOffset?.nodeType === Node.TEXT_NODE) {
+      const normalized = document.createRange();
+      normalized.setStart(childAtOffset, 0);
+      normalized.collapse(true);
+      return normalized;
+    }
+
+    if (element.childNodes.length === 0) {
+      const textNode = document.createTextNode("\u200b");
+      element.appendChild(textNode);
+      const normalized = document.createRange();
+      normalized.setStart(textNode, 0);
+      normalized.collapse(true);
+      return normalized;
+    }
+
+    return range.cloneRange();
+  }
+
+  /**
    * Expands a collapsed range to the word boundaries around the caret.
    *
    * @param {Range} range
@@ -1751,11 +1826,20 @@
     }
 
     const wasCollapsed = range.collapsed;
-    const commandRange = expandCollapsedRangeToWord(range);
+    let workingRange = range.cloneRange();
+
+    if (wasCollapsed) {
+      workingRange = ensureCollapsedCaretInTextNode(workingRange);
+      selection.removeAllRanges();
+      selection.addRange(workingRange);
+    }
+
+    const commandRange = expandCollapsedRangeToWord(workingRange);
 
     if (wasCollapsed && commandRange.collapsed) {
       document.execCommand(commandName, false);
       emitChange();
+      document.dispatchEvent(new Event("selectionchange"));
       return;
     }
 
@@ -1774,6 +1858,7 @@
     }
 
     emitChange();
+    document.dispatchEvent(new Event("selectionchange"));
   }
 
   async function insertImage(path, alt = "image") {
@@ -2725,8 +2810,42 @@
     emitChange();
   }
 
+  function handleFormattingShortcutCapture(event) {
+    if (!state.root || document.activeElement !== state.root || state.suppressInput) {
+      return;
+    }
+
+    const isMac = navigator.platform.toUpperCase().includes("MAC");
+    const hasPrimaryModifier = isMac ? event.metaKey : event.ctrlKey;
+    if (!hasPrimaryModifier) {
+      return;
+    }
+
+    const key = event.key.toLowerCase();
+    let command = null;
+    if (key === "b" && !event.shiftKey && !event.altKey) {
+      command = "bold";
+    } else if (key === "i" && !event.shiftKey && !event.altKey) {
+      command = "italic";
+    } else if (key === "x" && event.shiftKey && !event.altKey) {
+      command = "strike";
+    }
+
+    if (!command) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    void executeCommand(command);
+  }
+
   async function handleRootKeyDown(event) {
-    if (state.suppressInput || event.key !== "Backspace") {
+    if (state.suppressInput) {
+      return;
+    }
+
+    if (event.key !== "Backspace") {
       return;
     }
 
@@ -2956,6 +3075,7 @@
     }
 
     state.root.addEventListener("input", handleRootInput);
+    document.addEventListener("keydown", handleFormattingShortcutCapture, true);
     state.root.addEventListener("keydown", handleRootKeyDown);
     state.root.addEventListener("change", handleRootChange);
     state.root.addEventListener("click", handleRootClick);

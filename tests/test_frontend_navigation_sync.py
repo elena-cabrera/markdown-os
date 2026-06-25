@@ -424,10 +424,27 @@ def test_wysiwyg_inline_format_expands_word_at_collapsed_caret() -> None:
     source = _read_static_js("wysiwyg.js")
 
     assert "function expandCollapsedRangeToWord(range)" in source
+    assert "function ensureCollapsedCaretInTextNode(range)" in source
     assert "function execInlineFormatCommand(commandName)" in source
     assert "execInlineFormatCommand(\"bold\")" in source
     assert "execInlineFormatCommand(\"italic\")" in source
     assert "execInlineFormatCommand(\"strikeThrough\")" in source
+
+
+def test_wysiwyg_keyboard_shortcuts_route_inline_formats_through_execute_command() -> None:
+    """Verify Ctrl/Cmd formatting shortcuts use the shared inline-format command path."""
+
+    source = _read_static_js("wysiwyg.js")
+
+    assert "function handleFormattingShortcutCapture(event)" in source
+    assert "if (key === \"b\" && !event.shiftKey && !event.altKey)" in source
+    assert "command = \"bold\";" in source
+    assert "if (key === \"i\" && !event.shiftKey && !event.altKey)" in source
+    assert "command = \"italic\";" in source
+    assert "if (key === \"x\" && event.shiftKey && !event.altKey)" in source
+    assert "command = \"strike\";" in source
+    assert "void executeCommand(command);" in source
+    assert "document.addEventListener(\"keydown\", handleFormattingShortcutCapture, true)" in source
 
 
 def test_wysiwyg_mermaid_fullscreen_shows_loading_state() -> None:
