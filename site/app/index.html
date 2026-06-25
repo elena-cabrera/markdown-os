@@ -364,6 +364,17 @@
 
           <div id="floating-toolbar" class="floating-toolbar" role="toolbar" aria-label="Formatting toolbar">
             <div class="toolbar-group">
+              <button class="toolbar-button" type="button" data-command="image" title="Insert image" aria-label="Insert image">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M14 3h-4C6.229 3 4.343 3 3.172 4.172S2 7.229 2 11v2c0 3.771 0 5.657 1.172 6.828S6.229 21 10 21h4c3.771 0 5.657 0 6.828-1.172S22 16.771 22 13v-2c0-3.771 0-5.657-1.172-6.828S17.771 3 14 3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21.5 17l-5.152-5.62a1.17 1.17 0 0 0-1.69-.037L10 16l-2.16-2.16a1.16 1.16 0 0 0-1.686.049L2.5 18"/></g></svg>
+              </button>
+              <button class="toolbar-button" type="button" data-command="mermaid" title="Insert Mermaid diagram" aria-label="Insert Mermaid diagram">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 16 16"><path fill="currentColor" fill-rule="evenodd" d="M11.5 12.5A1.5 1.5 0 0 1 10 14H6a1.5 1.5 0 0 1-1.5-1.5v-.823a3.11 3.11 0 0 0-1.35-2.566A6.11 6.11 0 0 1 .5 4.073V3A1.5 1.5 0 0 1 2 1.5h.666A6.43 6.43 0 0 1 8 4.343A6.43 6.43 0 0 1 13.334 1.5H14A1.5 1.5 0 0 1 15.5 3v1.073a6.11 6.11 0 0 1-2.65 5.038a3.11 3.11 0 0 0-1.35 2.566zm-8-9.43a4.92 4.92 0 0 1 3.738 3.025c.275.688 1.249.688 1.524 0A4.92 4.92 0 0 1 13.334 3H14v1.073q0 .215-.02.427A4.61 4.61 0 0 1 12 7.875c-1.252.86-2 2.283-2 3.802v.823H6v-.823c0-1.52-.748-2.941-2-3.802a4.61 4.61 0 0 1-2-3.802V3h.666q.425 0 .834.07" clip-rule="evenodd"/></svg>
+              </button>
+            </div>
+
+            <div class="toolbar-divider" aria-hidden="true"></div>
+
+            <div class="toolbar-group">
               <button class="toolbar-button" type="button" data-command="bold" title="Bold (Ctrl+B)" aria-label="Bold">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M5 6c0-1.414 0-2.121.44-2.56C5.878 3 6.585 3 8 3h4.579C15.02 3 17 5.015 17 7.5S15.02 12 12.579 12H5z" clip-rule="evenodd"/><path d="M12.429 12h1.238C16.06 12 18 14.015 18 16.5S16.06 21 13.667 21H8c-1.414 0-2.121 0-2.56-.44C5 20.122 5 19.415 5 18v-6"/></g></svg>
               </button>
@@ -373,43 +384,34 @@
               <button class="toolbar-button" type="button" data-command="strike" title="Strikethrough (Ctrl+Shift+X)" aria-label="Strikethrough">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"><path stroke-linejoin="round" d="M4 12h16"/><path d="M17.5 7.667C17.5 5.089 15.038 3 12 3S6.5 5.09 6.5 7.667c0 .486.053.93.167 1.333M6 16.333C6 18.911 8.686 21 12 21s6-1.333 6-4.667c0-2.393-1.03-3.755-3.092-4.333"/></g></svg>
               </button>
-            </div>
-
-            <div class="toolbar-divider" aria-hidden="true"></div>
-
-            <div class="toolbar-group">
-              <button class="toolbar-button" type="button" data-command="h1" title="Heading 1 (Ctrl+Alt+1)" aria-label="Heading 1">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 5v14M14 5v14m3 0h1.5m1.5 0h-1.5m0 0v-8L17 12M4 12h10"/></svg>
-              </button>
-              <button class="toolbar-button" type="button" data-command="h2" title="Heading 2 (Ctrl+Alt+2)" aria-label="Heading 2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3.5 5v14m10-14v14m7 0h-4v-.31c0-.438 0-.657.087-.852c.086-.194.249-.34.575-.634l2.605-2.344c.467-.42.733-1.018.733-1.646V13a2 2 0 1 0-4 0v.4M3.5 12h10"/></svg>
-              </button>
-              <button class="toolbar-button" type="button" data-command="h3" title="Heading 3 (Ctrl+Alt+3)" aria-label="Heading 3">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3.5 5v14m10-14v14m3-2a2 2 0 1 0 2-2a2 2 0 1 0-2-2m-13-1h10"/></svg>
-              </button>
-            </div>
-
-            <div class="toolbar-divider" aria-hidden="true"></div>
-
-            <div class="toolbar-group">
-              <button class="toolbar-button" type="button" data-command="bulletList" title="Bulleted list (Ctrl+Shift+8)" aria-label="Bulleted list">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round"><path stroke-width="1.5" d="M8 5h12"/><path stroke-linejoin="round" stroke-width="2" d="M4 5h.009M4 12h.009M4 19h.009"/><path stroke-width="1.5" d="M8 12h12M8 19h12"/></g></svg>
-              </button>
-              <button class="toolbar-button" type="button" data-command="orderedList" title="Numbered list (Ctrl+Shift+7)" aria-label="Numbered list">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"><path d="M11 6h10m-10 6h10m-10 6h10"/><path stroke-linejoin="round" d="M3 15h1.5c.279 0 .418 0 .534.023a1.2 1.2 0 0 1 .943.943C6 16.082 6 16.22 6 16.5s0 .418-.023.534a1.2 1.2 0 0 1-.943.943C4.918 18 4.78 18 4.5 18s-.418 0-.534.023a1.2 1.2 0 0 0-.943.943C3 19.082 3 19.22 3 19.5v.9c0 .283 0 .424.088.512s.23.088.512.088H6M3 3h1.2a.3.3 0 0 1 .3.3V9m0 0H3m1.5 0H6"/></g></svg>
-              </button>
-              <button class="toolbar-button" type="button" data-command="taskList" title="Task list" aria-label="Task list">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"><path d="M11 6h10m-10 6h10m-10 6h10"/><path stroke-linejoin="round" d="M3 7.393S4 8.045 4.5 9C4.5 9 6 5.25 8 4M3 18.393S4 19.045 4.5 20c0 0 1.5-3.75 3.5-5"/></g></svg>
-              </button>
-              <button class="toolbar-button" type="button" data-command="math" title="Math equation" aria-label="Math equation">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.5 12c0-4.478 0-6.718 1.391-8.109S7.521 2.5 12 2.5c4.478 0 6.718 0 8.109 1.391S21.5 7.521 21.5 12c0 4.478 0 6.718-1.391 8.109S16.479 21.5 12 21.5c-4.478 0-6.718 0-8.109-1.391S2.5 16.479 2.5 12Z"/><path stroke-linecap="round" stroke-linejoin="round" d="m5.5 12.5l.475-.316c.473-.316.71-.474.938-.404c.227.071.333.335.545.864L9 16.5l2.088-6.265c.44-1.32.66-1.98 1.184-2.357s1.22-.378 2.611-.378H18.5M17 12l-1.5 1.5m0 0L14 15m1.5-1.5L17 15m-1.5-1.5L14 12"/></g></svg>
-              </button>
-              <button class="toolbar-button" type="button" data-command="codeBlock" title="Code block" aria-label="Code block">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m16 10l1.227 1.057c.515.445.773.667.773.943s-.258.498-.773.943L16 14m-8-4l-1.227 1.057C6.258 11.502 6 11.724 6 12s.258.498.773.943L8 14m5-5l-2 6"/><path d="M2.5 12c0-4.478 0-6.718 1.391-8.109S7.521 2.5 12 2.5c4.478 0 6.718 0 8.109 1.391S21.5 7.521 21.5 12c0 4.478 0 6.718-1.391 8.109S16.479 21.5 12 21.5c-4.478 0-6.718 0-8.109-1.391S2.5 16.479 2.5 12Z"/></g></svg>
-              </button>
-              <button class="toolbar-button" type="button" data-command="blockquote" title="Block quote" aria-label="Block quote">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"><path d="M9 6h8m-8 6h10M9 18h8"/><path stroke-linejoin="round" d="M5 3v18"/></g></svg>
-              </button>
+              <div class="toolbar-dropdown text-format-group">
+                <button
+                  id="text-format-menu-toggle"
+                  class="toolbar-button toolbar-button-dropdown"
+                  type="button"
+                  aria-haspopup="menu"
+                  aria-expanded="false"
+                  title="Text formatting"
+                  aria-label="Text formatting"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="M10.571 18H5.43M8 3v15M8 3c-1.19 0-2.717.123-3.933.243c-.514.052-.771.077-1 .167a1.72 1.72 0 0 0-.998 1.076C2 4.715 2 4.976 2 5.5M8 3c1.19 0 2.717.123 3.933.243c.514.052.771.077 1 .167c.473.188.854.599.998 1.076c.069.229.069.49.069 1.014M19.714 21h-3.428M18 12v9m0-9c-.793 0-1.811.082-2.622.162c-.343.034-.514.051-.666.111c-.316.125-.57.4-.666.717c-.046.153-.046.328-.046.677M18 12c.793 0 1.811.082 2.622.162c.343.034.514.051.666.111c.316.125.57.4.666.717c.046.153.046.328.046.677"/></svg>
+                  <svg class="toolbar-chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m6 9 6 6 6-6"/></svg>
+                </button>
+                <div id="text-format-menu" class="toolbar-submenu hidden" role="menu" aria-label="Text formatting options">
+                  <button class="toolbar-submenu-item" type="button" data-command="h1" title="Heading 1 (Ctrl+Alt+1)" aria-label="Heading 1" role="menuitem">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 5v14M14 5v14m3 0h1.5m1.5 0h-1.5m0 0v-8L17 12M4 12h10"/></svg>
+                  </button>
+                  <button class="toolbar-submenu-item" type="button" data-command="h2" title="Heading 2 (Ctrl+Alt+2)" aria-label="Heading 2" role="menuitem">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3.5 5v14m10-14v14m7 0h-4v-.31c0-.438 0-.657.087-.852c.086-.194.249-.34.575-.634l2.605-2.344c.467-.42.733-1.018.733-1.646V13a2 2 0 1 0-4 0v.4M3.5 12h10"/></svg>
+                  </button>
+                  <button class="toolbar-submenu-item" type="button" data-command="h3" title="Heading 3 (Ctrl+Alt+3)" aria-label="Heading 3" role="menuitem">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3.5 5v14m10-14v14m3-2a2 2 0 1 0 2-2a2 2 0 1 0-2-2m-13-1h10"/></svg>
+                  </button>
+                  <button class="toolbar-submenu-item" type="button" data-command="removeFormat" title="Remove formatting" aria-label="Remove formatting" role="menuitem">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m8.738 7.78l-3.891 3.977c-1.17 1.196-1.755 1.794-1.834 2.523q-.025.232 0 .464c.08.73.664 1.327 1.834 2.523l.149.152c.624.639.937.958 1.31 1.172q.328.188.689.291c.413.118.856.118 1.743.118c.886 0 1.33 0 1.743-.118q.361-.104.688-.29c.374-.215.686-.534 1.31-1.173l2.845-2.907M8.738 7.78l3.582-3.657C13.706 2.708 14.4 2 15.263 2s1.556.708 2.941 2.125l.743.76C20.316 6.283 21 6.983 21 7.85s-.685 1.566-2.054 2.964l-3.622 3.698M8.738 7.78l6.586 6.732M10 22h11"/></svg>
+                  </button>
+                </div>
+              </div>
               <button class="toolbar-button" type="button" data-command="link" title="Link (Ctrl+K)" aria-label="Link">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"><path d="M10 13.229q.213.349.504.654a3.56 3.56 0 0 0 4.454.59q.391-.24.73-.59l3.239-3.372c1.43-1.49 1.43-3.904 0-5.394a3.564 3.564 0 0 0-5.183 0l-.714.743"/><path d="m10.97 18.14l-.713.743a3.564 3.564 0 0 1-5.184 0c-1.43-1.49-1.43-3.905 0-5.394l3.24-3.372a3.564 3.564 0 0 1 5.183 0q.291.305.504.654"/></g></svg>
               </button>
@@ -417,36 +419,36 @@
 
             <div class="toolbar-divider" aria-hidden="true"></div>
 
-            <div class="toolbar-group format-group">
-              <button
-                id="format-menu-toggle"
-                class="toolbar-button toolbar-button-label"
-                type="button"
-                aria-haspopup="menu"
-                aria-expanded="false"
-                title="Insert block"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.891 20.109C2.5 18.717 2.5 16.479 2.5 12c0-4.478 0-6.718 1.391-8.109S7.521 2.5 12 2.5c4.478 0 6.718 0 8.109 1.391S21.5 7.521 21.5 12c0 4.478 0 6.718-1.391 8.109S16.479 21.5 12 21.5c-4.478 0-6.718 0-8.109-1.391"/><path d="M2.5 9h19m-19 4h19m-19 4h19"/><path stroke-linecap="round" d="M12 21.5V9"/></g></svg>
-                <span>Format</span>
+            <div class="toolbar-group">
+              <button class="toolbar-button" type="button" data-command="blockquote" title="Block quote" aria-label="Block quote">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"><path d="M9 6h8m-8 6h10M9 18h8"/><path stroke-linejoin="round" d="M5 3v18"/></g></svg>
               </button>
-              <div id="format-menu" class="format-menu hidden" role="menu">
-                <button class="format-menu-item" type="button" data-command="table" role="menuitem">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.891 20.109C2.5 18.717 2.5 16.479 2.5 12c0-4.478 0-6.718 1.391-8.109S7.521 2.5 12 2.5c4.478 0 6.718 0 8.109 1.391S21.5 7.521 21.5 12c0 4.478 0 6.718-1.391 8.109S16.479 21.5 12 21.5c-4.478 0-6.718 0-8.109-1.391"/><path d="M2.5 9h19m-19 4h19m-19 4h19"/><path stroke-linecap="round" d="M12 21.5V9"/></g></svg>
-                  <span>Table</span>
-                </button>
-                <button class="format-menu-item" type="button" data-command="image" role="menuitem">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M14 3h-4C6.229 3 4.343 3 3.172 4.172S2 7.229 2 11v2c0 3.771 0 5.657 1.172 6.828S6.229 21 10 21h4c3.771 0 5.657 0 6.828-1.172S22 16.771 22 13v-2c0-3.771 0-5.657-1.172-6.828S17.771 3 14 3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21.5 17l-5.152-5.62a1.17 1.17 0 0 0-1.69-.037L10 16l-2.16-2.16a1.16 1.16 0 0 0-1.686.049L2.5 18"/></g></svg>
-                  <span>Image</span>
-                </button>
-                <button class="format-menu-item" type="button" data-command="horizontalRule" role="menuitem">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 12h18"/></svg>
-                  <span>Divider</span>
-                </button>
-                <button class="format-menu-item" type="button" data-command="mermaid" role="menuitem">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h6l2 3h6"/><path d="M5 16h6l2-3h6"/><circle cx="4" cy="8" r="1"/><circle cx="4" cy="16" r="1"/><circle cx="20" cy="8" r="1"/><circle cx="20" cy="16" r="1"/></svg>
-                  <span>Mermaid</span>
-                </button>
-              </div>
+              <button class="toolbar-button" type="button" data-command="code" title="Code (Ctrl+E)" aria-label="Code">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m16 10l1.227 1.057c.515.445.773.667.773.943s-.258.498-.773.943L16 14m-8-4l-1.227 1.057C6.258 11.502 6 11.724 6 12s.258.498.773.943L8 14m5-5l-2 6"/><path d="M2.5 12c0-4.478 0-6.718 1.391-8.109S7.521 2.5 12 2.5c4.478 0 6.718 0 8.109 1.391S21.5 7.521 21.5 12c0 4.478 0 6.718-1.391 8.109S16.479 21.5 12 21.5c-4.478 0-6.718 0-8.109-1.391S2.5 16.479 2.5 12Z"/></g></svg>
+              </button>
+              <button class="toolbar-button" type="button" data-command="math" title="Math equation" aria-label="Math equation">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.5 12c0-4.478 0-6.718 1.391-8.109S7.521 2.5 12 2.5c4.478 0 6.718 0 8.109 1.391S21.5 7.521 21.5 12c0 4.478 0 6.718-1.391 8.109S16.479 21.5 12 21.5c-4.478 0-6.718 0-8.109-1.391S2.5 16.479 2.5 12Z"/><path stroke-linecap="round" stroke-linejoin="round" d="m5.5 12.5l.475-.316c.473-.316.71-.474.938-.404c.227.071.333.335.545.864L9 16.5l2.088-6.265c.44-1.32.66-1.98 1.184-2.357s1.22-.378 2.611-.378H18.5M17 12l-1.5 1.5m0 0L14 15m1.5-1.5L17 15m-1.5-1.5L14 12"/></g></svg>
+              </button>
+              <button class="toolbar-button" type="button" data-command="bulletList" title="Bulleted list (Ctrl+Shift+8)" aria-label="Bulleted list">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round"><path stroke-width="1.5" d="M8 5h12"/><path stroke-linejoin="round" stroke-width="2" d="M4 5h.009M4 12h.009M4 19h.009"/><path stroke-width="1.5" d="M8 12h12M8 19h12"/></g></svg>
+              </button>
+              <button class="toolbar-button" type="button" data-command="orderedList" title="Numbered list (Ctrl+Shift+7)" aria-label="Numbered list">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"><path d="M11 6h10m-10 6h10m-10 6h10"/><path stroke-linejoin="round" d="M3 15h1.5c.279 0 .418 0 .534.023a1.2 1.2 0 0 1 .943.943C6 16.082 6 16.22 6 16.5s0 .418-.023.534a1.2 1.2 0 0 1-.943.943C4.918 18 4.78 18 4.5 18s-.418 0-.534.023a1.2 1.2 0 0 0-.943.943C3 19.082 3 19.22 3 19.5v.9c0 .283 0 .424.088.512s.23.088.512.088H6M3 3h1.2a.3.3 0 0 1 .3.3V9m0 0H3m1.5 0H6"/></g></svg>
+              </button>
+              <button class="toolbar-button" type="button" data-command="taskList" title="Checklist" aria-label="Checklist">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"><path d="M11 6h10m-10 6h10m-10 6h10"/><path stroke-linejoin="round" d="M3 7.393S4 8.045 4.5 9C4.5 9 6 5.25 8 4M3 18.393S4 19.045 4.5 20c0 0 1.5-3.75 3.5-5"/></g></svg>
+              </button>
+            </div>
+
+            <div class="toolbar-divider" aria-hidden="true"></div>
+
+            <div class="toolbar-group">
+              <button class="toolbar-button" type="button" data-command="table" title="Insert table" aria-label="Insert table">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"><path stroke-linejoin="round" d="M20.109 3.891C21.5 5.282 21.5 7.521 21.5 12c0 4.478 0 6.718-1.391 8.109S16.479 21.5 12 21.5c-4.478 0-6.718 0-8.109-1.391S2.5 16.479 2.5 12c0-4.478 0-6.718 1.391-8.109S7.521 2.5 12 2.5c4.478 0 6.718 0 8.109 1.391"/><path d="M21.5 12h-19M12 2.5v19"/></g></svg>
+              </button>
+              <button class="toolbar-button" type="button" data-command="horizontalRule" title="Insert divider" aria-label="Insert divider">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M4 7H3V6h1V5h16v1h1v1h-1v1H4zm16 10h1v1h-1v1H4v-1H3v-1h1v-1h16zM1 11h22v2H1z"/><path fill="none" d="M0 0h24v24H0z"/></svg>
+              </button>
             </div>
           </div>
 

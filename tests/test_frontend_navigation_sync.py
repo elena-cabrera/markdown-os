@@ -398,12 +398,13 @@ def test_wysiwyg_backspace_unwraps_list_item_at_start() -> None:
 
 
 def test_wysiwyg_toolbar_exposes_ctrl_e_inline_code_shortcut() -> None:
-    """Verify Ctrl/Cmd+E maps to the inline code command."""
+    """Verify Ctrl/Cmd+E maps to the smart code command."""
 
     source = _read_static_js("wysiwyg-toolbar.js")
 
     assert "else if (key === \"e\")" in source
-    assert "await window.wysiwyg.exec(\"inlineCode\")" in source
+    assert "await runToolbarCommand(\"code\")" in source
+    assert "const resolvedCommand = hasTextSelection() ? \"inlineCode\" : \"codeBlock\";" in source
 
 
 def test_wysiwyg_inline_code_command_toggles_existing_code() -> None:
@@ -415,6 +416,35 @@ def test_wysiwyg_inline_code_command_toggles_existing_code() -> None:
     assert "function unwrapCodeElement(codeElement)" in source
     assert "const singleCodeSelection = startCode && endCode && startCode === endCode;" in source
     assert "if (singleCodeSelection) {" in source
+
+
+def test_wysiwyg_inline_format_expands_word_at_collapsed_caret() -> None:
+    """Verify bold/italic/strike expand to the current word when the caret is collapsed."""
+
+    source = _read_static_js("wysiwyg.js")
+
+    assert "function expandCollapsedRangeToWord(range)" in source
+    assert "function ensureCollapsedCaretInTextNode(range)" in source
+    assert "function execInlineFormatCommand(commandName)" in source
+    assert "execInlineFormatCommand(\"bold\")" in source
+    assert "execInlineFormatCommand(\"italic\")" in source
+    assert "execInlineFormatCommand(\"strikeThrough\")" in source
+
+
+def test_wysiwyg_keyboard_shortcuts_route_inline_formats_through_execute_command() -> None:
+    """Verify Ctrl/Cmd formatting shortcuts use the shared inline-format command path."""
+
+    source = _read_static_js("wysiwyg.js")
+
+    assert "function handleFormattingShortcutCapture(event)" in source
+    assert "if (key === \"b\" && !event.shiftKey && !event.altKey)" in source
+    assert "command = \"bold\";" in source
+    assert "if (key === \"i\" && !event.shiftKey && !event.altKey)" in source
+    assert "command = \"italic\";" in source
+    assert "if (key === \"x\" && event.shiftKey && !event.altKey)" in source
+    assert "command = \"strike\";" in source
+    assert "void executeCommand(command);" in source
+    assert "document.addEventListener(\"keydown\", handleFormattingShortcutCapture, true)" in source
 
 
 def test_wysiwyg_mermaid_fullscreen_shows_loading_state() -> None:

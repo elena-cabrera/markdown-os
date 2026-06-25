@@ -992,6 +992,20 @@
     return mermaidElement;
   }
 
+  function createMermaidContainerFromSource(sourceContent) {
+    const mermaidContainer = document.createElement("div");
+    mermaidContainer.className = "mermaid-container";
+    mermaidContainer.setAttribute("contenteditable", "false");
+    mermaidContainer.dataset.mermaidSource = sourceContent;
+
+    const canvas = document.createElement("div");
+    canvas.className = "mermaid-canvas";
+    canvas.appendChild(createMermaidSourceNode(sourceContent));
+    mermaidContainer.appendChild(canvas);
+
+    return mermaidContainer;
+  }
+
   function ensureMermaidCanvas(container) {
     let canvas = container.querySelector(".mermaid-canvas");
     if (!canvas) {
@@ -1300,17 +1314,7 @@
       }
 
       const sourceContent = codeElement.textContent || "";
-
-      const mermaidContainer = document.createElement("div");
-      mermaidContainer.className = "mermaid-container";
-      mermaidContainer.setAttribute("contenteditable", "false");
-      mermaidContainer.dataset.mermaidSource = sourceContent;
-
-      const canvas = document.createElement("div");
-      canvas.className = "mermaid-canvas";
-      canvas.appendChild(createMermaidSourceNode(sourceContent));
-      mermaidContainer.appendChild(canvas);
-
+      const mermaidContainer = createMermaidContainerFromSource(sourceContent);
       preElement.replaceWith(mermaidContainer);
     });
 
@@ -1575,6 +1579,7 @@
 
     const markdown = turndownService
       .turndown(cloneRoot)
+      .replace(/\u200b/g, "")
       .replace(/\n{3,}/g, "\n\n")
       .trim();
 
@@ -1620,6 +1625,50 @@
     document.execCommand("insertHTML", false, html);
   }
 
+  /**
+   * Inserts a rendered Mermaid container at the current selection using DOM APIs so
+   * native undo (Ctrl+Z) can remove the whole insertion in one step. Falls back to
+   * null when the selection is missing or not inside the editable root.
+   *
+   * @param {string} sourceContent
+   * @returns {HTMLElement | null}
+   */
+  function insertMermaidBlockAtCaret(sourceContent) {
+    if (!state.root) {
+      return null;
+    }
+
+    state.root.focus();
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) {
+      return null;
+    }
+
+    const range = selection.getRangeAt(0);
+    const ancestor = range.commonAncestorContainer;
+    const ancestorElement =
+      ancestor.nodeType === Node.TEXT_NODE ? ancestor.parentElement : ancestor;
+    if (
+      !ancestorElement ||
+      !state.root.contains(ancestorElement) ||
+      isWithinNonEditable(ancestor)
+    ) {
+      return null;
+    }
+
+    const mermaidContainer = createMermaidContainerFromSource(sourceContent);
+    const trailingParagraph = document.createElement("p");
+    trailingParagraph.innerHTML = "<br>";
+
+    const fragment = document.createDocumentFragment();
+    fragment.appendChild(mermaidContainer);
+    fragment.appendChild(trailingParagraph);
+
+    range.insertNode(fragment);
+    placeCaretAtEnd(trailingParagraph);
+    return mermaidContainer;
+  }
+
   function closestCodeElement(node) {
     if (!node) {
       return null;
@@ -1646,6 +1695,170 @@
     const textNode = document.createTextNode(codeElement.textContent || "");
     codeElement.replaceWith(textNode);
     return textNode;
+  }
+
+  /**
+   * Ensures a collapsed caret sits inside a text node so inline formatting can activate.
+   *
+   * @param {Range} range
+   * @returns {Range}
+   */
+  function ensureCollapsedCaretInTextNode(range) {
+    if (!range.collapsed) {
+      return range.cloneRange();
+    }
+
+    const { startContainer, startOffset } = range;
+    if (startContainer.nodeType === Node.TEXT_NODE) {
+      return range.cloneRange();
+    }
+
+    if (startContainer.nodeType !== Node.ELEMENT_NODE) {
+      return range.cloneRange();
+    }
+
+    const element = startContainer;
+    const childAtOffset = element.childNodes[startOffset];
+    const childBeforeOffset = element.childNodes[startOffset - 1];
+
+    if (
+      element.childNodes.length === 1 &&
+      element.firstChild?.nodeName === "BR"
+    ) {
+      const textNode = document.createTextNode("\u200b");
+      element.replaceChild(textNode, element.firstChild);
+      const normalized = document.createRange();
+      normalized.setStart(textNode, 0);
+      normalized.collapse(true);
+      return normalized;
+    }
+
+    if (childAtOffset?.nodeName === "BR") {
+      const textNode = document.createTextNode("\u200b");
+      element.insertBefore(textNode, childAtOffset);
+      const normalized = document.createRange();
+      normalized.setStart(textNode, 0);
+      normalized.collapse(true);
+      return normalized;
+    }
+
+    if (childBeforeOffset?.nodeType === Node.TEXT_NODE) {
+      const normalized = document.createRange();
+      normalized.setStart(
+        childBeforeOffset,
+        childBeforeOffset.textContent?.length || 0,
+      );
+      normalized.collapse(true);
+      return normalized;
+    }
+
+    if (childAtOffset?.nodeType === Node.TEXT_NODE) {
+      const normalized = document.createRange();
+      normalized.setStart(childAtOffset, 0);
+      normalized.collapse(true);
+      return normalized;
+    }
+
+    if (element.childNodes.length === 0) {
+      const textNode = document.createTextNode("\u200b");
+      element.appendChild(textNode);
+      const normalized = document.createRange();
+      normalized.setStart(textNode, 0);
+      normalized.collapse(true);
+      return normalized;
+    }
+
+    return range.cloneRange();
+  }
+
+  /**
+   * Expands a collapsed range to the word boundaries around the caret.
+   *
+   * @param {Range} range
+   * @returns {Range}
+   */
+  function expandCollapsedRangeToWord(range) {
+    if (!range.collapsed) {
+      return range.cloneRange();
+    }
+
+    const { startContainer, startOffset } = range;
+    if (startContainer.nodeType !== Node.TEXT_NODE) {
+      return range.cloneRange();
+    }
+
+    const text = startContainer.textContent || "";
+    let start = startOffset;
+    let end = startOffset;
+
+    while (start > 0 && !/\s/.test(text[start - 1])) {
+      start -= 1;
+    }
+    while (end < text.length && !/\s/.test(text[end])) {
+      end += 1;
+    }
+
+    if (start === end) {
+      return range.cloneRange();
+    }
+
+    const expanded = document.createRange();
+    expanded.setStart(startContainer, start);
+    expanded.setEnd(startContainer, end);
+    return expanded;
+  }
+
+  /**
+   * Applies an inline formatting execCommand, expanding to the current word when the caret is collapsed.
+   *
+   * @param {string} commandName
+   * @returns {void}
+   */
+  function execInlineFormatCommand(commandName) {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) {
+      return;
+    }
+
+    const range = selection.getRangeAt(0);
+    if (!state.root.contains(range.commonAncestorContainer)) {
+      return;
+    }
+
+    const wasCollapsed = range.collapsed;
+    let workingRange = range.cloneRange();
+
+    if (wasCollapsed) {
+      workingRange = ensureCollapsedCaretInTextNode(workingRange);
+      selection.removeAllRanges();
+      selection.addRange(workingRange);
+    }
+
+    const commandRange = expandCollapsedRangeToWord(workingRange);
+
+    if (wasCollapsed && commandRange.collapsed) {
+      document.execCommand(commandName, false);
+      emitChange();
+      document.dispatchEvent(new Event("selectionchange"));
+      return;
+    }
+
+    selection.removeAllRanges();
+    selection.addRange(commandRange);
+    document.execCommand(commandName, false);
+
+    if (wasCollapsed) {
+      const afterSelection = window.getSelection();
+      if (afterSelection && afterSelection.rangeCount > 0) {
+        const afterRange = afterSelection.getRangeAt(0);
+        afterRange.collapse(false);
+        afterSelection.removeAllRanges();
+        afterSelection.addRange(afterRange);
+      }
+    }
+
+    emitChange();
+    document.dispatchEvent(new Event("selectionchange"));
   }
 
   async function insertImage(path, alt = "image") {
@@ -1683,20 +1896,17 @@
     state.root.focus();
 
     if (command === "bold") {
-      document.execCommand("bold", false);
-      emitChange();
+      execInlineFormatCommand("bold");
       return;
     }
 
     if (command === "italic") {
-      document.execCommand("italic", false);
-      emitChange();
+      execInlineFormatCommand("italic");
       return;
     }
 
     if (command === "strike") {
-      document.execCommand("strikeThrough", false);
-      emitChange();
+      execInlineFormatCommand("strikeThrough");
       return;
     }
 
@@ -1766,6 +1976,26 @@
     if (command === "h1" || command === "h2" || command === "h3") {
       document.execCommand("formatBlock", false, command.toUpperCase());
       addHeadingIds(state.root);
+      emitChange();
+      return;
+    }
+
+    if (command === "removeFormat") {
+      document.execCommand("removeFormat", false);
+      document.execCommand("unlink", false);
+
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        let node = selection.anchorNode;
+        while (node && node !== state.root) {
+          if (node.nodeType === Node.ELEMENT_NODE && /^H[1-6]$/.test(node.tagName)) {
+            document.execCommand("formatBlock", false, "P");
+            break;
+          }
+          node = node.parentElement;
+        }
+      }
+
       emitChange();
       return;
     }
@@ -1873,10 +2103,30 @@
     }
 
     if (command === "mermaid") {
-      insertHtmlAtSelection(
-        '<pre><code class="language-mermaid">graph TD\n  A[Start] --> B[End]</code></pre><p><br></p>',
-      );
-      await renderMermaidDiagrams();
+      const defaultSource = "graph TD\n  A[Start] --> B[End]";
+      const inserted = insertMermaidBlockAtCaret(defaultSource);
+      if (!inserted) {
+        insertHtmlAtSelection(
+          `<pre><code class="language-mermaid">${defaultSource}</code></pre><p><br></p>`,
+        );
+        await renderMermaidDiagrams();
+      } else {
+        ensureMermaidInitialized();
+        const mermaidNode = inserted.querySelector(".mermaid-canvas .mermaid");
+        if (mermaidNode && window.mermaid) {
+          try {
+            await window.mermaid.run({ nodes: [mermaidNode] });
+            fixMermaidSvgDimensions();
+            applyZoomToDiagrams();
+            addMermaidControls(inserted);
+          } catch (error) {
+            console.error("Mermaid render error.", error);
+            renderMermaidError(inserted, inserted.dataset.mermaidSource || "");
+          }
+        } else {
+          addMermaidControls(inserted);
+        }
+      }
       emitChange();
     }
   }
@@ -2560,8 +2810,42 @@
     emitChange();
   }
 
+  function handleFormattingShortcutCapture(event) {
+    if (!state.root || document.activeElement !== state.root || state.suppressInput) {
+      return;
+    }
+
+    const isMac = navigator.platform.toUpperCase().includes("MAC");
+    const hasPrimaryModifier = isMac ? event.metaKey : event.ctrlKey;
+    if (!hasPrimaryModifier) {
+      return;
+    }
+
+    const key = event.key.toLowerCase();
+    let command = null;
+    if (key === "b" && !event.shiftKey && !event.altKey) {
+      command = "bold";
+    } else if (key === "i" && !event.shiftKey && !event.altKey) {
+      command = "italic";
+    } else if (key === "x" && event.shiftKey && !event.altKey) {
+      command = "strike";
+    }
+
+    if (!command) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    void executeCommand(command);
+  }
+
   async function handleRootKeyDown(event) {
-    if (state.suppressInput || event.key !== "Backspace") {
+    if (state.suppressInput) {
+      return;
+    }
+
+    if (event.key !== "Backspace") {
       return;
     }
 
@@ -2791,6 +3075,7 @@
     }
 
     state.root.addEventListener("input", handleRootInput);
+    document.addEventListener("keydown", handleFormattingShortcutCapture, true);
     state.root.addEventListener("keydown", handleRootKeyDown);
     state.root.addEventListener("change", handleRootChange);
     state.root.addEventListener("click", handleRootClick);

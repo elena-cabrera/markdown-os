@@ -1135,6 +1135,69 @@ body {
   font-weight: 500;
 }
 
+.toolbar-dropdown {
+  position: relative;
+}
+
+.toolbar-button-dropdown {
+  width: auto;
+  gap: 2px;
+  padding: 0 6px 0 8px;
+}
+
+.toolbar-chevron {
+  width: 12px;
+  height: 12px;
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.toolbar-submenu {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  z-index: 30;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel-bg);
+  box-shadow: var(--shadow);
+}
+
+.toolbar-submenu-item {
+  width: 34px;
+  height: 34px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.toolbar-submenu-item svg {
+  width: 18px;
+  height: 18px;
+}
+
+.toolbar-submenu-item:hover,
+.toolbar-submenu-item.active {
+  border-color: var(--border);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.toolbar-submenu-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .format-group {
   position: relative;
 }
