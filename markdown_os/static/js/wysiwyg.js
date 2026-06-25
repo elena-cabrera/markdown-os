@@ -1818,6 +1818,26 @@
       return;
     }
 
+    if (command === "removeFormat") {
+      document.execCommand("removeFormat", false);
+      document.execCommand("unlink", false);
+
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        let node = selection.anchorNode;
+        while (node && node !== state.root) {
+          if (node.nodeType === Node.ELEMENT_NODE && /^H[1-6]$/.test(node.tagName)) {
+            document.execCommand("formatBlock", false, "P");
+            break;
+          }
+          node = node.parentElement;
+        }
+      }
+
+      emitChange();
+      return;
+    }
+
     if (command === "bulletList") {
       document.execCommand("insertUnorderedList", false);
       emitChange();

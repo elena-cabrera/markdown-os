@@ -398,12 +398,13 @@ def test_wysiwyg_backspace_unwraps_list_item_at_start() -> None:
 
 
 def test_wysiwyg_toolbar_exposes_ctrl_e_inline_code_shortcut() -> None:
-    """Verify Ctrl/Cmd+E maps to the inline code command."""
+    """Verify Ctrl/Cmd+E maps to the smart code command."""
 
     source = _read_static_js("wysiwyg-toolbar.js")
 
     assert "else if (key === \"e\")" in source
-    assert "await window.wysiwyg.exec(\"inlineCode\")" in source
+    assert "await runToolbarCommand(\"code\")" in source
+    assert "const resolvedCommand = hasTextSelection() ? \"inlineCode\" : \"codeBlock\";" in source
 
 
 def test_wysiwyg_inline_code_command_toggles_existing_code() -> None:
