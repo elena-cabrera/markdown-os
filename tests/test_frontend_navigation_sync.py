@@ -207,20 +207,33 @@ def test_file_tree_exposes_open_imported_path_helper() -> None:
 
     assert "async function openImportedPath(payload)" in source
     assert "const importedPath = payload?.paths?.[0];" in source
-    assert "await window.fileTabs.openTab(importedPath);" in source
+    assert "await window.fileTabs.openTab(importedPath, { skipCurrentSave: true });" in source
     assert "openImportedPath," in source
 
 
-def test_web_storage_marks_browser_copy_files_read_only() -> None:
-    """Verify imported files without writable handles are not presented as saved."""
+def test_import_open_skips_blocking_save_on_previous_tab() -> None:
+    """Verify import switches tabs without blocking on the previous tab save."""
+
+    tabs_source = _read_static_js("tabs.js")
+
+    assert "async function openTab(filePath, options = {})" in tabs_source
+    assert "return switchTab(filePath, options);" in tabs_source
+    assert "if (currentTab) {" in tabs_source
+    assert "saveCurrentTabState(currentPath);" in tabs_source
+    assert "if (!skipCurrentSave && currentTab.isDirty)" in tabs_source
+    assert "return window.saveStatusForPayload(payload);" in tabs_source
+
+
+def test_web_storage_marks_imported_files_editable_in_browser() -> None:
+    """Verify imported files are stored as editable browser workspace files."""
 
     source = _read_static_js("storage-backend.js")
 
     assert 'storage_status: record.storageStatus || "browser"' in source
-    assert 'storageStatus: "browser-copy"' in source
+    assert 'storageStatus: "browser"' in source
     assert 'read_only: record.readOnly === true' in source
-    assert 'readOnly: true' in source
-    assert 'throw new Error("This browser copy is read-only. Changes are not written to the original file.");' in source
+    assert "readOnly: false" in source
+    assert 'return { paths, readOnly: false };' in source
 
 
 def test_web_storage_uses_browser_storage_not_file_sync() -> None:
@@ -246,11 +259,11 @@ def test_web_editor_uses_browser_storage_status_labels() -> None:
     assert "Synced to file" not in editor_source
     assert 'setSaveStatus(saveStatusForPayload(responsePayload), "saved");' in editor_source
     assert 'setSaveStatus(saveStatusForPayload(payload), "saved");' in tabs_source
-    assert 'setSaveStatus(tabData.readOnly ? "Browser copy only" : "Loaded", "saved");' in tabs_source
+    assert 'setSaveStatus(activeTab?.readOnly ? "Browser copy only" : "Loaded", "saved");' in tabs_source
 
 
-def test_web_read_only_imports_disable_editing() -> None:
-    """Verify browser-copy imports are displayed read-only instead of autosaved."""
+def test_web_read_only_metadata_still_disables_editing() -> None:
+    """Verify files marked read-only in metadata stay non-editable."""
 
     editor_source = _read_static_js("editor.js")
 

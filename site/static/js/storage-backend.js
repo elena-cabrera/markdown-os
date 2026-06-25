@@ -414,8 +414,8 @@ Your local CLI and desktop app still save directly to your filesystem.
 
     const content = await file.text();
     await writeRecord(targetPath, content, {
-      storageStatus: "browser-copy",
-      readOnly: true,
+      storageStatus: "browser",
+      readOnly: false,
     });
     return targetPath;
   }
@@ -431,7 +431,7 @@ Your local CLI and desktop app still save directly to your filesystem.
       }
     }
 
-    return { paths, readOnly: paths.length > 0 && files.every((file) => !file.handle) };
+    return { paths, readOnly: false };
   }
 
   async function importFileHandles(fileHandles) {
@@ -449,7 +449,7 @@ Your local CLI and desktop app still save directly to your filesystem.
       }
     }
 
-    return { paths, readOnly: paths.length > 0 };
+    return { paths, readOnly: false };
   }
 
   async function importDataTransferItems(items) {

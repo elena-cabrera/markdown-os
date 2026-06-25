@@ -117,7 +117,10 @@
   }
 
   function saveStatusForPayload(payload) {
-    return saveStatusForPayload(payload);
+    if (typeof window.saveStatusForPayload === "function") {
+      return window.saveStatusForPayload(payload);
+    }
+    return "Saved";
   }
 
   function isWorkspaceMode(mode) {
@@ -520,9 +523,9 @@
 
     const currentPath = tabsState.activeTabPath;
     const currentTab = getTabData(currentPath);
-    if (!skipCurrentSave && currentTab) {
+    if (currentTab) {
       saveCurrentTabState(currentPath);
-      if (currentTab.isDirty) {
+      if (!skipCurrentSave && currentTab.isDirty) {
         const hasConflict = await checkForExternalChanges(currentPath);
         if (hasConflict) {
           const choice = await window.showConflictDialog?.();
@@ -557,7 +560,8 @@
     await restoreTabToEditor(filePath);
     setPageTitle(filePath);
     window.fileTree?.setCurrentFile?.(filePath);
-    setSaveStatus(tabData.readOnly ? "Browser copy only" : "Loaded", "saved");
+    const activeTab = getTabData(filePath);
+    setSaveStatus(activeTab?.readOnly ? "Browser copy only" : "Loaded", "saved");
     renderTabBar();
     return true;
   }
@@ -606,13 +610,13 @@
     await clearEditor();
   }
 
-  async function openTab(filePath) {
+  async function openTab(filePath, options = {}) {
     if (!tabsState.enabled || !filePath) {
       return false;
     }
 
     if (tabsState.tabs.has(filePath)) {
-      return switchTab(filePath);
+      return switchTab(filePath, options);
     }
 
     if (tabsState.tabs.size >= MAX_OPEN_TABS) {
@@ -624,7 +628,7 @@
     tabsState.tabOrder.push(filePath);
     renderTabBar();
 
-    const switched = await switchTab(filePath);
+    const switched = await switchTab(filePath, options);
     if (!switched) {
       tabsState.tabs.delete(filePath);
       tabsState.tabOrder = tabsState.tabOrder.filter((path) => path !== filePath);

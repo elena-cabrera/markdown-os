@@ -715,7 +715,7 @@
       return false;
     }
     if (window.fileTabs?.isEnabled?.()) {
-      await window.fileTabs.openTab(importedPath);
+      await window.fileTabs.openTab(importedPath, { skipCurrentSave: true });
       return true;
     }
     if (typeof window.switchFile === "function") {
