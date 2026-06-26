@@ -645,138 +645,124 @@
     }
 
     edgeLayer.replaceChildren();
-    const tableRect = table.getBoundingClientRect();
-    const wrapperRect = wrapper.getBoundingClientRect();
-    const offsetTop = tableRect.top - wrapperRect.top;
-    const offsetLeft = tableRect.left - wrapperRect.left;
+
     const cursorPosition = getCursorPosition(table);
+    if (!cursorPosition) {
+      return edgeLayer;
+    }
 
     const rows = getTableRows(table);
-    rows.forEach((row, rowIndex) => {
-      const rowRect = row.getBoundingClientRect();
-      const top = rowRect.bottom - wrapperRect.top - 12;
-      const handle = createIconButton("add", "Insert row below", "table-row-insert-handle");
-      handle.style.top = `${top}px`;
-      handle.style.left = `${offsetLeft + tableRect.width / 2 - 12}px`;
-      handle.addEventListener("mousedown", (event) => event.preventDefault());
-      handle.addEventListener("mouseenter", () => {
-        previewInsertRow(wrapper, table, rowIndex);
-      });
-      handle.addEventListener("mouseleave", () => {
-        clearInsertPreview(wrapper);
-      });
-      handle.addEventListener("click", (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        const position = getCursorPosition(table);
-        if (!position) {
-          return;
-        }
-        const newRow = insertRowAt(table, rowIndex, "after");
-        refreshTableControls(wrapper);
-        placeCaretInCell(newRow?.cells[position.colIndex] || newRow?.cells[0]);
-        updateToolbarCounts(wrapper, table);
-        emitChange();
-      });
-      edgeLayer.appendChild(handle);
+    const row = rows[cursorPosition.rowIndex];
+    const cell = row?.cells[cursorPosition.colIndex];
+    if (!row || !cell) {
+      return edgeLayer;
+    }
 
-      if (!cursorPosition || cursorPosition.rowIndex !== rowIndex) {
+    const contentRect = getTableContentRect(table);
+    const wrapperRect = wrapper.getBoundingClientRect();
+    const rowRect = row.getBoundingClientRect();
+    const cellRect = cell.getBoundingClientRect();
+    const { rowIndex, colIndex } = cursorPosition;
+
+    const rowInsert = createIconButton("add", "Insert row below", "table-row-insert-handle");
+    rowInsert.style.top = `${rowRect.bottom - wrapperRect.top - 12}px`;
+    rowInsert.style.left = `${contentRect.left - wrapperRect.left + contentRect.width / 2 - 12}px`;
+    rowInsert.addEventListener("mousedown", (event) => event.preventDefault());
+    rowInsert.addEventListener("mouseenter", () => {
+      previewInsertRow(wrapper, table, rowIndex);
+    });
+    rowInsert.addEventListener("mouseleave", () => {
+      clearInsertPreview(wrapper);
+    });
+    rowInsert.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const position = getCursorPosition(table);
+      if (!position) {
         return;
       }
-
-      const rowDelete = createIconButton("delete", "Delete row", "table-row-delete-handle");
-      rowDelete.style.top = `${rowRect.top - wrapperRect.top + rowRect.height / 2 - 12}px`;
-      rowDelete.style.left = `${offsetLeft - 34}px`;
-      rowDelete.disabled = rows.length <= 1;
-      rowDelete.addEventListener("mousedown", (event) => event.preventDefault());
-      rowDelete.addEventListener("click", (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        const position = getCursorPosition(table);
-        if (!position) {
-          return;
-        }
-        if (deleteRowAt(table, position.rowIndex)) {
-          refreshTableControls(wrapper);
-          const nextRows = getTableRows(table);
-          const focusRow = nextRows[Math.min(position.rowIndex, nextRows.length - 1)];
-          placeCaretInCell(focusRow?.cells[position.colIndex] || focusRow?.cells[0]);
-          updateToolbarCounts(wrapper, table);
-          emitChange();
-        }
-      });
-      rowDelete.addEventListener("mouseenter", () => highlightRow(table, rowIndex));
-      rowDelete.addEventListener("mouseleave", () => clearHighlights(table));
-      edgeLayer.appendChild(rowDelete);
+      const newRow = insertRowAt(table, rowIndex, "after");
+      refreshTableControls(wrapper);
+      placeCaretInCell(newRow?.cells[position.colIndex] || newRow?.cells[0]);
+      updateToolbarCounts(wrapper, table);
+      emitChange();
     });
+    edgeLayer.appendChild(rowInsert);
 
-    const colCount = getColumnCount(table);
-    if (rows.length > 0) {
-      const sampleRow = rows[0];
-      for (let colIndex = 0; colIndex < colCount; colIndex += 1) {
-        const cell = sampleRow.cells[colIndex];
-        if (!cell) {
-          continue;
-        }
-
-        const cellRect = cell.getBoundingClientRect();
-        const insertLeft = cellRect.right - wrapperRect.left - 12;
-        const insertTop = offsetTop + tableRect.height / 2 - 12;
-        const handle = createIconButton("add", "Insert column right", "table-col-insert-handle");
-        handle.style.left = `${insertLeft}px`;
-        handle.style.top = `${insertTop}px`;
-        handle.addEventListener("mousedown", (event) => event.preventDefault());
-        handle.addEventListener("mouseenter", () => {
-          previewInsertColumn(wrapper, table, colIndex);
-        });
-        handle.addEventListener("mouseleave", () => {
-          clearInsertPreview(wrapper);
-        });
-        handle.addEventListener("click", (event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          const position = getCursorPosition(table);
-          if (!position) {
-            return;
-          }
-          insertColumnAt(table, colIndex, "after");
-          refreshTableControls(wrapper);
-          const nextCell = getTableRows(table)[position.rowIndex]?.cells[colIndex + 1];
-          placeCaretInCell(nextCell);
-          updateToolbarCounts(wrapper, table);
-          emitChange();
-        });
-        edgeLayer.appendChild(handle);
-
-        if (!cursorPosition || cursorPosition.colIndex !== colIndex) {
-          continue;
-        }
-
-        const colDelete = createIconButton("delete", "Delete column", "table-col-delete-handle");
-        colDelete.style.left = `${cellRect.left - wrapperRect.left + cellRect.width / 2 - 12}px`;
-        colDelete.style.top = `${offsetTop - 34}px`;
-        colDelete.disabled = colCount <= 1;
-        colDelete.addEventListener("mousedown", (event) => event.preventDefault());
-        colDelete.addEventListener("click", (event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          const position = getCursorPosition(table);
-          if (!position) {
-            return;
-          }
-          if (deleteColumnAt(table, position.colIndex)) {
-            refreshTableControls(wrapper);
-            const nextColIndex = Math.min(position.colIndex, getColumnCount(table) - 1);
-            placeCaretInCell(getTableRows(table)[position.rowIndex]?.cells[nextColIndex]);
-            updateToolbarCounts(wrapper, table);
-            emitChange();
-          }
-        });
-        colDelete.addEventListener("mouseenter", () => highlightColumn(table, colIndex));
-        colDelete.addEventListener("mouseleave", () => clearHighlights(table));
-        edgeLayer.appendChild(colDelete);
+    const rowDelete = createIconButton("delete", "Delete row", "table-row-delete-handle");
+    rowDelete.style.top = `${rowRect.top - wrapperRect.top + rowRect.height / 2 - 12}px`;
+    rowDelete.style.left = `${contentRect.left - wrapperRect.left - 34}px`;
+    rowDelete.disabled = rows.length <= 1;
+    rowDelete.addEventListener("mousedown", (event) => event.preventDefault());
+    rowDelete.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const position = getCursorPosition(table);
+      if (!position) {
+        return;
       }
-    }
+      if (deleteRowAt(table, position.rowIndex)) {
+        refreshTableControls(wrapper);
+        const nextRows = getTableRows(table);
+        const focusRow = nextRows[Math.min(position.rowIndex, nextRows.length - 1)];
+        placeCaretInCell(focusRow?.cells[position.colIndex] || focusRow?.cells[0]);
+        updateToolbarCounts(wrapper, table);
+        emitChange();
+      }
+    });
+    rowDelete.addEventListener("mouseenter", () => highlightRow(table, rowIndex));
+    rowDelete.addEventListener("mouseleave", () => clearHighlights(table));
+    edgeLayer.appendChild(rowDelete);
+
+    const colInsert = createIconButton("add", "Insert column right", "table-col-insert-handle");
+    colInsert.style.left = `${cellRect.right - wrapperRect.left - 12}px`;
+    colInsert.style.top = `${contentRect.top - wrapperRect.top + contentRect.height / 2 - 12}px`;
+    colInsert.addEventListener("mousedown", (event) => event.preventDefault());
+    colInsert.addEventListener("mouseenter", () => {
+      previewInsertColumn(wrapper, table, colIndex);
+    });
+    colInsert.addEventListener("mouseleave", () => {
+      clearInsertPreview(wrapper);
+    });
+    colInsert.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const position = getCursorPosition(table);
+      if (!position) {
+        return;
+      }
+      insertColumnAt(table, colIndex, "after");
+      refreshTableControls(wrapper);
+      const nextCell = getTableRows(table)[position.rowIndex]?.cells[colIndex + 1];
+      placeCaretInCell(nextCell);
+      updateToolbarCounts(wrapper, table);
+      emitChange();
+    });
+    edgeLayer.appendChild(colInsert);
+
+    const colDelete = createIconButton("delete", "Delete column", "table-col-delete-handle");
+    colDelete.style.left = `${cellRect.left - wrapperRect.left + cellRect.width / 2 - 12}px`;
+    colDelete.style.top = `${contentRect.top - wrapperRect.top - 34}px`;
+    colDelete.disabled = getColumnCount(table) <= 1;
+    colDelete.addEventListener("mousedown", (event) => event.preventDefault());
+    colDelete.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const position = getCursorPosition(table);
+      if (!position) {
+        return;
+      }
+      if (deleteColumnAt(table, position.colIndex)) {
+        refreshTableControls(wrapper);
+        const nextColIndex = Math.min(position.colIndex, getColumnCount(table) - 1);
+        placeCaretInCell(getTableRows(table)[position.rowIndex]?.cells[nextColIndex]);
+        updateToolbarCounts(wrapper, table);
+        emitChange();
+      }
+    });
+    colDelete.addEventListener("mouseenter", () => highlightColumn(table, colIndex));
+    colDelete.addEventListener("mouseleave", () => clearHighlights(table));
+    edgeLayer.appendChild(colDelete);
 
     return edgeLayer;
   }

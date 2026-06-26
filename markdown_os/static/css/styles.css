@@ -1802,8 +1802,8 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 
 .table-editor-wrapper.table-editor-active .table-row-insert-handle,
 .table-editor-wrapper.table-editor-active .table-col-insert-handle,
-.table-editor-wrapper.table-editor-active .table-row-delete-handle:hover,
-.table-editor-wrapper.table-editor-active .table-col-delete-handle:hover {
+.table-editor-wrapper.table-editor-active .table-row-delete-handle,
+.table-editor-wrapper.table-editor-active .table-col-delete-handle {
   opacity: 1;
   transform: scale(1);
 }
@@ -1814,14 +1814,8 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   opacity: 0;
 }
 
-.table-editor-wrapper.table-editor-active .table-row-delete-handle,
-.table-editor-wrapper.table-editor-active .table-col-delete-handle {
-  opacity: 0.75;
-}
-
 .table-row-delete-handle:hover,
 .table-col-delete-handle:hover {
-  opacity: 1 !important;
   color: #ef4444;
 }
 
