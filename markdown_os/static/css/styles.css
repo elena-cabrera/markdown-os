@@ -1715,6 +1715,31 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   z-index: 3;
 }
 
+.table-insert-preview-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.table-insert-preview-line {
+  position: absolute;
+  pointer-events: none;
+  background: var(--accent);
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.table-insert-preview-line-row {
+  height: 4px;
+  transform: translateY(-50%);
+}
+
+.table-insert-preview-line-column {
+  width: 4px;
+  transform: translateX(-50%);
+}
+
 .table-control-button,
 .table-row-insert-handle,
 .table-col-insert-handle {
@@ -1848,6 +1873,11 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 .table-stepper-remove-button:hover:not(:disabled) {
   color: #ef4444;
   background: color-mix(in srgb, #ef4444 12%, var(--panel-bg));
+}
+
+.table-stepper-add-button:hover:not(:disabled) {
+  color: var(--accent);
+  background: var(--accent-soft);
 }
 
 .table-stepper-button:disabled {

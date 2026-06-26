@@ -220,6 +220,66 @@
       });
   }
 
+  function ensureInsertPreviewLayer(wrapper) {
+    let layer = wrapper.querySelector(".table-insert-preview-layer");
+    if (!layer) {
+      layer = document.createElement("div");
+      layer.className = "table-insert-preview-layer";
+      layer.setAttribute("contenteditable", "false");
+      layer.setAttribute("aria-hidden", "true");
+      wrapper.appendChild(layer);
+    }
+    return layer;
+  }
+
+  function clearInsertPreview(wrapper) {
+    wrapper?.querySelector(".table-insert-preview-layer")?.replaceChildren();
+  }
+
+  function previewInsertRow(wrapper, table, rowIndex) {
+    const rows = getTableRows(table);
+    const row = rows[rowIndex];
+    if (!row) {
+      return;
+    }
+
+    const layer = ensureInsertPreviewLayer(wrapper);
+    layer.replaceChildren();
+
+    const tableRect = table.getBoundingClientRect();
+    const wrapperRect = wrapper.getBoundingClientRect();
+    const rowRect = row.getBoundingClientRect();
+    const line = document.createElement("div");
+    line.className = "table-insert-preview-line table-insert-preview-line-row";
+    line.style.left = `${tableRect.left - wrapperRect.left}px`;
+    line.style.top = `${rowRect.bottom - wrapperRect.top}px`;
+    line.style.width = `${tableRect.width}px`;
+    layer.appendChild(line);
+  }
+
+  function previewInsertColumn(wrapper, table, colIndex) {
+    const position = getCursorPosition(table);
+    const rows = getTableRows(table);
+    const row = rows[position?.rowIndex ?? 0];
+    const cell = row?.cells[colIndex];
+    if (!cell) {
+      return;
+    }
+
+    const layer = ensureInsertPreviewLayer(wrapper);
+    layer.replaceChildren();
+
+    const tableRect = table.getBoundingClientRect();
+    const wrapperRect = wrapper.getBoundingClientRect();
+    const cellRect = cell.getBoundingClientRect();
+    const line = document.createElement("div");
+    line.className = "table-insert-preview-line table-insert-preview-line-column";
+    line.style.left = `${cellRect.right - wrapperRect.left}px`;
+    line.style.top = `${tableRect.top - wrapperRect.top}px`;
+    line.style.height = `${tableRect.height}px`;
+    layer.appendChild(line);
+  }
+
   function clearHighlights(table) {
     if (!table) {
       return;
@@ -309,7 +369,7 @@
     }
   }
 
-  function createStepperGroup(kind, removeLabel, addLabel, table) {
+  function createStepperGroup(kind, removeLabel, addLabel, wrapper, table) {
     const group = document.createElement("div");
     group.className = "table-stepper-group";
     group.setAttribute("contenteditable", "false");
@@ -322,6 +382,7 @@
     removeButton.title = removeLabel;
     removeButton.setAttribute("aria-label", removeLabel);
     removeButton.addEventListener("mouseenter", () => {
+      clearInsertPreview(wrapper);
       if (removeButton.disabled) {
         return;
       }
@@ -348,11 +409,28 @@
 
     const addButton = document.createElement("button");
     addButton.type = "button";
-    addButton.className = "table-stepper-button";
+    addButton.className = "table-stepper-button table-stepper-add-button";
     addButton.dataset.action = `${kind}-add`;
     addButton.textContent = "+";
     addButton.title = addLabel;
     addButton.setAttribute("aria-label", addLabel);
+    addButton.addEventListener("mouseenter", () => {
+      clearDeletePreview(table);
+      const position = getCursorPosition(table);
+      if (!position) {
+        return;
+      }
+
+      if (kind === "row") {
+        previewInsertRow(wrapper, table, position.rowIndex);
+        return;
+      }
+
+      previewInsertColumn(wrapper, table, position.colIndex);
+    });
+    addButton.addEventListener("mouseleave", () => {
+      clearInsertPreview(wrapper);
+    });
 
     group.appendChild(removeButton);
     group.appendChild(countLabel);
@@ -375,12 +453,14 @@
       "row",
       "Remove row",
       "Add row below",
+      wrapper,
       table,
     );
     const columnStepper = createStepperGroup(
       "column",
       "Remove column",
       "Add column right",
+      wrapper,
       table,
     );
 
@@ -404,6 +484,7 @@
 
     toolbar.addEventListener("mouseleave", () => {
       clearDeletePreview(table);
+      clearInsertPreview(wrapper);
     });
 
     toolbar.addEventListener("click", (event) => {
@@ -434,6 +515,7 @@
     }
 
     clearDeletePreview(table);
+    clearInsertPreview(wrapper);
 
     if (action === "row-add") {
       const newRow = insertRowAt(table, position.rowIndex, "after");
@@ -630,6 +712,7 @@
     }
     clearHighlights(table);
     clearDeletePreview(table);
+    clearInsertPreview(wrapper);
   }
 
   function syncTableEditorState() {
@@ -704,7 +787,7 @@
     cloneRoot.querySelectorAll(`.${WRAPPER_CLASS}`).forEach((wrapper) => {
       wrapper
         .querySelectorAll(
-          ".table-edge-layer, .table-floating-toolbar, .table-edge-controls",
+          ".table-edge-layer, .table-floating-toolbar, .table-edge-controls, .table-insert-preview-layer",
         )
         .forEach((node) => {
           node.remove();

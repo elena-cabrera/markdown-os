@@ -635,10 +635,13 @@ def test_wysiwyg_table_controls_support_row_and_column_actions() -> None:
     assert "function getActiveTableWrapper()" in tables_source
     assert "function previewDeleteRow(table, rowIndex)" in tables_source
     assert "function previewDeleteColumn(table, colIndex)" in tables_source
+    assert "function previewInsertRow(wrapper, table, rowIndex)" in tables_source
+    assert "function previewInsertColumn(wrapper, table, colIndex)" in tables_source
     assert "function syncTableEditorState()" in tables_source
     assert "table-delete-table-button" in tables_source
     assert "window.wysiwygTables?.decorateTables?.(state.root);" in wysiwyg_source
     assert "window.wysiwygTables?.cleanupTableWrappers?.(cloneRoot);" in wysiwyg_source
     assert ".table-floating-toolbar" in css_source
     assert ".table-stepper-group" in css_source
+    assert ".table-insert-preview-line" in css_source
     assert ".table-row-insert-handle" in css_source
