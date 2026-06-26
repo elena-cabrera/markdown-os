@@ -1670,6 +1670,14 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 #wysiwyg-editor th,
 #wysiwyg-editor td {
   display: table-cell;
+  line-height: 1.5;
+  vertical-align: top;
+}
+
+#wysiwyg-editor th:empty::before,
+#wysiwyg-editor td:empty::before {
+  content: "\00a0";
+  pointer-events: none;
 }
 
 #wysiwyg-editor th {
