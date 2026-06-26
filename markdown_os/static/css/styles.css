@@ -1717,9 +1717,7 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 
 .table-control-button,
 .table-row-insert-handle,
-.table-col-insert-handle,
-.table-row-delete-handle,
-.table-col-delete-handle {
+.table-col-insert-handle {
   position: absolute;
   width: 24px;
   height: 24px;
@@ -1737,6 +1735,27 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   transform: scale(0.92);
   transition: opacity 0.15s ease, transform 0.15s ease;
   box-shadow: var(--shadow);
+}
+
+.table-row-delete-handle,
+.table-col-delete-handle {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  pointer-events: auto;
+  opacity: 0;
+  transform: scale(0.92);
+  transition: opacity 0.15s ease, transform 0.15s ease, color 0.15s ease;
+  box-shadow: none;
 }
 
 .table-control-button svg,
@@ -1758,7 +1777,6 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 
 .table-row-delete-handle,
 .table-col-delete-handle {
-  border-color: var(--border);
   color: var(--text-muted);
   opacity: 0;
 }
@@ -1772,7 +1790,6 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 .table-col-delete-handle:hover {
   opacity: 1 !important;
   color: #ef4444;
-  border-color: color-mix(in srgb, #ef4444 45%, var(--border));
 }
 
 .table-floating-toolbar {
@@ -1874,7 +1891,7 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 .table-delete-table-button {
   width: 30px;
   height: 30px;
-  border: 1px solid transparent;
+  border: 0;
   border-radius: 8px;
   background: transparent;
   color: var(--text-muted);
@@ -1891,7 +1908,6 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 }
 
 .table-delete-table-button:hover {
-  border-color: color-mix(in srgb, #ef4444 45%, var(--border));
   color: #ef4444;
   background: color-mix(in srgb, #ef4444 8%, var(--panel-bg));
 }
