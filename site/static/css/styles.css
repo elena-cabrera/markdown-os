@@ -1705,11 +1705,8 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 .table-editor-wrapper {
   position: relative;
   margin: 16px 0 20px;
-}
-
-.table-editor-wrapper.table-editor-active {
-  padding-top: 36px;
-  padding-left: 36px;
+  padding-top: 12px;
+  padding-left: 12px;
 }
 
 .table-editor-wrapper > table {

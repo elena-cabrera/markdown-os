@@ -653,7 +653,8 @@ def test_wysiwyg_table_controls_support_row_and_column_actions() -> None:
     assert ".table-floating-toolbar" in css_source
     assert ".table-stepper-group" in css_source
     assert ".table-insert-preview-line" in css_source
-    assert ".table-editor-wrapper.table-editor-active" in css_source
-    assert "padding-top: 36px" in css_source
+    assert ".table-editor-wrapper {" in css_source
+    assert "padding-top: 12px" in css_source
+    assert "padding-left: 12px" in css_source
     assert "#wysiwyg-editor td:empty::before" in css_source
     assert ".table-row-insert-handle" in css_source
