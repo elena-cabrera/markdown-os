@@ -668,17 +668,14 @@
     const columnBorderLeft = cellRect.right - wrapperRect.left;
     const contentTop = contentRect.top - wrapperRect.top;
     const contentLeft = contentRect.left - wrapperRect.left;
-    const handleSize = 24;
-    const handleGap = 8;
-    const rowHandleStackHeight = handleSize * 2 + handleGap;
-
-    const rowHandleStack = document.createElement("div");
-    rowHandleStack.className = "table-row-handle-stack";
-    rowHandleStack.setAttribute("contenteditable", "false");
-    rowHandleStack.style.left = `${contentLeft - 34}px`;
-    rowHandleStack.style.top = `${rowBorderTop - rowHandleStackHeight}px`;
+    const handleHalf = 12;
+    const rowTop = rowRect.top - wrapperRect.top;
+    const rowInsertTop = rowBorderTop - handleHalf;
+    const rowDeleteTop = rowTop + rowRect.height / 2 - handleHalf;
 
     const rowInsert = createIconButton("add", "Insert row below", "table-row-insert-handle");
+    rowInsert.style.top = `${rowInsertTop}px`;
+    rowInsert.style.left = `${contentLeft - 34}px`;
     rowInsert.addEventListener("mousedown", (event) => event.preventDefault());
     rowInsert.addEventListener("mouseenter", () => {
       previewInsertRow(wrapper, table, rowIndex);
@@ -701,6 +698,8 @@
     });
 
     const rowDelete = createIconButton("delete", "Delete row", "table-row-delete-handle");
+    rowDelete.style.top = `${rowDeleteTop}px`;
+    rowDelete.style.left = `${contentLeft - 34}px`;
     rowDelete.disabled = rows.length <= 1;
     rowDelete.addEventListener("mousedown", (event) => event.preventDefault());
     rowDelete.addEventListener("mouseenter", () => {
@@ -726,9 +725,8 @@
         emitChange();
       }
     });
-    rowHandleStack.appendChild(rowDelete);
-    rowHandleStack.appendChild(rowInsert);
-    edgeLayer.appendChild(rowHandleStack);
+    edgeLayer.appendChild(rowDelete);
+    edgeLayer.appendChild(rowInsert);
 
     const colInsert = createIconButton("add", "Insert column right", "table-col-insert-handle");
     colInsert.style.left = `${columnBorderLeft - 12}px`;

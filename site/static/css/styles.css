@@ -1672,6 +1672,9 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   display: table-cell;
   line-height: 1.5;
   vertical-align: top;
+  min-height: 3.75rem;
+  height: 3.75rem;
+  box-sizing: border-box;
 }
 
 #wysiwyg-editor th:empty::before,
@@ -1682,8 +1685,9 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 
 #wysiwyg-editor th {
   border: 1px solid var(--table-border);
-  padding: 10px 14px;
+  padding: 11px 14px;
   font-weight: 600;
+}
   background: var(--table-header-bg);
   color: var(--table-header-text);
   white-space: nowrap;
@@ -1691,7 +1695,7 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 
 #wysiwyg-editor td {
   border: 1px solid var(--table-border);
-  padding: 9px 14px;
+  padding: 11px 14px;
 }
 
 #wysiwyg-editor tbody tr:nth-child(even) {
@@ -1750,22 +1754,6 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   transform: translateX(-50%);
 }
 
-.table-row-handle-stack {
-  position: absolute;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  align-items: center;
-  pointer-events: none;
-  z-index: 3;
-}
-
-.table-row-handle-stack .table-row-delete-handle,
-.table-row-handle-stack .table-row-insert-handle {
-  position: static;
-  transform: none;
-}
-
 .table-control-button,
 .table-row-insert-handle,
 .table-col-insert-handle {
@@ -1821,16 +1809,9 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 .table-editor-wrapper.table-editor-active .table-row-insert-handle,
 .table-editor-wrapper.table-editor-active .table-col-insert-handle,
 .table-editor-wrapper.table-editor-active .table-row-delete-handle,
-.table-editor-wrapper.table-editor-active .table-col-delete-handle,
-.table-editor-wrapper.table-editor-active .table-row-handle-stack .table-row-delete-handle,
-.table-editor-wrapper.table-editor-active .table-row-handle-stack .table-row-insert-handle {
+.table-editor-wrapper.table-editor-active .table-col-delete-handle {
   opacity: 1;
   transform: scale(1);
-}
-
-.table-editor-wrapper.table-editor-active .table-row-handle-stack .table-row-delete-handle,
-.table-editor-wrapper.table-editor-active .table-row-handle-stack .table-row-insert-handle {
-  transform: none;
 }
 
 .table-row-delete-handle,
