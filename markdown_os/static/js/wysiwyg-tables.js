@@ -624,6 +624,9 @@
       edgeLayer = document.createElement("div");
       edgeLayer.className = "table-edge-layer";
       edgeLayer.setAttribute("contenteditable", "false");
+      edgeLayer.addEventListener("mouseleave", () => {
+        clearInsertPreview(wrapper);
+      });
       wrapper.insertBefore(edgeLayer, table);
     }
 
@@ -642,6 +645,12 @@
       handle.style.top = `${top}px`;
       handle.style.left = `${offsetLeft + tableRect.width / 2 - 12}px`;
       handle.addEventListener("mousedown", (event) => event.preventDefault());
+      handle.addEventListener("mouseenter", () => {
+        previewInsertRow(wrapper, table, rowIndex);
+      });
+      handle.addEventListener("mouseleave", () => {
+        clearInsertPreview(wrapper);
+      });
       handle.addEventListener("click", (event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -703,6 +712,12 @@
         handle.style.left = `${insertLeft}px`;
         handle.style.top = `${insertTop}px`;
         handle.addEventListener("mousedown", (event) => event.preventDefault());
+        handle.addEventListener("mouseenter", () => {
+          previewInsertColumn(wrapper, table, colIndex);
+        });
+        handle.addEventListener("mouseleave", () => {
+          clearInsertPreview(wrapper);
+        });
         handle.addEventListener("click", (event) => {
           event.preventDefault();
           event.stopPropagation();

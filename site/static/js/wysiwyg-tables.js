@@ -304,14 +304,14 @@
     const layer = ensureInsertPreviewLayer(wrapper);
     layer.replaceChildren();
 
-    const tableRect = table.getBoundingClientRect();
+    const contentRect = getTableContentRect(table);
     const wrapperRect = wrapper.getBoundingClientRect();
     const rowRect = row.getBoundingClientRect();
     const line = document.createElement("div");
     line.className = "table-insert-preview-line table-insert-preview-line-row";
-    line.style.left = `${tableRect.left - wrapperRect.left}px`;
+    line.style.left = `${contentRect.left - wrapperRect.left}px`;
     line.style.top = `${rowRect.bottom - wrapperRect.top}px`;
-    line.style.width = `${tableRect.width}px`;
+    line.style.width = `${contentRect.width}px`;
     layer.appendChild(line);
   }
 
@@ -327,14 +327,14 @@
     const layer = ensureInsertPreviewLayer(wrapper);
     layer.replaceChildren();
 
-    const tableRect = table.getBoundingClientRect();
+    const contentRect = getTableContentRect(table);
     const wrapperRect = wrapper.getBoundingClientRect();
     const cellRect = cell.getBoundingClientRect();
     const line = document.createElement("div");
     line.className = "table-insert-preview-line table-insert-preview-line-column";
     line.style.left = `${cellRect.right - wrapperRect.left}px`;
-    line.style.top = `${tableRect.top - wrapperRect.top}px`;
-    line.style.height = `${tableRect.height}px`;
+    line.style.top = `${contentRect.top - wrapperRect.top}px`;
+    line.style.height = `${contentRect.height}px`;
     layer.appendChild(line);
   }
 
@@ -624,6 +624,9 @@
       edgeLayer = document.createElement("div");
       edgeLayer.className = "table-edge-layer";
       edgeLayer.setAttribute("contenteditable", "false");
+      edgeLayer.addEventListener("mouseleave", () => {
+        clearInsertPreview(wrapper);
+      });
       wrapper.insertBefore(edgeLayer, table);
     }
 
@@ -642,6 +645,12 @@
       handle.style.top = `${top}px`;
       handle.style.left = `${offsetLeft + tableRect.width / 2 - 12}px`;
       handle.addEventListener("mousedown", (event) => event.preventDefault());
+      handle.addEventListener("mouseenter", () => {
+        previewInsertRow(wrapper, table, rowIndex);
+      });
+      handle.addEventListener("mouseleave", () => {
+        clearInsertPreview(wrapper);
+      });
       handle.addEventListener("click", (event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -703,6 +712,12 @@
         handle.style.left = `${insertLeft}px`;
         handle.style.top = `${insertTop}px`;
         handle.addEventListener("mousedown", (event) => event.preventDefault());
+        handle.addEventListener("mouseenter", () => {
+          previewInsertColumn(wrapper, table, colIndex);
+        });
+        handle.addEventListener("mouseleave", () => {
+          clearInsertPreview(wrapper);
+        });
         handle.addEventListener("click", (event) => {
           event.preventDefault();
           event.stopPropagation();
