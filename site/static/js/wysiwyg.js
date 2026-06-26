@@ -1434,6 +1434,7 @@
     await renderMermaidDiagrams();
     makeTaskListsInteractive();
     decorateLinks();
+    window.wysiwygTables?.decorateTables?.(state.root);
   }
 
   function getTurndownService() {
@@ -1526,6 +1527,8 @@
       .forEach((node) => {
         node.remove();
       });
+
+    window.wysiwygTables?.cleanupTableWrappers?.(cloneRoot);
 
     cloneRoot.querySelectorAll(".code-block").forEach((wrapper) => {
       const source =
@@ -1869,25 +1872,6 @@
     emitChange();
   }
 
-  function createTableTemplate() {
-    return `
-      <table>
-        <thead>
-          <tr>
-            <th>Column 1</th>
-            <th>Column 2</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Value</td>
-            <td>Value</td>
-          </tr>
-        </tbody>
-      </table>
-      <p><br></p>`;
-  }
-
   async function executeCommand(command, payload = {}) {
     if (!state.root) {
       return;
@@ -2078,7 +2062,14 @@
     }
 
     if (command === "table") {
-      insertHtmlAtSelection(createTableTemplate());
+      const inserted = window.wysiwygTables?.insertTableAtCaret?.(state.root, {
+        onChange: emitChange,
+      });
+      if (!inserted) {
+        insertHtmlAtSelection(
+          '<table><thead><tr><th>Column 1</th><th>Column 2</th></tr></thead><tbody><tr><td>Value</td><td>Value</td></tr></tbody></table><p><br></p>',
+        );
+      }
       emitChange();
       return;
     }
@@ -3103,6 +3094,7 @@
     bindModifierLinkCursorState();
     bindFullscreenListeners();
     bindBlockEditListeners();
+    window.wysiwygTables?.initTableEditor?.(state.root, emitChange);
 
     window.addEventListener("markdown-os:theme-changed", () => {
       closeMermaidFullscreen();

@@ -593,3 +593,47 @@ def test_dialogs_restore_editor_scroll_after_modal_close() -> None:
     assert "focusWithoutScroll" in dialogs_source
     assert "window.wysiwyg?.setScrollTop?.(previousScrollTop);" in editor_source
     assert "window.wysiwyg?.setScrollTop?.(previousScrollTop);" in tabs_source
+
+
+def test_wysiwyg_tables_module_is_loaded_before_editor() -> None:
+    """Verify table editor helpers load before the main WYSIWYG module."""
+
+    html_source = Path(__file__).resolve().parents[1].joinpath(
+        "markdown_os",
+        "static",
+        "index.html",
+    ).read_text(encoding="utf-8")
+
+    tables_index = html_source.index("/static/js/wysiwyg-tables.js")
+    wysiwyg_index = html_source.index("/static/js/wysiwyg.js")
+
+    assert tables_index < wysiwyg_index
+
+
+def test_wysiwyg_table_insert_focuses_first_cell() -> None:
+    """Verify table insertion uses DOM APIs that place the caret in the first cell."""
+
+    tables_source = _read_static_js("wysiwyg-tables.js")
+    wysiwyg_source = _read_static_js("wysiwyg.js")
+
+    assert "function insertTableAtCaret(root, options = {})" in tables_source
+    assert "placeCaretInCell(wrapper.querySelector(\"th, td\"));" in tables_source
+    assert "window.wysiwygTables?.insertTableAtCaret?.(state.root" in wysiwyg_source
+
+
+def test_wysiwyg_table_controls_support_row_and_column_actions() -> None:
+    """Verify table wrappers expose row/column add-delete controls and cleanup."""
+
+    tables_source = _read_static_js("wysiwyg-tables.js")
+    wysiwyg_source = _read_static_js("wysiwyg.js")
+    css_source = _read_static_css("styles.css")
+
+    assert "function decorateTables(root)" in tables_source
+    assert "function cleanupTableWrappers(cloneRoot)" in tables_source
+    assert 'id: "row-insert-above"' in tables_source
+    assert 'id: "column-delete"' in tables_source
+    assert "table-delete-table-button" in tables_source
+    assert "window.wysiwygTables?.decorateTables?.(state.root);" in wysiwyg_source
+    assert "window.wysiwygTables?.cleanupTableWrappers?.(cloneRoot);" in wysiwyg_source
+    assert ".table-floating-toolbar" in css_source
+    assert ".table-row-insert-handle" in css_source

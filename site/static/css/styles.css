@@ -1694,6 +1694,216 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   background: var(--table-row-hover-bg);
 }
 
+.table-editor-wrapper {
+  position: relative;
+  margin: 16px 0 20px;
+}
+
+.table-editor-wrapper > table {
+  margin: 0;
+}
+
+.table-editor-wrapper.table-editor-active > table {
+  outline: 2px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  outline-offset: 2px;
+}
+
+.table-edge-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.table-control-button,
+.table-row-insert-handle,
+.table-col-insert-handle,
+.table-row-delete-handle,
+.table-col-delete-handle {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--panel-bg);
+  color: var(--accent);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  pointer-events: auto;
+  opacity: 0;
+  transform: scale(0.92);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  box-shadow: var(--shadow);
+}
+
+.table-control-button svg,
+.table-row-insert-handle svg,
+.table-col-insert-handle svg,
+.table-row-delete-handle svg,
+.table-col-delete-handle svg {
+  width: 14px;
+  height: 14px;
+}
+
+.table-editor-wrapper.table-editor-active .table-row-insert-handle,
+.table-editor-wrapper.table-editor-active .table-col-insert-handle,
+.table-editor-wrapper.table-editor-active .table-row-delete-handle:hover,
+.table-editor-wrapper.table-editor-active .table-col-delete-handle:hover {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.table-row-delete-handle,
+.table-col-delete-handle {
+  border-color: var(--border);
+  color: var(--text-muted);
+  opacity: 0;
+}
+
+.table-editor-wrapper.table-editor-active .table-row-delete-handle,
+.table-editor-wrapper.table-editor-active .table-col-delete-handle {
+  opacity: 0.75;
+}
+
+.table-row-delete-handle:hover,
+.table-col-delete-handle:hover {
+  opacity: 1 !important;
+  color: #ef4444;
+  border-color: color-mix(in srgb, #ef4444 45%, var(--border));
+}
+
+.table-floating-toolbar {
+  position: absolute;
+  left: 50%;
+  bottom: -14px;
+  transform: translate(-50%, 100%);
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel-bg);
+  box-shadow: var(--shadow);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.table-editor-wrapper.table-editor-active .table-floating-toolbar {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.table-menu-group {
+  position: relative;
+}
+
+.table-menu-toggle {
+  height: 30px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 10px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.table-menu-toggle svg {
+  width: 14px;
+  height: 14px;
+}
+
+.table-menu-toggle:hover,
+.table-menu-toggle[aria-expanded="true"] {
+  border-color: var(--border);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.table-dropdown {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 6px);
+  min-width: 150px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel-bg);
+  box-shadow: var(--shadow);
+  z-index: 5;
+}
+
+.table-dropdown.hidden {
+  display: none;
+}
+
+.table-dropdown-item {
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  text-align: left;
+  padding: 8px 10px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.table-dropdown-item:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.table-toolbar-divider {
+  width: 1px;
+  height: 22px;
+  background: var(--border);
+}
+
+.table-delete-table-button {
+  width: 30px;
+  height: 30px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+}
+
+.table-delete-table-button svg {
+  width: 15px;
+  height: 15px;
+}
+
+.table-delete-table-button:hover {
+  border-color: color-mix(in srgb, #ef4444 45%, var(--border));
+  color: #ef4444;
+  background: color-mix(in srgb, #ef4444 8%, var(--panel-bg));
+}
+
+#wysiwyg-editor tr.table-row-highlight > th,
+#wysiwyg-editor tr.table-row-highlight > td,
+#wysiwyg-editor th.table-col-highlight,
+#wysiwyg-editor td.table-col-highlight {
+  outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  outline-offset: -2px;
+}
+
 #wysiwyg-editor code {
   font-family:
     "JetBrains Mono",
