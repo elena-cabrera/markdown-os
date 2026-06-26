@@ -637,6 +637,7 @@ def test_wysiwyg_table_controls_support_row_and_column_actions() -> None:
     assert "function previewDeleteColumn(table, colIndex)" in tables_source
     assert "function previewInsertRow(wrapper, table, rowIndex)" in tables_source
     assert "function previewInsertColumn(wrapper, table, colIndex)" in tables_source
+    assert "function getTableContentRect(table)" in tables_source
     assert "function ensureTableBody(table)" in tables_source
     assert "isHeaderRow && position === \"after\"" in tables_source
     assert "function syncTableEditorState()" in tables_source

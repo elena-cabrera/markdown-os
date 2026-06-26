@@ -235,6 +235,35 @@
     return true;
   }
 
+  function getTableContentRect(table) {
+    const rows = getTableRows(table);
+    if (rows.length === 0) {
+      return table.getBoundingClientRect();
+    }
+
+    let top = Infinity;
+    let left = Infinity;
+    let right = -Infinity;
+    let bottom = -Infinity;
+
+    rows.forEach((row) => {
+      const rect = row.getBoundingClientRect();
+      top = Math.min(top, rect.top);
+      left = Math.min(left, rect.left);
+      right = Math.max(right, rect.right);
+      bottom = Math.max(bottom, rect.bottom);
+    });
+
+    return {
+      top,
+      left,
+      right,
+      bottom,
+      width: right - left,
+      height: bottom - top,
+    };
+  }
+
   function clearDeletePreview(table) {
     if (!table) {
       return;

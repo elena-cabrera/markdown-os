@@ -235,6 +235,35 @@
     return true;
   }
 
+  function getTableContentRect(table) {
+    const rows = getTableRows(table);
+    if (rows.length === 0) {
+      return table.getBoundingClientRect();
+    }
+
+    let top = Infinity;
+    let left = Infinity;
+    let right = -Infinity;
+    let bottom = -Infinity;
+
+    rows.forEach((row) => {
+      const rect = row.getBoundingClientRect();
+      top = Math.min(top, rect.top);
+      left = Math.min(left, rect.left);
+      right = Math.max(right, rect.right);
+      bottom = Math.max(bottom, rect.bottom);
+    });
+
+    return {
+      top,
+      left,
+      right,
+      bottom,
+      width: right - left,
+      height: bottom - top,
+    };
+  }
+
   function clearDeletePreview(table) {
     if (!table) {
       return;
@@ -275,14 +304,14 @@
     const layer = ensureInsertPreviewLayer(wrapper);
     layer.replaceChildren();
 
-    const tableRect = table.getBoundingClientRect();
+    const contentRect = getTableContentRect(table);
     const wrapperRect = wrapper.getBoundingClientRect();
     const rowRect = row.getBoundingClientRect();
     const line = document.createElement("div");
     line.className = "table-insert-preview-line table-insert-preview-line-row";
-    line.style.left = `${tableRect.left - wrapperRect.left}px`;
+    line.style.left = `${contentRect.left - wrapperRect.left}px`;
     line.style.top = `${rowRect.bottom - wrapperRect.top}px`;
-    line.style.width = `${tableRect.width}px`;
+    line.style.width = `${contentRect.width}px`;
     layer.appendChild(line);
   }
 
@@ -298,14 +327,14 @@
     const layer = ensureInsertPreviewLayer(wrapper);
     layer.replaceChildren();
 
-    const tableRect = table.getBoundingClientRect();
+    const contentRect = getTableContentRect(table);
     const wrapperRect = wrapper.getBoundingClientRect();
     const cellRect = cell.getBoundingClientRect();
     const line = document.createElement("div");
     line.className = "table-insert-preview-line table-insert-preview-line-column";
     line.style.left = `${cellRect.right - wrapperRect.left}px`;
-    line.style.top = `${tableRect.top - wrapperRect.top}px`;
-    line.style.height = `${tableRect.height}px`;
+    line.style.top = `${contentRect.top - wrapperRect.top}px`;
+    line.style.height = `${contentRect.height}px`;
     layer.appendChild(line);
   }
 
