@@ -1674,6 +1674,7 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   vertical-align: top;
   min-height: 4rem;
   height: 4rem;
+  min-width: 4rem;
   box-sizing: border-box;
 }
 
