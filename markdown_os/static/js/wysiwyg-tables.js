@@ -62,6 +62,23 @@
     return cell;
   }
 
+  function createBodyCell(text = "") {
+    const cell = document.createElement("td");
+    if (text) {
+      cell.textContent = text;
+    }
+    return cell;
+  }
+
+  function ensureTableBody(table) {
+    let tbody = table.querySelector(":scope > tbody");
+    if (!tbody) {
+      tbody = document.createElement("tbody");
+      table.appendChild(tbody);
+    }
+    return tbody;
+  }
+
   function placeCaretInCell(cell) {
     if (!cell) {
       return;
@@ -156,8 +173,20 @@
       return null;
     }
 
-    const newRow = document.createElement("tr");
     const colCount = Math.max(refRow.cells.length, 1);
+    const isHeaderRow = refRow.parentElement?.tagName === "THEAD";
+
+    if (isHeaderRow && position === "after") {
+      const tbody = ensureTableBody(table);
+      const newRow = document.createElement("tr");
+      for (let index = 0; index < colCount; index += 1) {
+        newRow.appendChild(createBodyCell());
+      }
+      tbody.insertBefore(newRow, tbody.firstChild);
+      return newRow;
+    }
+
+    const newRow = document.createElement("tr");
     for (let index = 0; index < colCount; index += 1) {
       newRow.appendChild(createCellForRow(refRow));
     }
