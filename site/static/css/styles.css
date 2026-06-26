@@ -1672,8 +1672,8 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   display: table-cell;
   line-height: 1.5;
   vertical-align: top;
-  min-height: 3.75rem;
-  height: 3.75rem;
+  min-height: 4rem;
+  height: 4rem;
   box-sizing: border-box;
 }
 
@@ -1687,7 +1687,6 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   border: 1px solid var(--table-border);
   padding: 11px 14px;
   font-weight: 600;
-}
   background: var(--table-header-bg);
   color: var(--table-header-text);
   white-space: nowrap;

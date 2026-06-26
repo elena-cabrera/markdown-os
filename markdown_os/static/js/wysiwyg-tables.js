@@ -669,9 +669,8 @@
     const contentTop = contentRect.top - wrapperRect.top;
     const contentLeft = contentRect.left - wrapperRect.left;
     const handleHalf = 12;
-    const rowTop = rowRect.top - wrapperRect.top;
     const rowInsertTop = rowBorderTop - handleHalf;
-    const rowDeleteTop = rowTop + rowRect.height / 2 - handleHalf;
+    const rowDeleteTop = cellRect.top - wrapperRect.top + cellRect.height / 2 - handleHalf;
 
     const rowInsert = createIconButton("add", "Insert row below", "table-row-insert-handle");
     rowInsert.style.top = `${rowInsertTop}px`;
