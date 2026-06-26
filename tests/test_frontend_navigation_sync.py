@@ -636,7 +636,9 @@ def test_wysiwyg_table_controls_support_row_and_column_actions() -> None:
     assert "function previewDeleteRow(table, rowIndex)" in tables_source
     assert "function previewDeleteColumn(table, colIndex)" in tables_source
     assert "function previewDeleteTable(table)" in tables_source
-    assert "previewInsertRow(wrapper, table, rowIndex)" in tables_source
+    assert "previewDeleteRow(table, rowIndex)" in tables_source
+    assert "contentLeft - 34" in tables_source
+    assert "contentTop - 34" in tables_source
     assert "previewInsertColumn(wrapper, table, colIndex)" in tables_source
     assert "const cursorPosition = getCursorPosition(table);\n    if (!cursorPosition) {\n      return edgeLayer;" in tables_source
     assert "table-row-insert-handle" in tables_source
@@ -650,5 +652,7 @@ def test_wysiwyg_table_controls_support_row_and_column_actions() -> None:
     assert ".table-floating-toolbar" in css_source
     assert ".table-stepper-group" in css_source
     assert ".table-insert-preview-line" in css_source
+    assert ".table-editor-wrapper.table-editor-active" in css_source
+    assert "padding-top: 36px" in css_source
     assert "#wysiwyg-editor td:empty::before" in css_source
     assert ".table-row-insert-handle" in css_source

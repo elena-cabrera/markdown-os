@@ -1707,6 +1707,11 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   margin: 16px 0 20px;
 }
 
+.table-editor-wrapper.table-editor-active {
+  padding-top: 36px;
+  padding-left: 36px;
+}
+
 .table-editor-wrapper > table {
   margin: 0;
 }
@@ -1812,11 +1817,13 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 .table-col-delete-handle {
   color: var(--text-muted);
   opacity: 0;
+  background: color-mix(in srgb, var(--panel-bg) 88%, transparent);
 }
 
 .table-row-delete-handle:hover,
 .table-col-delete-handle:hover {
   color: #ef4444;
+  background: color-mix(in srgb, #ef4444 12%, var(--panel-bg));
 }
 
 .table-floating-toolbar {

@@ -640,6 +640,7 @@
       edgeLayer.setAttribute("contenteditable", "false");
       edgeLayer.addEventListener("mouseleave", () => {
         clearInsertPreview(wrapper);
+        clearDeletePreview(table);
       });
       wrapper.insertBefore(edgeLayer, table);
     }
@@ -663,10 +664,14 @@
     const rowRect = row.getBoundingClientRect();
     const cellRect = cell.getBoundingClientRect();
     const { rowIndex, colIndex } = cursorPosition;
+    const rowBorderTop = rowRect.bottom - wrapperRect.top;
+    const columnBorderLeft = cellRect.right - wrapperRect.left;
+    const contentTop = contentRect.top - wrapperRect.top;
+    const contentLeft = contentRect.left - wrapperRect.left;
 
     const rowInsert = createIconButton("add", "Insert row below", "table-row-insert-handle");
-    rowInsert.style.top = `${rowRect.bottom - wrapperRect.top - 12}px`;
-    rowInsert.style.left = `${contentRect.left - wrapperRect.left + contentRect.width / 2 - 12}px`;
+    rowInsert.style.top = `${rowBorderTop - 12}px`;
+    rowInsert.style.left = `${contentLeft - 34}px`;
     rowInsert.addEventListener("mousedown", (event) => event.preventDefault());
     rowInsert.addEventListener("mouseenter", () => {
       previewInsertRow(wrapper, table, rowIndex);
@@ -691,9 +696,16 @@
 
     const rowDelete = createIconButton("delete", "Delete row", "table-row-delete-handle");
     rowDelete.style.top = `${rowRect.top - wrapperRect.top + rowRect.height / 2 - 12}px`;
-    rowDelete.style.left = `${contentRect.left - wrapperRect.left - 34}px`;
+    rowDelete.style.left = `${contentLeft + contentRect.width / 2 - 12}px`;
     rowDelete.disabled = rows.length <= 1;
     rowDelete.addEventListener("mousedown", (event) => event.preventDefault());
+    rowDelete.addEventListener("mouseenter", () => {
+      clearInsertPreview(wrapper);
+      previewDeleteRow(table, rowIndex);
+    });
+    rowDelete.addEventListener("mouseleave", () => {
+      clearDeletePreview(table);
+    });
     rowDelete.addEventListener("click", (event) => {
       event.preventDefault();
       event.stopPropagation();
@@ -710,13 +722,11 @@
         emitChange();
       }
     });
-    rowDelete.addEventListener("mouseenter", () => highlightRow(table, rowIndex));
-    rowDelete.addEventListener("mouseleave", () => clearHighlights(table));
     edgeLayer.appendChild(rowDelete);
 
     const colInsert = createIconButton("add", "Insert column right", "table-col-insert-handle");
-    colInsert.style.left = `${cellRect.right - wrapperRect.left - 12}px`;
-    colInsert.style.top = `${contentRect.top - wrapperRect.top + contentRect.height / 2 - 12}px`;
+    colInsert.style.left = `${columnBorderLeft - 12}px`;
+    colInsert.style.top = `${contentTop - 34}px`;
     colInsert.addEventListener("mousedown", (event) => event.preventDefault());
     colInsert.addEventListener("mouseenter", () => {
       previewInsertColumn(wrapper, table, colIndex);
@@ -742,9 +752,16 @@
 
     const colDelete = createIconButton("delete", "Delete column", "table-col-delete-handle");
     colDelete.style.left = `${cellRect.left - wrapperRect.left + cellRect.width / 2 - 12}px`;
-    colDelete.style.top = `${contentRect.top - wrapperRect.top - 34}px`;
+    colDelete.style.top = `${contentTop + contentRect.height / 2 - 12}px`;
     colDelete.disabled = getColumnCount(table) <= 1;
     colDelete.addEventListener("mousedown", (event) => event.preventDefault());
+    colDelete.addEventListener("mouseenter", () => {
+      clearInsertPreview(wrapper);
+      previewDeleteColumn(table, colIndex);
+    });
+    colDelete.addEventListener("mouseleave", () => {
+      clearDeletePreview(table);
+    });
     colDelete.addEventListener("click", (event) => {
       event.preventDefault();
       event.stopPropagation();
@@ -760,8 +777,6 @@
         emitChange();
       }
     });
-    colDelete.addEventListener("mouseenter", () => highlightColumn(table, colIndex));
-    colDelete.addEventListener("mouseleave", () => clearHighlights(table));
     edgeLayer.appendChild(colDelete);
 
     return edgeLayer;
