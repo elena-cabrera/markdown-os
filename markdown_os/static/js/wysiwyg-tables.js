@@ -668,9 +668,16 @@
     const columnBorderLeft = cellRect.right - wrapperRect.left;
     const contentTop = contentRect.top - wrapperRect.top;
     const contentLeft = contentRect.left - wrapperRect.left;
+    const handleHalf = 12;
+    const handleGap = 8;
+    const rowInsertTop = rowBorderTop - handleHalf;
+    const rowDeleteTop = Math.min(
+      rowRect.top - wrapperRect.top + rowRect.height / 2 - handleHalf,
+      rowInsertTop - handleHalf * 2 - handleGap,
+    );
 
     const rowInsert = createIconButton("add", "Insert row below", "table-row-insert-handle");
-    rowInsert.style.top = `${rowBorderTop - 12}px`;
+    rowInsert.style.top = `${rowInsertTop}px`;
     rowInsert.style.left = `${contentLeft - 34}px`;
     rowInsert.addEventListener("mousedown", (event) => event.preventDefault());
     rowInsert.addEventListener("mouseenter", () => {
@@ -695,7 +702,7 @@
     edgeLayer.appendChild(rowInsert);
 
     const rowDelete = createIconButton("delete", "Delete row", "table-row-delete-handle");
-    rowDelete.style.top = `${rowRect.top - wrapperRect.top + rowRect.height / 2 - 12}px`;
+    rowDelete.style.top = `${rowDeleteTop}px`;
     rowDelete.style.left = `${contentLeft - 34}px`;
     rowDelete.disabled = rows.length <= 1;
     rowDelete.addEventListener("mousedown", (event) => event.preventDefault());
