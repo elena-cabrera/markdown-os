@@ -14,9 +14,6 @@
     if (kind === "delete") {
       return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" aria-hidden="true"><path d="m19.5 5.5l-.62 10.025c-.158 2.561-.237 3.842-.88 4.763a4 4 0 0 1-1.2 1.128c-.957.584-2.24.584-4.806.584c-2.57 0-3.855 0-4.814-.585a4 4 0 0 1-1.2-1.13c-.642-.922-.72-2.205-.874-4.77L4.5 5.5M3 5.5h18m-4.944 0l-.683-1.408c-.453-.936-.68-1.403-1.071-1.695a2 2 0 0 0-.275-.172C13.594 2 13.074 2 12.035 2c-1.066 0-1.599 0-2.04.234a2 2 0 0 0-.278.18c-.395.303-.616.788-1.058 1.757L8.053 5.5m1.447 11v-6m5 6v-6"/></svg>';
     }
-    if (kind === "chevron") {
-      return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>';
-    }
     return "";
   }
 
@@ -103,6 +100,34 @@
     return cell;
   }
 
+  function getActiveTableWrapper() {
+    if (!rootElement) {
+      return null;
+    }
+
+    const selection = window.getSelection();
+    if (!selection?.anchorNode) {
+      return null;
+    }
+
+    let node = selection.anchorNode;
+    if (node.nodeType === Node.TEXT_NODE) {
+      node = node.parentElement;
+    }
+
+    const cell = node?.closest?.("td, th");
+    if (!cell || !rootElement.contains(cell)) {
+      return null;
+    }
+
+    const wrapper = cell.closest(`.${WRAPPER_CLASS}`);
+    if (!wrapper || !rootElement.contains(wrapper)) {
+      return null;
+    }
+
+    return wrapper;
+  }
+
   function getCellPosition(table, cell) {
     const rows = getTableRows(table);
     for (let rowIndex = 0; rowIndex < rows.length; rowIndex += 1) {
@@ -114,17 +139,11 @@
     return null;
   }
 
-  function resolveTargetPosition(table, explicitPosition) {
-    if (explicitPosition) {
-      return explicitPosition;
-    }
-
+  function getCursorPosition(table) {
     const activeCell = getActiveCell(table);
     if (!activeCell) {
-      const rows = getTableRows(table);
-      return { rowIndex: 0, colIndex: 0 };
+      return null;
     }
-
     return getCellPosition(table, activeCell);
   }
 
@@ -186,6 +205,10 @@
   }
 
   function clearHighlights(table) {
+    if (!table) {
+      return;
+    }
+
     table
       .querySelectorAll(`.${HIGHLIGHT_ROW_CLASS}, .${HIGHLIGHT_COL_CLASS}`)
       .forEach((node) => {
@@ -232,62 +255,67 @@
     return table;
   }
 
-  function closeAllTableMenus(exceptMenu = null) {
-    document.querySelectorAll(".table-dropdown").forEach((menu) => {
-      if (menu === exceptMenu) {
-        return;
-      }
-      menu.classList.add("hidden");
-      menu.previousElementSibling?.setAttribute("aria-expanded", "false");
-    });
+  function formatCountLabel(count, singular, plural) {
+    return `${count} ${count === 1 ? singular : plural}`;
   }
 
-  function createMenuGroup(label, actions) {
+  function updateToolbarCounts(wrapper, table) {
+    const rowCount = getTableRows(table).length;
+    const colCount = getColumnCount(table);
+    const rowLabel = wrapper.querySelector('[data-stepper-count="row"]');
+    const colLabel = wrapper.querySelector('[data-stepper-count="column"]');
+    const rowRemove = wrapper.querySelector('[data-action="row-remove"]');
+    const colRemove = wrapper.querySelector('[data-action="column-remove"]');
+
+    if (rowLabel) {
+      rowLabel.textContent = formatCountLabel(rowCount, "row", "rows");
+    }
+    if (colLabel) {
+      colLabel.textContent = formatCountLabel(colCount, "column", "columns");
+    }
+    if (rowRemove) {
+      rowRemove.disabled = rowCount <= 1;
+    }
+    if (colRemove) {
+      colRemove.disabled = colCount <= 1;
+    }
+  }
+
+  function createStepperGroup(kind, removeLabel, addLabel) {
     const group = document.createElement("div");
-    group.className = "table-menu-group";
+    group.className = "table-stepper-group";
     group.setAttribute("contenteditable", "false");
 
-    const toggle = document.createElement("button");
-    toggle.type = "button";
-    toggle.className = "table-menu-toggle";
-    toggle.setAttribute("aria-expanded", "false");
-    toggle.innerHTML = `${label} ${iconSvg("chevron")}`;
+    const removeButton = document.createElement("button");
+    removeButton.type = "button";
+    removeButton.className = "table-stepper-button";
+    removeButton.dataset.action = `${kind}-remove`;
+    removeButton.textContent = "−";
+    removeButton.title = removeLabel;
+    removeButton.setAttribute("aria-label", removeLabel);
 
-    const dropdown = document.createElement("div");
-    dropdown.className = "table-dropdown hidden";
+    const countLabel = document.createElement("span");
+    countLabel.className = "table-stepper-count";
+    countLabel.dataset.stepperCount = kind;
 
-    actions.forEach((action) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "table-dropdown-item";
-      button.dataset.action = action.id;
-      button.textContent = action.label;
-      dropdown.appendChild(button);
-    });
+    const addButton = document.createElement("button");
+    addButton.type = "button";
+    addButton.className = "table-stepper-button";
+    addButton.dataset.action = `${kind}-add`;
+    addButton.textContent = "+";
+    addButton.title = addLabel;
+    addButton.setAttribute("aria-label", addLabel);
 
-    toggle.addEventListener("mousedown", (event) => {
-      event.preventDefault();
-    });
-
-    toggle.addEventListener("click", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      const willOpen = dropdown.classList.contains("hidden");
-      closeAllTableMenus();
-      if (willOpen) {
-        dropdown.classList.remove("hidden");
-        toggle.setAttribute("aria-expanded", "true");
-      }
-    });
-
-    group.appendChild(toggle);
-    group.appendChild(dropdown);
+    group.appendChild(removeButton);
+    group.appendChild(countLabel);
+    group.appendChild(addButton);
     return group;
   }
 
   function buildFloatingToolbar(wrapper, table) {
     let toolbar = wrapper.querySelector(".table-floating-toolbar");
     if (toolbar) {
+      updateToolbarCounts(wrapper, table);
       return toolbar;
     }
 
@@ -295,16 +323,16 @@
     toolbar.className = "table-floating-toolbar";
     toolbar.setAttribute("contenteditable", "false");
 
-    const rowMenu = createMenuGroup("Row", [
-      { id: "row-insert-above", label: "Insert above" },
-      { id: "row-insert-below", label: "Insert below" },
-      { id: "row-delete", label: "Delete row" },
-    ]);
-    const columnMenu = createMenuGroup("Column", [
-      { id: "column-insert-left", label: "Insert left" },
-      { id: "column-insert-right", label: "Insert right" },
-      { id: "column-delete", label: "Delete column" },
-    ]);
+    const rowStepper = createStepperGroup(
+      "row",
+      "Remove row",
+      "Add row below",
+    );
+    const columnStepper = createStepperGroup(
+      "column",
+      "Remove column",
+      "Add column right",
+    );
 
     const divider = document.createElement("span");
     divider.className = "table-toolbar-divider";
@@ -312,8 +340,8 @@
 
     const deleteTableButton = createIconButton("delete", "Delete table", "table-delete-table-button");
 
-    toolbar.appendChild(rowMenu);
-    toolbar.appendChild(columnMenu);
+    toolbar.appendChild(rowStepper);
+    toolbar.appendChild(columnStepper);
     toolbar.appendChild(divider);
     toolbar.appendChild(deleteTableButton);
     wrapper.appendChild(toolbar);
@@ -326,14 +354,13 @@
 
     toolbar.addEventListener("click", (event) => {
       const actionButton = event.target.closest("[data-action]");
-      if (!actionButton) {
+      if (!actionButton || actionButton.disabled) {
         return;
       }
 
       event.preventDefault();
       event.stopPropagation();
       handleToolbarAction(wrapper, table, actionButton.dataset.action);
-      closeAllTableMenus();
     });
 
     deleteTableButton.addEventListener("click", (event) => {
@@ -342,63 +369,54 @@
       deleteTable(wrapper);
     });
 
+    updateToolbarCounts(wrapper, table);
     return toolbar;
   }
 
   function handleToolbarAction(wrapper, table, action) {
-    const position = resolveTargetPosition(table);
-
-    if (action === "row-insert-above") {
-      const newRow = insertRowAt(table, position.rowIndex, "before");
-      refreshTableControls(wrapper);
-      placeCaretInCell(newRow?.cells[position.colIndex] || newRow?.cells[0]);
-      emitChange();
+    const position = getCursorPosition(table);
+    if (!position) {
       return;
     }
 
-    if (action === "row-insert-below") {
+    if (action === "row-add") {
       const newRow = insertRowAt(table, position.rowIndex, "after");
       refreshTableControls(wrapper);
       placeCaretInCell(newRow?.cells[position.colIndex] || newRow?.cells[0]);
+      updateToolbarCounts(wrapper, table);
       emitChange();
       return;
     }
 
-    if (action === "row-delete") {
+    if (action === "row-remove") {
       if (deleteRowAt(table, position.rowIndex)) {
         refreshTableControls(wrapper);
         const rows = getTableRows(table);
         const focusRow = rows[Math.min(position.rowIndex, rows.length - 1)];
         placeCaretInCell(focusRow?.cells[position.colIndex] || focusRow?.cells[0]);
+        updateToolbarCounts(wrapper, table);
         emitChange();
       }
       return;
     }
 
-    if (action === "column-insert-left") {
-      insertColumnAt(table, position.colIndex, "before");
-      refreshTableControls(wrapper);
-      const cell = getTableRows(table)[position.rowIndex]?.cells[position.colIndex];
-      placeCaretInCell(cell);
-      emitChange();
-      return;
-    }
-
-    if (action === "column-insert-right") {
+    if (action === "column-add") {
       insertColumnAt(table, position.colIndex, "after");
       refreshTableControls(wrapper);
       const cell = getTableRows(table)[position.rowIndex]?.cells[position.colIndex + 1];
       placeCaretInCell(cell);
+      updateToolbarCounts(wrapper, table);
       emitChange();
       return;
     }
 
-    if (action === "column-delete") {
+    if (action === "column-remove") {
       if (deleteColumnAt(table, position.colIndex)) {
         refreshTableControls(wrapper);
         const rows = getTableRows(table);
         const colIndex = Math.min(position.colIndex, getColumnCount(table) - 1);
         placeCaretInCell(rows[position.rowIndex]?.cells[colIndex]);
+        updateToolbarCounts(wrapper, table);
         emitChange();
       }
     }
@@ -418,6 +436,7 @@
     const wrapperRect = wrapper.getBoundingClientRect();
     const offsetTop = tableRect.top - wrapperRect.top;
     const offsetLeft = tableRect.left - wrapperRect.left;
+    const cursorPosition = getCursorPosition(table);
 
     const rows = getTableRows(table);
     rows.forEach((row, rowIndex) => {
@@ -430,22 +449,40 @@
       handle.addEventListener("click", (event) => {
         event.preventDefault();
         event.stopPropagation();
+        const position = getCursorPosition(table);
+        if (!position) {
+          return;
+        }
         const newRow = insertRowAt(table, rowIndex, "after");
         refreshTableControls(wrapper);
-        placeCaretInCell(newRow?.cells[0]);
+        placeCaretInCell(newRow?.cells[position.colIndex] || newRow?.cells[0]);
+        updateToolbarCounts(wrapper, table);
         emitChange();
       });
       edgeLayer.appendChild(handle);
 
+      if (!cursorPosition || cursorPosition.rowIndex !== rowIndex) {
+        return;
+      }
+
       const rowDelete = createIconButton("delete", "Delete row", "table-row-delete-handle");
       rowDelete.style.top = `${rowRect.top - wrapperRect.top + rowRect.height / 2 - 12}px`;
       rowDelete.style.left = `${offsetLeft - 34}px`;
+      rowDelete.disabled = rows.length <= 1;
       rowDelete.addEventListener("mousedown", (event) => event.preventDefault());
       rowDelete.addEventListener("click", (event) => {
         event.preventDefault();
         event.stopPropagation();
-        if (deleteRowAt(table, rowIndex)) {
+        const position = getCursorPosition(table);
+        if (!position) {
+          return;
+        }
+        if (deleteRowAt(table, position.rowIndex)) {
           refreshTableControls(wrapper);
+          const nextRows = getTableRows(table);
+          const focusRow = nextRows[Math.min(position.rowIndex, nextRows.length - 1)];
+          placeCaretInCell(focusRow?.cells[position.colIndex] || focusRow?.cells[0]);
+          updateToolbarCounts(wrapper, table);
           emitChange();
         }
       });
@@ -473,24 +510,40 @@
         handle.addEventListener("click", (event) => {
           event.preventDefault();
           event.stopPropagation();
+          const position = getCursorPosition(table);
+          if (!position) {
+            return;
+          }
           insertColumnAt(table, colIndex, "after");
           refreshTableControls(wrapper);
-          const active = getActiveCell(table);
-          const position = active ? getCellPosition(table, active) : { rowIndex: 0, colIndex: colIndex + 1 };
-          placeCaretInCell(getTableRows(table)[position.rowIndex]?.cells[position.colIndex]);
+          const nextCell = getTableRows(table)[position.rowIndex]?.cells[colIndex + 1];
+          placeCaretInCell(nextCell);
+          updateToolbarCounts(wrapper, table);
           emitChange();
         });
         edgeLayer.appendChild(handle);
 
+        if (!cursorPosition || cursorPosition.colIndex !== colIndex) {
+          continue;
+        }
+
         const colDelete = createIconButton("delete", "Delete column", "table-col-delete-handle");
         colDelete.style.left = `${cellRect.left - wrapperRect.left + cellRect.width / 2 - 12}px`;
         colDelete.style.top = `${offsetTop - 34}px`;
+        colDelete.disabled = colCount <= 1;
         colDelete.addEventListener("mousedown", (event) => event.preventDefault());
         colDelete.addEventListener("click", (event) => {
           event.preventDefault();
           event.stopPropagation();
-          if (deleteColumnAt(table, colIndex)) {
+          const position = getCursorPosition(table);
+          if (!position) {
+            return;
+          }
+          if (deleteColumnAt(table, position.colIndex)) {
             refreshTableControls(wrapper);
+            const nextColIndex = Math.min(position.colIndex, getColumnCount(table) - 1);
+            placeCaretInCell(getTableRows(table)[position.rowIndex]?.cells[nextColIndex]);
+            updateToolbarCounts(wrapper, table);
             emitChange();
           }
         });
@@ -508,16 +561,29 @@
     if (!table) {
       return;
     }
+    buildFloatingToolbar(wrapper, table);
     buildEdgeLayer(wrapper, table);
   }
 
   function setWrapperActive(wrapper, isActive) {
     wrapper.classList.toggle(ACTIVE_CLASS, isActive);
+    const table = wrapper.querySelector("table");
     if (isActive) {
       refreshTableControls(wrapper);
       return;
     }
-    clearHighlights(wrapper.querySelector("table"));
+    clearHighlights(table);
+  }
+
+  function syncTableEditorState() {
+    if (!rootElement) {
+      return;
+    }
+
+    const activeWrapper = getActiveTableWrapper();
+    rootElement.querySelectorAll(`.${WRAPPER_CLASS}`).forEach((wrapper) => {
+      setWrapperActive(wrapper, wrapper === activeWrapper);
+    });
   }
 
   function deleteTable(wrapper) {
@@ -536,6 +602,7 @@
     selection.removeAllRanges();
     selection.addRange(range);
     emitChange();
+    syncTableEditorState();
   }
 
   function decorateTableWrapper(wrapper) {
@@ -547,22 +614,6 @@
     wrapper.dataset.tableDecorated = "true";
     buildFloatingToolbar(wrapper, table);
     buildEdgeLayer(wrapper, table);
-
-    wrapper.addEventListener("mouseenter", () => {
-      setWrapperActive(wrapper, true);
-    });
-
-    wrapper.addEventListener("mouseleave", (event) => {
-      const nextTarget = event.relatedTarget;
-      if (nextTarget instanceof Node && wrapper.contains(nextTarget)) {
-        return;
-      }
-      setWrapperActive(wrapper, false);
-    });
-
-    wrapper.addEventListener("focusin", () => {
-      setWrapperActive(wrapper, true);
-    });
   }
 
   function wrapTable(table) {
@@ -640,8 +691,8 @@
     range.insertNode(fragment);
 
     decorateTableWrapper(wrapper);
-    setWrapperActive(wrapper, true);
     placeCaretInCell(wrapper.querySelector("th, td"));
+    syncTableEditorState();
     options.onChange?.();
     return true;
   }
@@ -650,49 +701,17 @@
     rootElement = root;
     changeCallback = onChange;
 
-    document.addEventListener("click", (event) => {
-      if (!(event.target instanceof Element)) {
-        return;
-      }
-      if (event.target.closest(".table-menu-group")) {
-        return;
-      }
-      closeAllTableMenus();
-    });
-
     document.addEventListener("selectionchange", () => {
-      if (!rootElement) {
-        return;
-      }
-
-      const selection = window.getSelection();
-      if (!selection?.anchorNode) {
-        return;
-      }
-
-      let node = selection.anchorNode;
-      if (node.nodeType === Node.TEXT_NODE) {
-        node = node.parentElement;
-      }
-
-      const wrapper = node?.closest?.(`.${WRAPPER_CLASS}`);
-      rootElement.querySelectorAll(`.${WRAPPER_CLASS}.${ACTIVE_CLASS}`).forEach((activeWrapper) => {
-        if (activeWrapper !== wrapper) {
-          setWrapperActive(activeWrapper, false);
-        }
-      });
-
-      if (wrapper && rootElement.contains(wrapper)) {
-        setWrapperActive(wrapper, true);
-      }
+      syncTableEditorState();
     });
 
     window.addEventListener(
       "resize",
       () => {
-        rootElement
-          ?.querySelectorAll(`.${WRAPPER_CLASS}.${ACTIVE_CLASS}`)
-          .forEach((wrapper) => refreshTableControls(wrapper));
+        const activeWrapper = getActiveTableWrapper();
+        if (activeWrapper) {
+          refreshTableControls(activeWrapper);
+        }
       },
       { passive: true },
     );

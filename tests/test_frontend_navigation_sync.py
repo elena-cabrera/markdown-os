@@ -622,7 +622,7 @@ def test_wysiwyg_table_insert_focuses_first_cell() -> None:
 
 
 def test_wysiwyg_table_controls_support_row_and_column_actions() -> None:
-    """Verify table wrappers expose row/column add-delete controls and cleanup."""
+    """Verify table wrappers expose stepper controls and cleanup."""
 
     tables_source = _read_static_js("wysiwyg-tables.js")
     wysiwyg_source = _read_static_js("wysiwyg.js")
@@ -630,10 +630,13 @@ def test_wysiwyg_table_controls_support_row_and_column_actions() -> None:
 
     assert "function decorateTables(root)" in tables_source
     assert "function cleanupTableWrappers(cloneRoot)" in tables_source
-    assert 'id: "row-insert-above"' in tables_source
-    assert 'id: "column-delete"' in tables_source
+    assert 'dataset.action = `${kind}-remove`' in tables_source
+    assert 'dataset.action = `${kind}-add`' in tables_source
+    assert "function getActiveTableWrapper()" in tables_source
+    assert "function syncTableEditorState()" in tables_source
     assert "table-delete-table-button" in tables_source
     assert "window.wysiwygTables?.decorateTables?.(state.root);" in wysiwyg_source
     assert "window.wysiwygTables?.cleanupTableWrappers?.(cloneRoot);" in wysiwyg_source
     assert ".table-floating-toolbar" in css_source
+    assert ".table-stepper-group" in css_source
     assert ".table-row-insert-handle" in css_source
