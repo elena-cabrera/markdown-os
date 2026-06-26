@@ -1845,6 +1845,11 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   background: var(--accent-soft);
 }
 
+.table-stepper-remove-button:hover:not(:disabled) {
+  color: #ef4444;
+  background: color-mix(in srgb, #ef4444 12%, var(--panel-bg));
+}
+
 .table-stepper-button:disabled {
   opacity: 0.35;
   cursor: not-allowed;
@@ -1898,6 +1903,15 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 #wysiwyg-editor th.table-col-highlight,
 #wysiwyg-editor td.table-col-highlight {
   outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  outline-offset: -2px;
+}
+
+#wysiwyg-editor tr.table-row-delete-preview > th,
+#wysiwyg-editor tr.table-row-delete-preview > td,
+#wysiwyg-editor th.table-col-delete-preview,
+#wysiwyg-editor td.table-col-delete-preview {
+  background: color-mix(in srgb, #ef4444 38%, var(--table-row-hover-bg)) !important;
+  outline: 2px solid color-mix(in srgb, #ef4444 55%, transparent);
   outline-offset: -2px;
 }
 

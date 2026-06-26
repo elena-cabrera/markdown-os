@@ -3,6 +3,8 @@
   const ACTIVE_CLASS = "table-editor-active";
   const HIGHLIGHT_ROW_CLASS = "table-row-highlight";
   const HIGHLIGHT_COL_CLASS = "table-col-highlight";
+  const DELETE_ROW_PREVIEW_CLASS = "table-row-delete-preview";
+  const DELETE_COL_PREVIEW_CLASS = "table-col-delete-preview";
 
   let changeCallback = null;
   let rootElement = null;
@@ -204,6 +206,20 @@
     return true;
   }
 
+  function clearDeletePreview(table) {
+    if (!table) {
+      return;
+    }
+
+    table
+      .querySelectorAll(
+        `.${DELETE_ROW_PREVIEW_CLASS}, .${DELETE_COL_PREVIEW_CLASS}`,
+      )
+      .forEach((node) => {
+        node.classList.remove(DELETE_ROW_PREVIEW_CLASS, DELETE_COL_PREVIEW_CLASS);
+      });
+  }
+
   function clearHighlights(table) {
     if (!table) {
       return;
@@ -225,6 +241,18 @@
     clearHighlights(table);
     getTableRows(table).forEach((row) => {
       row.cells[colIndex]?.classList.add(HIGHLIGHT_COL_CLASS);
+    });
+  }
+
+  function previewDeleteRow(table, rowIndex) {
+    clearDeletePreview(table);
+    getTableRows(table)[rowIndex]?.classList.add(DELETE_ROW_PREVIEW_CLASS);
+  }
+
+  function previewDeleteColumn(table, colIndex) {
+    clearDeletePreview(table);
+    getTableRows(table).forEach((row) => {
+      row.cells[colIndex]?.classList.add(DELETE_COL_PREVIEW_CLASS);
     });
   }
 
@@ -281,18 +309,38 @@
     }
   }
 
-  function createStepperGroup(kind, removeLabel, addLabel) {
+  function createStepperGroup(kind, removeLabel, addLabel, table) {
     const group = document.createElement("div");
     group.className = "table-stepper-group";
     group.setAttribute("contenteditable", "false");
 
     const removeButton = document.createElement("button");
     removeButton.type = "button";
-    removeButton.className = "table-stepper-button";
+    removeButton.className = "table-stepper-button table-stepper-remove-button";
     removeButton.dataset.action = `${kind}-remove`;
     removeButton.textContent = "−";
     removeButton.title = removeLabel;
     removeButton.setAttribute("aria-label", removeLabel);
+    removeButton.addEventListener("mouseenter", () => {
+      if (removeButton.disabled) {
+        return;
+      }
+
+      const position = getCursorPosition(table);
+      if (!position) {
+        return;
+      }
+
+      if (kind === "row") {
+        previewDeleteRow(table, position.rowIndex);
+        return;
+      }
+
+      previewDeleteColumn(table, position.colIndex);
+    });
+    removeButton.addEventListener("mouseleave", () => {
+      clearDeletePreview(table);
+    });
 
     const countLabel = document.createElement("span");
     countLabel.className = "table-stepper-count";
@@ -327,11 +375,13 @@
       "row",
       "Remove row",
       "Add row below",
+      table,
     );
     const columnStepper = createStepperGroup(
       "column",
       "Remove column",
       "Add column right",
+      table,
     );
 
     const divider = document.createElement("span");
@@ -350,6 +400,10 @@
       if (event.target.closest("button")) {
         event.preventDefault();
       }
+    });
+
+    toolbar.addEventListener("mouseleave", () => {
+      clearDeletePreview(table);
     });
 
     toolbar.addEventListener("click", (event) => {
@@ -573,6 +627,7 @@
       return;
     }
     clearHighlights(table);
+    clearDeletePreview(table);
   }
 
   function syncTableEditorState() {

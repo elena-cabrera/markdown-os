@@ -633,6 +633,8 @@ def test_wysiwyg_table_controls_support_row_and_column_actions() -> None:
     assert 'dataset.action = `${kind}-remove`' in tables_source
     assert 'dataset.action = `${kind}-add`' in tables_source
     assert "function getActiveTableWrapper()" in tables_source
+    assert "function previewDeleteRow(table, rowIndex)" in tables_source
+    assert "function previewDeleteColumn(table, colIndex)" in tables_source
     assert "function syncTableEditorState()" in tables_source
     assert "table-delete-table-button" in tables_source
     assert "window.wysiwygTables?.decorateTables?.(state.root);" in wysiwyg_source
