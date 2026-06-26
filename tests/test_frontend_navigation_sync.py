@@ -639,12 +639,17 @@ def test_wysiwyg_table_controls_support_row_and_column_actions() -> None:
     assert "previewDeleteRow(table, rowIndex)" in tables_source
     assert "contentLeft - 34" in tables_source
     assert "contentTop - 34" in tables_source
+    assert "function getEffectiveCursorPosition(wrapper, table)" in tables_source
+    assert "function updateEdgeHandlePositions(wrapper, table, cursorPosition)" in tables_source
+    assert "function ensureEdgeLayer(wrapper, table)" in tables_source
+    assert 'button.dataset.tableAction = spec.action' in tables_source
+    assert "const cursorKey = getCursorKey(position)" in tables_source
+    assert "cursorKey !== wrapperCursorKeys.get(wrapper)" in tables_source
     assert "rowDeleteTop = cellRect.top - wrapperRect.top + cellRect.height / 2 - handleHalf" in tables_source
     assert "min-height: 4rem" in css_source
     assert "height: 4rem" in css_source
     assert "min-width: 4rem" in css_source
     assert "previewInsertColumn(wrapper, table, colIndex)" in tables_source
-    assert "const cursorPosition = getCursorPosition(table);\n    if (!cursorPosition) {\n      return edgeLayer;" in tables_source
     assert "table-row-insert-handle" in tables_source
     assert "function getTableContentRect(table)" in tables_source
     assert "function ensureTableBody(table)" in tables_source
@@ -661,3 +666,5 @@ def test_wysiwyg_table_controls_support_row_and_column_actions() -> None:
     assert "padding-left: 12px" in css_source
     assert "#wysiwyg-editor td:empty::before" in css_source
     assert ".table-row-insert-handle" in css_source
+    assert ".table-editor-wrapper.table-editor-active .table-row-delete-handle" in css_source
+    assert "pointer-events: auto" in css_source

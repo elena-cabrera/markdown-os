@@ -9,6 +9,39 @@
 
   let changeCallback = null;
   let rootElement = null;
+  const wrapperCursorKeys = new WeakMap();
+
+  function getCursorKey(position) {
+    if (!position) {
+      return null;
+    }
+    return `${position.rowIndex}:${position.colIndex}`;
+  }
+
+  function storeCursorPosition(wrapper, position) {
+    if (!position) {
+      return;
+    }
+    wrapper.dataset.tableCursorRow = String(position.rowIndex);
+    wrapper.dataset.tableCursorCol = String(position.colIndex);
+    wrapperCursorKeys.set(wrapper, getCursorKey(position));
+  }
+
+  function getStoredCursorPosition(wrapper) {
+    const rowIndex = wrapper.dataset.tableCursorRow;
+    const colIndex = wrapper.dataset.tableCursorCol;
+    if (rowIndex === undefined || colIndex === undefined) {
+      return null;
+    }
+    return {
+      rowIndex: Number(rowIndex),
+      colIndex: Number(colIndex),
+    };
+  }
+
+  function getEffectiveCursorPosition(wrapper, table) {
+    return getCursorPosition(table) || getStoredCursorPosition(wrapper);
+  }
 
   function iconSvg(kind) {
     if (kind === "add") {
@@ -452,7 +485,7 @@
         return;
       }
 
-      const position = getCursorPosition(table);
+      const position = getEffectiveCursorPosition(wrapper, table);
       if (!position) {
         return;
       }
@@ -481,7 +514,7 @@
     addButton.setAttribute("aria-label", addLabel);
     addButton.addEventListener("mouseenter", () => {
       clearDeletePreview(table);
-      const position = getCursorPosition(table);
+      const position = getEffectiveCursorPosition(wrapper, table);
       if (!position) {
         return;
       }
@@ -581,7 +614,7 @@
   }
 
   function handleToolbarAction(wrapper, table, action) {
-    const position = getCursorPosition(table);
+    const position = getEffectiveCursorPosition(wrapper, table);
     if (!position) {
       return;
     }
@@ -632,30 +665,185 @@
     }
   }
 
-  function buildEdgeLayer(wrapper, table) {
-    let edgeLayer = wrapper.querySelector(".table-edge-layer");
-    if (!edgeLayer) {
-      edgeLayer = document.createElement("div");
-      edgeLayer.className = "table-edge-layer";
-      edgeLayer.setAttribute("contenteditable", "false");
-      edgeLayer.addEventListener("mouseleave", () => {
-        clearInsertPreview(wrapper);
-        clearDeletePreview(table);
-      });
-      wrapper.insertBefore(edgeLayer, table);
+  function handleEdgeAction(wrapper, table, action) {
+    const position = getEffectiveCursorPosition(wrapper, table);
+    if (!position) {
+      return;
     }
 
-    edgeLayer.replaceChildren();
+    const { rowIndex, colIndex } = position;
+    clearDeletePreview(table);
+    clearInsertPreview(wrapper);
 
-    const cursorPosition = getCursorPosition(table);
-    if (!cursorPosition) {
+    if (action === "row-insert") {
+      const newRow = insertRowAt(table, rowIndex, "after");
+      refreshTableControls(wrapper);
+      placeCaretInCell(newRow?.cells[colIndex] || newRow?.cells[0]);
+      updateToolbarCounts(wrapper, table);
+      emitChange();
+      return;
+    }
+
+    if (action === "row-delete") {
+      if (deleteRowAt(table, rowIndex)) {
+        refreshTableControls(wrapper);
+        const nextRows = getTableRows(table);
+        const focusRow = nextRows[Math.min(rowIndex, nextRows.length - 1)];
+        placeCaretInCell(focusRow?.cells[colIndex] || focusRow?.cells[0]);
+        updateToolbarCounts(wrapper, table);
+        emitChange();
+      }
+      return;
+    }
+
+    if (action === "column-insert") {
+      insertColumnAt(table, colIndex, "after");
+      refreshTableControls(wrapper);
+      const nextCell = getTableRows(table)[rowIndex]?.cells[colIndex + 1];
+      placeCaretInCell(nextCell);
+      updateToolbarCounts(wrapper, table);
+      emitChange();
+      return;
+    }
+
+    if (action === "column-delete") {
+      if (deleteColumnAt(table, colIndex)) {
+        refreshTableControls(wrapper);
+        const nextColIndex = Math.min(colIndex, getColumnCount(table) - 1);
+        placeCaretInCell(getTableRows(table)[rowIndex]?.cells[nextColIndex]);
+        updateToolbarCounts(wrapper, table);
+        emitChange();
+      }
+    }
+  }
+
+  function ensureEdgeLayer(wrapper, table) {
+    let edgeLayer = wrapper.querySelector(".table-edge-layer");
+    if (edgeLayer) {
       return edgeLayer;
     }
+
+    edgeLayer = document.createElement("div");
+    edgeLayer.className = "table-edge-layer";
+    edgeLayer.setAttribute("contenteditable", "false");
+
+    const handleSpecs = [
+      {
+        action: "row-delete",
+        kind: "delete",
+        title: "Delete row",
+        className: "table-row-delete-handle",
+      },
+      {
+        action: "row-insert",
+        kind: "add",
+        title: "Insert row below",
+        className: "table-row-insert-handle",
+      },
+      {
+        action: "column-insert",
+        kind: "add",
+        title: "Insert column right",
+        className: "table-col-insert-handle",
+      },
+      {
+        action: "column-delete",
+        kind: "delete",
+        title: "Delete column",
+        className: "table-col-delete-handle",
+      },
+    ];
+
+    handleSpecs.forEach((spec) => {
+      const button = createIconButton(spec.kind, spec.title, spec.className);
+      button.dataset.tableAction = spec.action;
+      edgeLayer.appendChild(button);
+    });
+
+    edgeLayer.addEventListener("mousedown", (event) => {
+      if (event.target.closest("button")) {
+        event.preventDefault();
+      }
+    });
+
+    edgeLayer.addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-table-action]");
+      if (!button || button.disabled) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      handleEdgeAction(wrapper, table, button.dataset.tableAction);
+    });
+
+    edgeLayer.addEventListener(
+      "mouseover",
+      (event) => {
+        const button = event.target.closest("button[data-table-action]");
+        if (!button || button.disabled) {
+          return;
+        }
+
+        const position = getEffectiveCursorPosition(wrapper, table);
+        if (!position) {
+          return;
+        }
+
+        const action = button.dataset.tableAction;
+        if (action === "row-insert") {
+          clearDeletePreview(table);
+          previewInsertRow(wrapper, table, position.rowIndex);
+          return;
+        }
+
+        if (action === "column-insert") {
+          clearDeletePreview(table);
+          previewInsertColumn(wrapper, table, position.colIndex);
+          return;
+        }
+
+        if (action === "row-delete") {
+          clearInsertPreview(wrapper);
+          previewDeleteRow(table, position.rowIndex);
+          return;
+        }
+
+        if (action === "column-delete") {
+          clearInsertPreview(wrapper);
+          previewDeleteColumn(table, position.colIndex);
+        }
+      },
+      true,
+    );
+
+    edgeLayer.addEventListener("mouseleave", () => {
+      clearInsertPreview(wrapper);
+      clearDeletePreview(table);
+    });
+
+    wrapper.insertBefore(edgeLayer, table);
+    return edgeLayer;
+  }
+
+  function updateEdgeHandlePositions(wrapper, table, cursorPosition) {
+    const edgeLayer = ensureEdgeLayer(wrapper, table);
+    if (!cursorPosition) {
+      edgeLayer.querySelectorAll("button[data-table-action]").forEach((button) => {
+        button.hidden = true;
+      });
+      return edgeLayer;
+    }
+
+    storeCursorPosition(wrapper, cursorPosition);
 
     const rows = getTableRows(table);
     const row = rows[cursorPosition.rowIndex];
     const cell = row?.cells[cursorPosition.colIndex];
     if (!row || !cell) {
+      edgeLayer.querySelectorAll("button[data-table-action]").forEach((button) => {
+        button.hidden = true;
+      });
       return edgeLayer;
     }
 
@@ -663,7 +851,6 @@
     const wrapperRect = wrapper.getBoundingClientRect();
     const rowRect = row.getBoundingClientRect();
     const cellRect = cell.getBoundingClientRect();
-    const { rowIndex, colIndex } = cursorPosition;
     const rowBorderTop = rowRect.bottom - wrapperRect.top;
     const columnBorderLeft = cellRect.right - wrapperRect.left;
     const contentTop = contentRect.top - wrapperRect.top;
@@ -672,117 +859,43 @@
     const rowInsertTop = rowBorderTop - handleHalf;
     const rowDeleteTop = cellRect.top - wrapperRect.top + cellRect.height / 2 - handleHalf;
 
-    const rowInsert = createIconButton("add", "Insert row below", "table-row-insert-handle");
-    rowInsert.style.top = `${rowInsertTop}px`;
-    rowInsert.style.left = `${contentLeft - 34}px`;
-    rowInsert.addEventListener("mousedown", (event) => event.preventDefault());
-    rowInsert.addEventListener("mouseenter", () => {
-      previewInsertRow(wrapper, table, rowIndex);
-    });
-    rowInsert.addEventListener("mouseleave", () => {
-      clearInsertPreview(wrapper);
-    });
-    rowInsert.addEventListener("click", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      const position = getCursorPosition(table);
-      if (!position) {
-        return;
-      }
-      const newRow = insertRowAt(table, rowIndex, "after");
-      refreshTableControls(wrapper);
-      placeCaretInCell(newRow?.cells[position.colIndex] || newRow?.cells[0]);
-      updateToolbarCounts(wrapper, table);
-      emitChange();
-    });
+    const rowInsert = edgeLayer.querySelector(".table-row-insert-handle");
+    const rowDelete = edgeLayer.querySelector(".table-row-delete-handle");
+    const colInsert = edgeLayer.querySelector(".table-col-insert-handle");
+    const colDelete = edgeLayer.querySelector(".table-col-delete-handle");
 
-    const rowDelete = createIconButton("delete", "Delete row", "table-row-delete-handle");
-    rowDelete.style.top = `${rowDeleteTop}px`;
-    rowDelete.style.left = `${contentLeft - 34}px`;
-    rowDelete.disabled = rows.length <= 1;
-    rowDelete.addEventListener("mousedown", (event) => event.preventDefault());
-    rowDelete.addEventListener("mouseenter", () => {
-      clearInsertPreview(wrapper);
-      previewDeleteRow(table, rowIndex);
-    });
-    rowDelete.addEventListener("mouseleave", () => {
-      clearDeletePreview(table);
-    });
-    rowDelete.addEventListener("click", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      const position = getCursorPosition(table);
-      if (!position) {
-        return;
-      }
-      if (deleteRowAt(table, position.rowIndex)) {
-        refreshTableControls(wrapper);
-        const nextRows = getTableRows(table);
-        const focusRow = nextRows[Math.min(position.rowIndex, nextRows.length - 1)];
-        placeCaretInCell(focusRow?.cells[position.colIndex] || focusRow?.cells[0]);
-        updateToolbarCounts(wrapper, table);
-        emitChange();
-      }
-    });
-    edgeLayer.appendChild(rowDelete);
-    edgeLayer.appendChild(rowInsert);
+    if (rowInsert) {
+      rowInsert.hidden = false;
+      rowInsert.style.top = `${rowInsertTop}px`;
+      rowInsert.style.left = `${contentLeft - 34}px`;
+    }
 
-    const colInsert = createIconButton("add", "Insert column right", "table-col-insert-handle");
-    colInsert.style.left = `${columnBorderLeft - 12}px`;
-    colInsert.style.top = `${contentTop - 34}px`;
-    colInsert.addEventListener("mousedown", (event) => event.preventDefault());
-    colInsert.addEventListener("mouseenter", () => {
-      previewInsertColumn(wrapper, table, colIndex);
-    });
-    colInsert.addEventListener("mouseleave", () => {
-      clearInsertPreview(wrapper);
-    });
-    colInsert.addEventListener("click", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      const position = getCursorPosition(table);
-      if (!position) {
-        return;
-      }
-      insertColumnAt(table, colIndex, "after");
-      refreshTableControls(wrapper);
-      const nextCell = getTableRows(table)[position.rowIndex]?.cells[colIndex + 1];
-      placeCaretInCell(nextCell);
-      updateToolbarCounts(wrapper, table);
-      emitChange();
-    });
-    edgeLayer.appendChild(colInsert);
+    if (rowDelete) {
+      rowDelete.hidden = false;
+      rowDelete.style.top = `${rowDeleteTop}px`;
+      rowDelete.style.left = `${contentLeft - 34}px`;
+      rowDelete.disabled = rows.length <= 1;
+    }
 
-    const colDelete = createIconButton("delete", "Delete column", "table-col-delete-handle");
-    colDelete.style.left = `${cellRect.left - wrapperRect.left + cellRect.width / 2 - 12}px`;
-    colDelete.style.top = `${contentTop - 34}px`;
-    colDelete.disabled = getColumnCount(table) <= 1;
-    colDelete.addEventListener("mousedown", (event) => event.preventDefault());
-    colDelete.addEventListener("mouseenter", () => {
-      clearInsertPreview(wrapper);
-      previewDeleteColumn(table, colIndex);
-    });
-    colDelete.addEventListener("mouseleave", () => {
-      clearDeletePreview(table);
-    });
-    colDelete.addEventListener("click", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      const position = getCursorPosition(table);
-      if (!position) {
-        return;
-      }
-      if (deleteColumnAt(table, position.colIndex)) {
-        refreshTableControls(wrapper);
-        const nextColIndex = Math.min(position.colIndex, getColumnCount(table) - 1);
-        placeCaretInCell(getTableRows(table)[position.rowIndex]?.cells[nextColIndex]);
-        updateToolbarCounts(wrapper, table);
-        emitChange();
-      }
-    });
-    edgeLayer.appendChild(colDelete);
+    if (colInsert) {
+      colInsert.hidden = false;
+      colInsert.style.left = `${columnBorderLeft - 12}px`;
+      colInsert.style.top = `${contentTop - 34}px`;
+    }
+
+    if (colDelete) {
+      colDelete.hidden = false;
+      colDelete.style.left = `${cellRect.left - wrapperRect.left + cellRect.width / 2 - 12}px`;
+      colDelete.style.top = `${contentTop - 34}px`;
+      colDelete.disabled = getColumnCount(table) <= 1;
+    }
 
     return edgeLayer;
+  }
+
+  function buildEdgeLayer(wrapper, table) {
+    const cursorPosition = getEffectiveCursorPosition(wrapper, table);
+    return updateEdgeHandlePositions(wrapper, table, cursorPosition);
   }
 
   function refreshTableControls(wrapper) {
@@ -791,19 +904,29 @@
       return;
     }
     buildFloatingToolbar(wrapper, table);
-    buildEdgeLayer(wrapper, table);
+    const position = getEffectiveCursorPosition(wrapper, table);
+    updateEdgeHandlePositions(wrapper, table, position);
   }
 
   function setWrapperActive(wrapper, isActive) {
+    const wasActive = wrapper.classList.contains(ACTIVE_CLASS);
     wrapper.classList.toggle(ACTIVE_CLASS, isActive);
     const table = wrapper.querySelector("table");
     if (isActive) {
-      refreshTableControls(wrapper);
+      buildFloatingToolbar(wrapper, table);
+      const position = getCursorPosition(table);
+      const cursorKey = getCursorKey(position);
+      if (!wasActive || cursorKey !== wrapperCursorKeys.get(wrapper)) {
+        updateEdgeHandlePositions(wrapper, table, position);
+      }
       return;
     }
-    clearHighlights(table);
-    clearDeletePreview(table);
-    clearInsertPreview(wrapper);
+
+    if (wasActive) {
+      clearHighlights(table);
+      clearDeletePreview(table);
+      clearInsertPreview(wrapper);
+    }
   }
 
   function syncTableEditorState() {

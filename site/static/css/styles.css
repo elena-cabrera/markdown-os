@@ -1769,7 +1769,7 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   align-items: center;
   justify-content: center;
   padding: 0;
-  pointer-events: auto;
+  pointer-events: none;
   opacity: 0;
   transform: scale(0.92);
   transition: opacity 0.15s ease, transform 0.15s ease;
@@ -1790,7 +1790,7 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   align-items: center;
   justify-content: center;
   padding: 0;
-  pointer-events: auto;
+  pointer-events: none;
   opacity: 0;
   transform: scale(0.92);
   transition: opacity 0.15s ease, transform 0.15s ease, color 0.15s ease;
@@ -1812,6 +1812,7 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 .table-editor-wrapper.table-editor-active .table-col-delete-handle {
   opacity: 1;
   transform: scale(1);
+  pointer-events: auto;
 }
 
 .table-row-delete-handle,
