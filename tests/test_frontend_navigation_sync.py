@@ -639,6 +639,7 @@ def test_wysiwyg_table_controls_support_row_and_column_actions() -> None:
     assert "previewDeleteRow(table, rowIndex)" in tables_source
     assert "contentLeft - 34" in tables_source
     assert "contentTop - 34" in tables_source
+    assert "contentLeft + contentRect.width / 2" not in tables_source
     assert "previewInsertColumn(wrapper, table, colIndex)" in tables_source
     assert "const cursorPosition = getCursorPosition(table);\n    if (!cursorPosition) {\n      return edgeLayer;" in tables_source
     assert "table-row-insert-handle" in tables_source

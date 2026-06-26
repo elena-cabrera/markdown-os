@@ -696,7 +696,7 @@
 
     const rowDelete = createIconButton("delete", "Delete row", "table-row-delete-handle");
     rowDelete.style.top = `${rowRect.top - wrapperRect.top + rowRect.height / 2 - 12}px`;
-    rowDelete.style.left = `${contentLeft + contentRect.width / 2 - 12}px`;
+    rowDelete.style.left = `${contentLeft - 34}px`;
     rowDelete.disabled = rows.length <= 1;
     rowDelete.addEventListener("mousedown", (event) => event.preventDefault());
     rowDelete.addEventListener("mouseenter", () => {
@@ -752,7 +752,7 @@
 
     const colDelete = createIconButton("delete", "Delete column", "table-col-delete-handle");
     colDelete.style.left = `${cellRect.left - wrapperRect.left + cellRect.width / 2 - 12}px`;
-    colDelete.style.top = `${contentTop + contentRect.height / 2 - 12}px`;
+    colDelete.style.top = `${contentTop - 34}px`;
     colDelete.disabled = getColumnCount(table) <= 1;
     colDelete.addEventListener("mousedown", (event) => event.preventDefault());
     colDelete.addEventListener("mouseenter", () => {
