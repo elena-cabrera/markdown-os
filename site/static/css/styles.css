@@ -1947,7 +1947,9 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 #wysiwyg-editor tr.table-row-delete-preview > th,
 #wysiwyg-editor tr.table-row-delete-preview > td,
 #wysiwyg-editor th.table-col-delete-preview,
-#wysiwyg-editor td.table-col-delete-preview {
+#wysiwyg-editor td.table-col-delete-preview,
+#wysiwyg-editor table.table-delete-preview th,
+#wysiwyg-editor table.table-delete-preview td {
   background: color-mix(in srgb, #ef4444 38%, var(--table-row-hover-bg)) !important;
   outline: 2px solid color-mix(in srgb, #ef4444 55%, transparent);
   outline-offset: -2px;

@@ -635,6 +635,7 @@ def test_wysiwyg_table_controls_support_row_and_column_actions() -> None:
     assert "function getActiveTableWrapper()" in tables_source
     assert "function previewDeleteRow(table, rowIndex)" in tables_source
     assert "function previewDeleteColumn(table, colIndex)" in tables_source
+    assert "function previewDeleteTable(table)" in tables_source
     assert "previewInsertRow(wrapper, table, rowIndex)" in tables_source
     assert "previewInsertColumn(wrapper, table, colIndex)" in tables_source
     assert "table-row-insert-handle" in tables_source

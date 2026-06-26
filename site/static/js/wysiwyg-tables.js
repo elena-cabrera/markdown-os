@@ -5,6 +5,7 @@
   const HIGHLIGHT_COL_CLASS = "table-col-highlight";
   const DELETE_ROW_PREVIEW_CLASS = "table-row-delete-preview";
   const DELETE_COL_PREVIEW_CLASS = "table-col-delete-preview";
+  const DELETE_TABLE_PREVIEW_CLASS = "table-delete-preview";
 
   let changeCallback = null;
   let rootElement = null;
@@ -276,6 +277,7 @@
       .forEach((node) => {
         node.classList.remove(DELETE_ROW_PREVIEW_CLASS, DELETE_COL_PREVIEW_CLASS);
       });
+    table.classList.remove(DELETE_TABLE_PREVIEW_CLASS);
   }
 
   function ensureInsertPreviewLayer(wrapper) {
@@ -372,6 +374,11 @@
     getTableRows(table).forEach((row) => {
       row.cells[colIndex]?.classList.add(DELETE_COL_PREVIEW_CLASS);
     });
+  }
+
+  function previewDeleteTable(table) {
+    clearDeletePreview(table);
+    table.classList.add(DELETE_TABLE_PREVIEW_CLASS);
   }
 
   function createTableElement() {
@@ -556,6 +563,13 @@
       handleToolbarAction(wrapper, table, actionButton.dataset.action);
     });
 
+    deleteTableButton.addEventListener("mouseenter", () => {
+      clearInsertPreview(wrapper);
+      previewDeleteTable(table);
+    });
+    deleteTableButton.addEventListener("mouseleave", () => {
+      clearDeletePreview(table);
+    });
     deleteTableButton.addEventListener("click", (event) => {
       event.preventDefault();
       event.stopPropagation();
