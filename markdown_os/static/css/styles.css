@@ -1750,6 +1750,22 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   transform: translateX(-50%);
 }
 
+.table-row-handle-stack {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.table-row-handle-stack .table-row-delete-handle,
+.table-row-handle-stack .table-row-insert-handle {
+  position: static;
+  transform: none;
+}
+
 .table-control-button,
 .table-row-insert-handle,
 .table-col-insert-handle {
@@ -1805,9 +1821,16 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 .table-editor-wrapper.table-editor-active .table-row-insert-handle,
 .table-editor-wrapper.table-editor-active .table-col-insert-handle,
 .table-editor-wrapper.table-editor-active .table-row-delete-handle,
-.table-editor-wrapper.table-editor-active .table-col-delete-handle {
+.table-editor-wrapper.table-editor-active .table-col-delete-handle,
+.table-editor-wrapper.table-editor-active .table-row-handle-stack .table-row-delete-handle,
+.table-editor-wrapper.table-editor-active .table-row-handle-stack .table-row-insert-handle {
   opacity: 1;
   transform: scale(1);
+}
+
+.table-editor-wrapper.table-editor-active .table-row-handle-stack .table-row-delete-handle,
+.table-editor-wrapper.table-editor-active .table-row-handle-stack .table-row-insert-handle {
+  transform: none;
 }
 
 .table-row-delete-handle,
