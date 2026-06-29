@@ -413,6 +413,21 @@ def test_wysiwyg_table_backspace_selects_then_deletes_table_after_line() -> None
     assert "table-editor-delete-selected" in css_source
 
 
+def test_wysiwyg_table_row_column_mutations_use_undo_friendly_replacement() -> None:
+    """Verify row/column edits replace the table via insertHTML for native undo."""
+
+    tables_source = _read_static_js("wysiwyg-tables.js")
+    wysiwyg_source = _read_static_js("wysiwyg.js")
+
+    assert "function replaceTableWithUndo(table, mutateDraft)" in tables_source
+    assert 'document.execCommand("insertHTML", false, replacement.outerHTML)' in tables_source
+    assert "function insertRowIntoDraft(table, rowIndex, position)" in tables_source
+    assert "function insertColumnIntoDraft(table, colIndex, position)" in tables_source
+    assert "function refreshAllTableControls(root)" in tables_source
+    assert "window.wysiwygTables?.refreshAllTableControls?.(state.root)" in wysiwyg_source
+    assert 'event.inputType === "historyUndo"' in wysiwyg_source
+
+
 def test_wysiwyg_toolbar_exposes_ctrl_e_inline_code_shortcut() -> None:
     """Verify Ctrl/Cmd+E maps to the smart code command."""
 

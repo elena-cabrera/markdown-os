@@ -2163,11 +2163,13 @@
 
   function undo() {
     document.execCommand("undo", false);
+    window.wysiwygTables?.refreshAllTableControls?.(state.root);
     emitChange();
   }
 
   function redo() {
     document.execCommand("redo", false);
+    window.wysiwygTables?.refreshAllTableControls?.(state.root);
     emitChange();
   }
 
@@ -2892,6 +2894,18 @@
     emitChange();
   }
 
+  function handleRootBeforeInput(event) {
+    if (state.suppressInput) {
+      return;
+    }
+
+    if (event.inputType === "historyUndo" || event.inputType === "historyRedo") {
+      queueMicrotask(() => {
+        window.wysiwygTables?.refreshAllTableControls?.(state.root);
+      });
+    }
+  }
+
   function handleRootChange(event) {
     const checkbox = event.target.closest('input[type="checkbox"]');
     if (!checkbox) {
@@ -3073,6 +3087,7 @@
     }
 
     state.root.addEventListener("input", handleRootInput);
+    state.root.addEventListener("beforeinput", handleRootBeforeInput);
     document.addEventListener("keydown", handleFormattingShortcutCapture, true);
     state.root.addEventListener("keydown", handleRootKeyDown);
     state.root.addEventListener("change", handleRootChange);

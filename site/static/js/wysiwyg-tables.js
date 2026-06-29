@@ -342,11 +342,11 @@
     return getCellPosition(table, activeCell);
   }
 
-  function insertRowAt(table, rowIndex, position) {
+  function insertRowIntoDraft(table, rowIndex, position) {
     const rows = getTableRows(table);
     const refRow = rows[rowIndex];
     if (!refRow) {
-      return null;
+      return -1;
     }
 
     const colCount = Math.max(refRow.cells.length, 1);
@@ -359,7 +359,7 @@
         newRow.appendChild(createBodyCell());
       }
       tbody.insertBefore(newRow, tbody.firstChild);
-      return newRow;
+      return getTableRows(table).indexOf(newRow);
     }
 
     const newRow = document.createElement("tr");
@@ -370,11 +370,47 @@
     const parent = refRow.parentElement;
     if (position === "before") {
       parent.insertBefore(newRow, refRow);
-    } else {
-      parent.insertBefore(newRow, refRow.nextSibling);
+      return rowIndex;
     }
 
-    return newRow;
+    parent.insertBefore(newRow, refRow.nextSibling);
+    return rowIndex + 1;
+  }
+
+  function replaceTableWithUndo(table, mutateDraft) {
+    const wrapper = table.closest(`.${WRAPPER_CLASS}`);
+    const replacement = table.cloneNode(true);
+    mutateDraft(replacement);
+
+    if (!rootElement?.isConnected || !table.parentNode) {
+      table.parentNode?.replaceChild(replacement, table);
+      return wrapper?.querySelector("table") ?? replacement;
+    }
+
+    rootElement.focus();
+    const selection = window.getSelection();
+    const range = document.createRange();
+    range.selectNode(table);
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+
+    const executed = document.execCommand("insertHTML", false, replacement.outerHTML);
+    if (!executed) {
+      table.parentNode.replaceChild(replacement, table);
+    }
+
+    return wrapper?.querySelector("table") ?? table.parentNode?.querySelector("table") ?? replacement;
+  }
+
+  function insertRowAt(table, rowIndex, position) {
+    let targetRowIndex = -1;
+    const nextTable = replaceTableWithUndo(table, (draft) => {
+      targetRowIndex = insertRowIntoDraft(draft, rowIndex, position);
+    });
+    if (targetRowIndex < 0) {
+      return null;
+    }
+    return getTableRows(nextTable)[targetRowIndex] ?? null;
   }
 
   function deleteRowAt(table, rowIndex) {
@@ -383,13 +419,14 @@
       return false;
     }
 
-    rows[rowIndex]?.remove();
+    replaceTableWithUndo(table, (draft) => {
+      getTableRows(draft)[rowIndex]?.remove();
+    });
     return true;
   }
 
-  function insertColumnAt(table, colIndex, position) {
-    const rows = getTableRows(table);
-    rows.forEach((row) => {
+  function insertColumnIntoDraft(table, colIndex, position) {
+    getTableRows(table).forEach((row) => {
       const refCell = row.cells[colIndex];
       const cell = createCellForRow(row);
       if (position === "before") {
@@ -400,13 +437,21 @@
     });
   }
 
+  function insertColumnAt(table, colIndex, position) {
+    replaceTableWithUndo(table, (draft) => {
+      insertColumnIntoDraft(draft, colIndex, position);
+    });
+  }
+
   function deleteColumnAt(table, colIndex) {
     if (getColumnCount(table) <= 1) {
       return false;
     }
 
-    getTableRows(table).forEach((row) => {
-      row.cells[colIndex]?.remove();
+    replaceTableWithUndo(table, (draft) => {
+      getTableRows(draft).forEach((row) => {
+        row.cells[colIndex]?.remove();
+      });
     });
     return true;
   }
@@ -768,7 +813,7 @@
       const newRow = insertRowAt(table, position.rowIndex, "after");
       refreshTableControls(wrapper);
       placeCaretInCell(newRow?.cells[position.colIndex] || newRow?.cells[0]);
-      updateToolbarCounts(wrapper, table);
+      updateToolbarCounts(wrapper, wrapper.querySelector("table"));
       emitChange();
       return;
     }
@@ -776,10 +821,11 @@
     if (action === "row-remove") {
       if (deleteRowAt(table, position.rowIndex)) {
         refreshTableControls(wrapper);
-        const rows = getTableRows(table);
+        const nextTable = wrapper.querySelector("table");
+        const rows = getTableRows(nextTable);
         const focusRow = rows[Math.min(position.rowIndex, rows.length - 1)];
         placeCaretInCell(focusRow?.cells[position.colIndex] || focusRow?.cells[0]);
-        updateToolbarCounts(wrapper, table);
+        updateToolbarCounts(wrapper, nextTable);
         emitChange();
       }
       return;
@@ -788,9 +834,10 @@
     if (action === "column-add") {
       insertColumnAt(table, position.colIndex, "after");
       refreshTableControls(wrapper);
-      const cell = getTableRows(table)[position.rowIndex]?.cells[position.colIndex + 1];
+      const nextTable = wrapper.querySelector("table");
+      const cell = getTableRows(nextTable)[position.rowIndex]?.cells[position.colIndex + 1];
       placeCaretInCell(cell);
-      updateToolbarCounts(wrapper, table);
+      updateToolbarCounts(wrapper, nextTable);
       emitChange();
       return;
     }
@@ -798,10 +845,11 @@
     if (action === "column-remove") {
       if (deleteColumnAt(table, position.colIndex)) {
         refreshTableControls(wrapper);
-        const rows = getTableRows(table);
-        const colIndex = Math.min(position.colIndex, getColumnCount(table) - 1);
+        const nextTable = wrapper.querySelector("table");
+        const rows = getTableRows(nextTable);
+        const colIndex = Math.min(position.colIndex, getColumnCount(nextTable) - 1);
         placeCaretInCell(rows[position.rowIndex]?.cells[colIndex]);
-        updateToolbarCounts(wrapper, table);
+        updateToolbarCounts(wrapper, nextTable);
         emitChange();
       }
     }
@@ -821,7 +869,7 @@
       const newRow = insertRowAt(table, rowIndex, "after");
       refreshTableControls(wrapper);
       placeCaretInCell(newRow?.cells[colIndex] || newRow?.cells[0]);
-      updateToolbarCounts(wrapper, table);
+      updateToolbarCounts(wrapper, wrapper.querySelector("table"));
       emitChange();
       return;
     }
@@ -829,10 +877,11 @@
     if (action === "row-delete") {
       if (deleteRowAt(table, rowIndex)) {
         refreshTableControls(wrapper);
-        const nextRows = getTableRows(table);
+        const nextTable = wrapper.querySelector("table");
+        const nextRows = getTableRows(nextTable);
         const focusRow = nextRows[Math.min(rowIndex, nextRows.length - 1)];
         placeCaretInCell(focusRow?.cells[colIndex] || focusRow?.cells[0]);
-        updateToolbarCounts(wrapper, table);
+        updateToolbarCounts(wrapper, nextTable);
         emitChange();
       }
       return;
@@ -841,9 +890,10 @@
     if (action === "column-insert") {
       insertColumnAt(table, colIndex, "after");
       refreshTableControls(wrapper);
-      const nextCell = getTableRows(table)[rowIndex]?.cells[colIndex + 1];
+      const nextTable = wrapper.querySelector("table");
+      const nextCell = getTableRows(nextTable)[rowIndex]?.cells[colIndex + 1];
       placeCaretInCell(nextCell);
-      updateToolbarCounts(wrapper, table);
+      updateToolbarCounts(wrapper, nextTable);
       emitChange();
       return;
     }
@@ -851,9 +901,10 @@
     if (action === "column-delete") {
       if (deleteColumnAt(table, colIndex)) {
         refreshTableControls(wrapper);
-        const nextColIndex = Math.min(colIndex, getColumnCount(table) - 1);
-        placeCaretInCell(getTableRows(table)[rowIndex]?.cells[nextColIndex]);
-        updateToolbarCounts(wrapper, table);
+        const nextTable = wrapper.querySelector("table");
+        const nextColIndex = Math.min(colIndex, getColumnCount(nextTable) - 1);
+        placeCaretInCell(getTableRows(nextTable)[rowIndex]?.cells[nextColIndex]);
+        updateToolbarCounts(wrapper, nextTable);
         emitChange();
       }
     }
@@ -1071,6 +1122,17 @@
     }
   }
 
+  function refreshAllTableControls(root) {
+    if (!root) {
+      return;
+    }
+
+    root.querySelectorAll(`.${WRAPPER_CLASS}`).forEach((wrapper) => {
+      refreshTableControls(wrapper);
+    });
+    syncTableEditorState();
+  }
+
   function syncTableEditorState() {
     if (!rootElement) {
       return;
@@ -1230,5 +1292,6 @@
     decorateTables,
     cleanupTableWrappers,
     handleTableBackspace,
+    refreshAllTableControls,
   };
 })();
