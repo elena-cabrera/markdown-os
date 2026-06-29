@@ -6,9 +6,12 @@
   const DELETE_ROW_PREVIEW_CLASS = "table-row-delete-preview";
   const DELETE_COL_PREVIEW_CLASS = "table-col-delete-preview";
   const DELETE_TABLE_PREVIEW_CLASS = "table-delete-preview";
+  const DELETE_TABLE_SELECTED_CLASS = "table-delete-selected";
+  const DELETE_SELECTED_WRAPPER_CLASS = "table-editor-delete-selected";
 
   let changeCallback = null;
   let rootElement = null;
+  let pendingDeleteWrapper = null;
   const wrapperCursorKeys = new WeakMap();
 
   function getCursorKey(position) {
@@ -37,6 +40,145 @@
       rowIndex: Number(rowIndex),
       colIndex: Number(colIndex),
     };
+  }
+
+  function closestEditorBlock(node, root) {
+    if (!node || !root) {
+      return null;
+    }
+
+    const startNode = node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+    if (!startNode || !root.contains(startNode)) {
+      return null;
+    }
+
+    if (startNode.closest("td, th")) {
+      return null;
+    }
+
+    return startNode.closest("p, div, li, blockquote, h1, h2, h3, h4, h5, h6");
+  }
+
+  function isRangeAtBlockStart(range, block) {
+    const probe = range.cloneRange();
+    probe.setStart(block, 0);
+    const prefixText = (probe.toString() || "").replace(/\u00a0/g, " ").trim();
+    return prefixText.length === 0;
+  }
+
+  function placeCaretAtBlockStart(block) {
+    const selection = window.getSelection();
+    if (!selection || !block) {
+      return;
+    }
+
+    const range = document.createRange();
+    if (block.firstChild) {
+      range.setStart(block.firstChild, 0);
+    } else {
+      range.setStart(block, 0);
+    }
+    range.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+
+  function getTableWrapperBeforeBlock(block) {
+    const previous = block?.previousElementSibling;
+    if (!previous?.classList?.contains(WRAPPER_CLASS)) {
+      return null;
+    }
+    return previous;
+  }
+
+  function clearPendingTableDeletion() {
+    if (!pendingDeleteWrapper) {
+      return;
+    }
+
+    pendingDeleteWrapper.classList.remove(DELETE_SELECTED_WRAPPER_CLASS);
+    pendingDeleteWrapper
+      .querySelector("table")
+      ?.classList.remove(DELETE_TABLE_SELECTED_CLASS);
+    pendingDeleteWrapper = null;
+  }
+
+  function selectTableForDeletion(wrapper) {
+    clearPendingTableDeletion();
+    pendingDeleteWrapper = wrapper;
+    wrapper.classList.add(DELETE_SELECTED_WRAPPER_CLASS);
+    wrapper.querySelector("table")?.classList.add(DELETE_TABLE_SELECTED_CLASS);
+  }
+
+  function clearPendingTableDeletionIfNeeded() {
+    if (!pendingDeleteWrapper || !rootElement) {
+      return;
+    }
+
+    const selection = window.getSelection();
+    if (!selection?.anchorNode || !rootElement.contains(selection.anchorNode)) {
+      clearPendingTableDeletion();
+      return;
+    }
+
+    if (selection.anchorNode.parentElement?.closest?.("td, th")) {
+      clearPendingTableDeletion();
+      return;
+    }
+
+    const block = closestEditorBlock(selection.anchorNode, rootElement);
+    const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+    if (
+      block &&
+      block.previousElementSibling === pendingDeleteWrapper &&
+      range &&
+      isRangeAtBlockStart(range, block)
+    ) {
+      return;
+    }
+
+    clearPendingTableDeletion();
+  }
+
+  function handleTableBackspace(root) {
+    const selection = window.getSelection();
+    if (!selection?.isCollapsed || selection.rangeCount === 0) {
+      return false;
+    }
+
+    const anchorNode = selection.anchorNode;
+    if (!anchorNode || !root.contains(anchorNode)) {
+      return false;
+    }
+
+    if (anchorNode.parentElement?.closest?.('[contenteditable="false"]')) {
+      return false;
+    }
+
+    const block = closestEditorBlock(anchorNode, root);
+    if (!block) {
+      return false;
+    }
+
+    const range = selection.getRangeAt(0);
+    if (!isRangeAtBlockStart(range, block)) {
+      return false;
+    }
+
+    const tableWrapper = getTableWrapperBeforeBlock(block);
+    if (!tableWrapper) {
+      return false;
+    }
+
+    if (pendingDeleteWrapper === tableWrapper) {
+      deleteTable(tableWrapper, { focusBlock: block });
+      return true;
+    }
+
+    selectTableForDeletion(tableWrapper);
+    placeCaretAtBlockStart(block);
+    syncTableEditorState();
+    return true;
   }
 
   function getEffectiveCursorPosition(wrapper, table) {
@@ -940,21 +1082,29 @@
     });
   }
 
-  function deleteTable(wrapper) {
-    const replacement = document.createElement("p");
-    replacement.innerHTML = "<br>";
-    wrapper.replaceWith(replacement);
+  function deleteTable(wrapper, options = {}) {
+    if (pendingDeleteWrapper === wrapper) {
+      clearPendingTableDeletion();
+    }
+
+    const focusBlock = options.focusBlock;
+    if (focusBlock?.isConnected) {
+      wrapper.remove();
+      placeCaretAtBlockStart(focusBlock);
+    } else {
+      const replacement = document.createElement("p");
+      replacement.innerHTML = "<br>";
+      wrapper.replaceWith(replacement);
+      placeCaretAtBlockStart(replacement);
+    }
 
     const selection = window.getSelection();
     if (!selection) {
+      emitChange();
+      syncTableEditorState();
       return;
     }
 
-    const range = document.createRange();
-    range.setStart(replacement, 0);
-    range.collapse(true);
-    selection.removeAllRanges();
-    selection.addRange(range);
     emitChange();
     syncTableEditorState();
   }
@@ -999,6 +1149,7 @@
 
   function cleanupTableWrappers(cloneRoot) {
     cloneRoot.querySelectorAll(`.${WRAPPER_CLASS}`).forEach((wrapper) => {
+      wrapper.classList.remove(DELETE_SELECTED_WRAPPER_CLASS);
       wrapper
         .querySelectorAll(
           ".table-edge-layer, .table-floating-toolbar, .table-edge-controls, .table-insert-preview-layer",
@@ -1007,6 +1158,7 @@
           node.remove();
         });
       const table = wrapper.querySelector("table");
+      table?.classList.remove(DELETE_TABLE_SELECTED_CLASS, DELETE_TABLE_PREVIEW_CLASS);
       if (table) {
         wrapper.replaceWith(table);
       }
@@ -1057,6 +1209,7 @@
 
     document.addEventListener("selectionchange", () => {
       syncTableEditorState();
+      clearPendingTableDeletionIfNeeded();
     });
 
     window.addEventListener(
@@ -1076,5 +1229,6 @@
     insertTableAtCaret,
     decorateTables,
     cleanupTableWrappers,
+    handleTableBackspace,
   };
 })();

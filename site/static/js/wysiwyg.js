@@ -2850,6 +2850,13 @@
       return;
     }
 
+    if (window.wysiwygTables?.handleTableBackspace?.(state.root)) {
+      event.preventDefault();
+      await decorateDocument();
+      emitChange();
+      return;
+    }
+
     const listItem = (
       anchorNode.nodeType === Node.TEXT_NODE
         ? anchorNode.parentElement

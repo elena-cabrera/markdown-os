@@ -392,9 +392,25 @@ def test_wysiwyg_backspace_unwraps_list_item_at_start() -> None:
 
     assert "async function handleRootKeyDown(event)" in source
     assert "event.key !== \"Backspace\"" in source
+    assert "window.wysiwygTables?.handleTableBackspace?.(state.root)" in source
     assert "function unwrapListItemToParagraph(listItem)" in source
     assert "if (!isRangeAtElementStart(range, listItem))" in source
     assert "placeCaretAtNodeStart(replacementParagraph);" in source
+
+
+def test_wysiwyg_table_backspace_selects_then_deletes_table_after_line() -> None:
+    """Verify Backspace on the line after a table selects it, then deletes on repeat."""
+
+    tables_source = _read_static_js("wysiwyg-tables.js")
+    css_source = _read_static_css("styles.css")
+
+    assert "function handleTableBackspace(root)" in tables_source
+    assert "function selectTableForDeletion(wrapper)" in tables_source
+    assert "function clearPendingTableDeletionIfNeeded()" in tables_source
+    assert "pendingDeleteWrapper === tableWrapper" in tables_source
+    assert "deleteTable(tableWrapper, { focusBlock: block })" in tables_source
+    assert "table-delete-selected" in css_source
+    assert "table-editor-delete-selected" in css_source
 
 
 def test_wysiwyg_toolbar_exposes_ctrl_e_inline_code_shortcut() -> None:

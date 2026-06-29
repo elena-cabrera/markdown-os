@@ -1952,10 +1952,17 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 #wysiwyg-editor th.table-col-delete-preview,
 #wysiwyg-editor td.table-col-delete-preview,
 #wysiwyg-editor table.table-delete-preview th,
-#wysiwyg-editor table.table-delete-preview td {
+#wysiwyg-editor table.table-delete-preview td,
+#wysiwyg-editor table.table-delete-selected th,
+#wysiwyg-editor table.table-delete-selected td {
   background: color-mix(in srgb, #ef4444 38%, var(--table-row-hover-bg)) !important;
   outline: 2px solid color-mix(in srgb, #ef4444 55%, transparent);
   outline-offset: -2px;
+}
+
+.table-editor-wrapper.table-editor-delete-selected > table {
+  outline: 2px solid color-mix(in srgb, #ef4444 55%, transparent);
+  outline-offset: 2px;
 }
 
 #wysiwyg-editor code {
