@@ -392,9 +392,40 @@ def test_wysiwyg_backspace_unwraps_list_item_at_start() -> None:
 
     assert "async function handleRootKeyDown(event)" in source
     assert "event.key !== \"Backspace\"" in source
+    assert "window.wysiwygTables?.handleTableBackspace?.(state.root)" in source
     assert "function unwrapListItemToParagraph(listItem)" in source
     assert "if (!isRangeAtElementStart(range, listItem))" in source
     assert "placeCaretAtNodeStart(replacementParagraph);" in source
+
+
+def test_wysiwyg_table_backspace_selects_then_deletes_table_after_line() -> None:
+    """Verify Backspace on the line after a table selects it, then deletes on repeat."""
+
+    tables_source = _read_static_js("wysiwyg-tables.js")
+    css_source = _read_static_css("styles.css")
+
+    assert "function handleTableBackspace(root)" in tables_source
+    assert "function selectTableForDeletion(wrapper)" in tables_source
+    assert "function clearPendingTableDeletionIfNeeded()" in tables_source
+    assert "pendingDeleteWrapper === tableWrapper" in tables_source
+    assert "deleteTable(tableWrapper, { focusBlock: block })" in tables_source
+    assert "table-delete-selected" in css_source
+    assert "table-editor-delete-selected" in css_source
+
+
+def test_wysiwyg_table_row_column_mutations_use_undo_friendly_replacement() -> None:
+    """Verify row/column edits replace the table via insertHTML for native undo."""
+
+    tables_source = _read_static_js("wysiwyg-tables.js")
+    wysiwyg_source = _read_static_js("wysiwyg.js")
+
+    assert "function replaceTableWithUndo(table, mutateDraft)" in tables_source
+    assert 'document.execCommand("insertHTML", false, replacement.outerHTML)' in tables_source
+    assert "function insertRowIntoDraft(table, rowIndex, position)" in tables_source
+    assert "function insertColumnIntoDraft(table, colIndex, position)" in tables_source
+    assert "function refreshAllTableControls(root)" in tables_source
+    assert "window.wysiwygTables?.refreshAllTableControls?.(state.root)" in wysiwyg_source
+    assert 'event.inputType === "historyUndo"' in wysiwyg_source
 
 
 def test_wysiwyg_toolbar_exposes_ctrl_e_inline_code_shortcut() -> None:
@@ -593,3 +624,78 @@ def test_dialogs_restore_editor_scroll_after_modal_close() -> None:
     assert "focusWithoutScroll" in dialogs_source
     assert "window.wysiwyg?.setScrollTop?.(previousScrollTop);" in editor_source
     assert "window.wysiwyg?.setScrollTop?.(previousScrollTop);" in tabs_source
+
+
+def test_wysiwyg_tables_module_is_loaded_before_editor() -> None:
+    """Verify table editor helpers load before the main WYSIWYG module."""
+
+    html_source = Path(__file__).resolve().parents[1].joinpath(
+        "markdown_os",
+        "static",
+        "index.html",
+    ).read_text(encoding="utf-8")
+
+    tables_index = html_source.index("/static/js/wysiwyg-tables.js")
+    wysiwyg_index = html_source.index("/static/js/wysiwyg.js")
+
+    assert tables_index < wysiwyg_index
+
+
+def test_wysiwyg_table_insert_focuses_first_cell() -> None:
+    """Verify table insertion uses DOM APIs that place the caret in the first cell."""
+
+    tables_source = _read_static_js("wysiwyg-tables.js")
+    wysiwyg_source = _read_static_js("wysiwyg.js")
+
+    assert "function insertTableAtCaret(root, options = {})" in tables_source
+    assert "placeCaretInCell(wrapper.querySelector(\"th, td\"));" in tables_source
+    assert "window.wysiwygTables?.insertTableAtCaret?.(state.root" in wysiwyg_source
+
+
+def test_wysiwyg_table_controls_support_row_and_column_actions() -> None:
+    """Verify table wrappers expose stepper controls and cleanup."""
+
+    tables_source = _read_static_js("wysiwyg-tables.js")
+    wysiwyg_source = _read_static_js("wysiwyg.js")
+    css_source = _read_static_css("styles.css")
+
+    assert "function decorateTables(root)" in tables_source
+    assert "function cleanupTableWrappers(cloneRoot)" in tables_source
+    assert 'dataset.action = `${kind}-remove`' in tables_source
+    assert 'dataset.action = `${kind}-add`' in tables_source
+    assert "function getActiveTableWrapper()" in tables_source
+    assert "function previewDeleteRow(table, rowIndex)" in tables_source
+    assert "function previewDeleteColumn(table, colIndex)" in tables_source
+    assert "function previewDeleteTable(table)" in tables_source
+    assert "previewDeleteRow(table, rowIndex)" in tables_source
+    assert "contentLeft - 34" in tables_source
+    assert "contentTop - 34" in tables_source
+    assert "function getEffectiveCursorPosition(wrapper, table)" in tables_source
+    assert "function updateEdgeHandlePositions(wrapper, table, cursorPosition)" in tables_source
+    assert "function ensureEdgeLayer(wrapper, table)" in tables_source
+    assert 'button.dataset.tableAction = spec.action' in tables_source
+    assert "const cursorKey = getCursorKey(position)" in tables_source
+    assert "cursorKey !== wrapperCursorKeys.get(wrapper)" in tables_source
+    assert "rowDeleteTop = cellRect.top - wrapperRect.top + cellRect.height / 2 - handleHalf" in tables_source
+    assert "min-height: 4rem" in css_source
+    assert "height: 4rem" in css_source
+    assert "min-width: 4rem" in css_source
+    assert "previewInsertColumn(wrapper, table, colIndex)" in tables_source
+    assert "table-row-insert-handle" in tables_source
+    assert "function getTableContentRect(table)" in tables_source
+    assert "function ensureTableBody(table)" in tables_source
+    assert "isHeaderRow && position === \"after\"" in tables_source
+    assert "function syncTableEditorState()" in tables_source
+    assert "table-delete-table-button" in tables_source
+    assert "window.wysiwygTables?.decorateTables?.(state.root);" in wysiwyg_source
+    assert "window.wysiwygTables?.cleanupTableWrappers?.(cloneRoot);" in wysiwyg_source
+    assert ".table-floating-toolbar" in css_source
+    assert ".table-stepper-group" in css_source
+    assert ".table-insert-preview-line" in css_source
+    assert ".table-editor-wrapper {" in css_source
+    assert "padding-top: 12px" in css_source
+    assert "padding-left: 12px" in css_source
+    assert "#wysiwyg-editor td:empty::before" in css_source
+    assert ".table-row-insert-handle" in css_source
+    assert ".table-editor-wrapper.table-editor-active .table-row-delete-handle" in css_source
+    assert "pointer-events: auto" in css_source

@@ -1434,6 +1434,7 @@
     await renderMermaidDiagrams();
     makeTaskListsInteractive();
     decorateLinks();
+    window.wysiwygTables?.decorateTables?.(state.root);
   }
 
   function getTurndownService() {
@@ -1526,6 +1527,8 @@
       .forEach((node) => {
         node.remove();
       });
+
+    window.wysiwygTables?.cleanupTableWrappers?.(cloneRoot);
 
     cloneRoot.querySelectorAll(".code-block").forEach((wrapper) => {
       const source =
@@ -1869,25 +1872,6 @@
     emitChange();
   }
 
-  function createTableTemplate() {
-    return `
-      <table>
-        <thead>
-          <tr>
-            <th>Column 1</th>
-            <th>Column 2</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Value</td>
-            <td>Value</td>
-          </tr>
-        </tbody>
-      </table>
-      <p><br></p>`;
-  }
-
   async function executeCommand(command, payload = {}) {
     if (!state.root) {
       return;
@@ -2078,7 +2062,14 @@
     }
 
     if (command === "table") {
-      insertHtmlAtSelection(createTableTemplate());
+      const inserted = window.wysiwygTables?.insertTableAtCaret?.(state.root, {
+        onChange: emitChange,
+      });
+      if (!inserted) {
+        insertHtmlAtSelection(
+          '<table><thead><tr><th>Column 1</th><th>Column 2</th></tr></thead><tbody><tr><td>Value</td><td>Value</td></tr></tbody></table><p><br></p>',
+        );
+      }
       emitChange();
       return;
     }
@@ -2172,11 +2163,13 @@
 
   function undo() {
     document.execCommand("undo", false);
+    window.wysiwygTables?.refreshAllTableControls?.(state.root);
     emitChange();
   }
 
   function redo() {
     document.execCommand("redo", false);
+    window.wysiwygTables?.refreshAllTableControls?.(state.root);
     emitChange();
   }
 
@@ -2859,6 +2852,13 @@
       return;
     }
 
+    if (window.wysiwygTables?.handleTableBackspace?.(state.root)) {
+      event.preventDefault();
+      await decorateDocument();
+      emitChange();
+      return;
+    }
+
     const listItem = (
       anchorNode.nodeType === Node.TEXT_NODE
         ? anchorNode.parentElement
@@ -2892,6 +2892,18 @@
     addHeadingIds(state.root);
     ensureCaretAboveFloatingToolbar();
     emitChange();
+  }
+
+  function handleRootBeforeInput(event) {
+    if (state.suppressInput) {
+      return;
+    }
+
+    if (event.inputType === "historyUndo" || event.inputType === "historyRedo") {
+      queueMicrotask(() => {
+        window.wysiwygTables?.refreshAllTableControls?.(state.root);
+      });
+    }
   }
 
   function handleRootChange(event) {
@@ -3075,6 +3087,7 @@
     }
 
     state.root.addEventListener("input", handleRootInput);
+    state.root.addEventListener("beforeinput", handleRootBeforeInput);
     document.addEventListener("keydown", handleFormattingShortcutCapture, true);
     state.root.addEventListener("keydown", handleRootKeyDown);
     state.root.addEventListener("change", handleRootChange);
@@ -3103,6 +3116,7 @@
     bindModifierLinkCursorState();
     bindFullscreenListeners();
     bindBlockEditListeners();
+    window.wysiwygTables?.initTableEditor?.(state.root, emitChange);
 
     window.addEventListener("markdown-os:theme-changed", () => {
       closeMermaidFullscreen();
