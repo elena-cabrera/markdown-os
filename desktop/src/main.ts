@@ -8,6 +8,11 @@ import {
 } from "./backend";
 import { pickMarkdownFile, pickWorkspaceFolder, pickFileOrFolder } from "./dialogs";
 import {
+  findMarkdownPathInArgv,
+  isMarkdownPath,
+  queueLaunchPath,
+} from "./launch-path";
+import {
   dismissVersion,
   getDismissedVersion,
   checkForUpdate,
@@ -19,6 +24,32 @@ import { shouldInstallApplicationMenu } from "./application-menu";
 let mainWindow: BrowserWindow | null = null;
 let backendHandle: BackendHandle | null = null;
 let pendingOpenPath: string | null = null;
+
+function rememberLaunchPath(filePath: string): void {
+  pendingOpenPath = queueLaunchPath(pendingOpenPath, filePath);
+}
+
+function captureInitialLaunchPath(): void {
+  const argvPath = findMarkdownPathInArgv(process.argv);
+  if (argvPath) {
+    rememberLaunchPath(argvPath);
+  }
+}
+
+// macOS can emit open-file before app.whenReady(); queue the path immediately.
+app.on("open-file", async (event, filePath) => {
+  event.preventDefault();
+  if (!isMarkdownPath(filePath)) {
+    return;
+  }
+
+  if (!mainWindow) {
+    rememberLaunchPath(filePath);
+    return;
+  }
+
+  await sendWorkspaceToRenderer(filePath);
+});
 
 function getPreloadPath(): string {
   return path.join(__dirname, "preload.js");
@@ -50,7 +81,7 @@ function currentWindow(): BrowserWindow {
 
 async function sendWorkspaceToRenderer(filePath: string): Promise<void> {
   if (!mainWindow) {
-    pendingOpenPath = filePath;
+    rememberLaunchPath(filePath);
     return;
   }
 
@@ -156,14 +187,13 @@ async function bootstrap(): Promise<void> {
     return;
   }
 
+  captureInitialLaunchPath();
   registerIpcHandlers();
   backendHandle = await startBackend();
   await createMainWindow();
 
   app.on("second-instance", async (_event, commandLine) => {
-    const candidatePath = commandLine.find((entry) =>
-      entry.endsWith(".md") || entry.endsWith(".markdown"),
-    );
+    const candidatePath = findMarkdownPathInArgv(commandLine);
     if (!candidatePath) {
       currentWindow().focus();
       return;
@@ -172,11 +202,6 @@ async function bootstrap(): Promise<void> {
     currentWindow().show();
     currentWindow().focus();
     await sendWorkspaceToRenderer(candidatePath);
-  });
-
-  app.on("open-file", async (event, filePath) => {
-    event.preventDefault();
-    await sendWorkspaceToRenderer(filePath);
   });
 
   app.on("before-quit", async () => {
