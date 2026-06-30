@@ -67,15 +67,15 @@ def test_read_raises_when_file_missing(tmp_path: Path) -> None:
         file_handler.read()
 
 
-def test_cleanup_removes_lock_file_after_read(tmp_path: Path) -> None:
+def test_read_does_not_leave_lock_file(tmp_path: Path) -> None:
     """
-    Verify cleanup deletes the lock file created during read.
+    Verify read removes the advisory lock file after the operation completes.
 
     Args:
     - tmp_path (Path): Pytest-managed temporary directory fixture.
 
     Returns:
-    - None: Assertions validate cleanup after read lock creation.
+    - None: Assertion validates no lock file residue after read.
     """
 
     markdown_path = tmp_path / "document.md"
@@ -84,21 +84,18 @@ def test_cleanup_removes_lock_file_after_read(tmp_path: Path) -> None:
     lock_path = markdown_path.with_suffix(".md.lock")
 
     file_handler.read()
-    assert lock_path.exists()
-
-    file_handler.cleanup()
     assert not lock_path.exists()
 
 
-def test_cleanup_removes_lock_file_after_write(tmp_path: Path) -> None:
+def test_write_does_not_leave_lock_file(tmp_path: Path) -> None:
     """
-    Verify cleanup deletes the lock file created during write.
+    Verify write removes the advisory lock file after the operation completes.
 
     Args:
     - tmp_path (Path): Pytest-managed temporary directory fixture.
 
     Returns:
-    - None: Assertions validate cleanup after write lock creation.
+    - None: Assertion validates no lock file residue after write.
     """
 
     markdown_path = tmp_path / "document.md"
@@ -107,9 +104,6 @@ def test_cleanup_removes_lock_file_after_write(tmp_path: Path) -> None:
     lock_path = markdown_path.with_suffix(".md.lock")
 
     file_handler.write("new")
-    assert lock_path.exists()
-
-    file_handler.cleanup()
     assert not lock_path.exists()
 
 

@@ -35,7 +35,6 @@ class FileHandler:
 
         self._filepath = filepath.expanduser().resolve()
         self._lock_path = self._filepath.with_suffix(f"{self._filepath.suffix}.lock")
-        self._lock_created = False
 
     @property
     def filepath(self) -> Path:
@@ -120,7 +119,10 @@ class FileHandler:
 
     def cleanup(self) -> None:
         """
-        Remove the lock file created by this handler instance.
+        Remove any leftover lock file for this handler instance.
+
+        Lock files are normally deleted after each read or write. This method
+        acts as a best-effort safety net during session shutdown.
 
         Args:
         - None (None): This method operates on the handler's tracked lock path.
@@ -129,14 +131,7 @@ class FileHandler:
         - None: Cleanup has best-effort semantics and never raises.
         """
 
-        if not self._lock_created:
-            return
-
-        try:
-            if self._lock_path.exists():
-                self._lock_path.unlink()
-        except OSError:
-            return
+        self._safe_remove(self._lock_path)
 
     def _read_text_from_disk(self) -> str:
         """
@@ -195,17 +190,21 @@ class FileHandler:
         except OSError as exc:
             raise FileWriteError(f"Failed to open lock file: {self._lock_path}") from exc
 
-        with lock_file_context as lock_file:
-            self._lock_created = True
-            lock_flags = portalocker.LOCK_EX if exclusive else portalocker.LOCK_SH
-            try:
-                portalocker.lock(lock_file, lock_flags)
-            except portalocker.LockException as exc:
-                raise FileWriteError(f"Failed to acquire lock: {self._lock_path}") from exc
-            try:
-                yield
-            finally:
-                portalocker.unlock(lock_file)
+        try:
+            with lock_file_context as lock_file:
+                lock_flags = portalocker.LOCK_EX if exclusive else portalocker.LOCK_SH
+                try:
+                    portalocker.lock(lock_file, lock_flags)
+                except portalocker.LockException as exc:
+                    raise FileWriteError(
+                        f"Failed to acquire lock: {self._lock_path}"
+                    ) from exc
+                try:
+                    yield
+                finally:
+                    portalocker.unlock(lock_file)
+        finally:
+            self._safe_remove(self._lock_path)
 
     def _write_temporary_file(self, content: str) -> Path:
         """
