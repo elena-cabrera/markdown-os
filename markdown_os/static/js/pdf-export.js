@@ -1,15 +1,49 @@
 (() => {
-  const COLOR_MIX_PATTERN = /color-mix\((?:[^()]|\([^()]*\))*\)/g;
+  const UNSUPPORTED_COLOR_PATTERN =
+    /color-mix\((?:[^()]|\([^()]*\))*\)|oklab\([^)]*\)|oklch\([^)]*\)|(?:^|[^a-z-])lab\([^)]*\)|(?:^|[^a-z-])lch\([^)]*\)|color\([^)]*\)/gi;
   let exportInProgress = false;
 
-  function resolveColorMixExpression(expression) {
+  function toRgbColor(colorValue) {
+    if (!colorValue || colorValue === "transparent") {
+      return "transparent";
+    }
+
+    if (colorValue === "inherit" || colorValue === "initial" || colorValue === "unset") {
+      return colorValue;
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = 1;
+    canvas.height = 1;
+    const context = canvas.getContext("2d");
+    if (!context) {
+      return "transparent";
+    }
+
+    try {
+      context.clearRect(0, 0, 1, 1);
+      context.fillStyle = colorValue;
+      context.fillRect(0, 0, 1, 1);
+      const [red, green, blue, alpha] = context.getImageData(0, 0, 1, 1).data;
+      if (alpha === 255) {
+        return `rgb(${red}, ${green}, ${blue})`;
+      }
+
+      return `rgba(${red}, ${green}, ${blue}, ${(alpha / 255).toFixed(3)})`;
+    } catch (_error) {
+      return "transparent";
+    }
+  }
+
+  function resolveColorExpression(expression) {
     const probe = document.createElement("div");
     probe.style.display = "none";
     document.body.appendChild(probe);
 
     try {
       probe.style.color = expression;
-      return window.getComputedStyle(probe).color || "transparent";
+      const computed = window.getComputedStyle(probe).color;
+      return toRgbColor(computed);
     } catch (_error) {
       return "transparent";
     } finally {
@@ -18,10 +52,18 @@
   }
 
   function sanitizeCssText(cssText) {
-    return cssText.replace(COLOR_MIX_PATTERN, (match) => resolveColorMixExpression(match));
+    return cssText.replace(UNSUPPORTED_COLOR_PATTERN, (match) => resolveColorExpression(match));
   }
 
-  function sanitizeColorMixInStylesheets(clonedDocument) {
+  function cssTextNeedsColorSanitization(cssText) {
+    if (!cssText) {
+      return false;
+    }
+
+    return /color-mix|oklab|oklch|\blab\(|\blch\(|\bcolor\(/i.test(cssText);
+  }
+
+  function sanitizeUnsupportedColorsInStylesheets(clonedDocument) {
     Array.from(clonedDocument.styleSheets).forEach((sheet) => {
       let rules;
       try {
@@ -33,7 +75,7 @@
       for (let index = rules.length - 1; index >= 0; index -= 1) {
         const rule = rules[index];
         const cssText = rule.cssText;
-        if (!cssText || !cssText.includes("color-mix")) {
+        if (!cssTextNeedsColorSanitization(cssText)) {
           continue;
         }
 
@@ -78,7 +120,7 @@
     }
 
     clonedDocument.documentElement.setAttribute("data-theme", "light");
-    sanitizeColorMixInStylesheets(clonedDocument);
+    sanitizeUnsupportedColorsInStylesheets(clonedDocument);
     removeEditorChromeFromClone(clonedDocument);
 
     const editor = clonedDocument.getElementById("wysiwyg-editor");
