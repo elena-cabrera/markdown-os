@@ -4,8 +4,7 @@
   const PDF_EXPORT_THEME_ID = "light";
   const PDF_HIGHLIGHT_THEME = "github";
   const HIGHLIGHT_THEME_BASE = "/static/vendor/highlightjs/styles";
-  const MERMAID_RENDER_WAIT_MS = 6000;
-  const MERMAID_POLL_INTERVAL_MS = 100;
+  const PDF_MERMAID_THEME = "default";
   const INLINE_STYLE_PROPERTIES_TO_STRIP = [
     "color",
     "background",
@@ -367,56 +366,78 @@
     });
   }
 
-  function hasRenderableMermaidDiagram(container) {
-    const svg = container.querySelector(".mermaid-canvas svg");
-    if (!(svg instanceof SVGSVGElement)) {
-      return false;
+  async function rerenderMermaidDiagramsForPdfExport() {
+    if (typeof window.wysiwyg?.rerenderMermaidDiagramsForTheme === "function") {
+      await window.wysiwyg.rerenderMermaidDiagramsForTheme();
+      return;
     }
 
-    const bounds = svg.getBoundingClientRect();
-    return bounds.width > 50 && bounds.height > 50;
+    if (!window.mermaid) {
+      return;
+    }
+
+    window.mermaid.initialize({
+      startOnLoad: false,
+      securityLevel: "strict",
+      theme: PDF_MERMAID_THEME,
+      useMaxWidth: false,
+    });
+
+    const containers = document.querySelectorAll(".mermaid-container");
+    for (const container of containers) {
+      const source = (container.dataset.mermaidSource || "").trim();
+      if (!source) {
+        continue;
+      }
+
+      const canvas = container.querySelector(".mermaid-canvas");
+      if (!canvas) {
+        continue;
+      }
+
+      canvas.replaceChildren();
+      const renderId = `pdf-export-mermaid-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      try {
+        const { svg } = await window.mermaid.render(renderId, source);
+        const template = document.createElement("template");
+        template.innerHTML = svg.trim();
+        canvas.replaceChildren(...template.content.childNodes);
+      } catch (error) {
+        console.error("Failed to render Mermaid diagram for PDF export.", error);
+      }
+    }
   }
 
-  async function waitForMermaidDiagrams(timeoutMs = MERMAID_RENDER_WAIT_MS) {
-    const startedAt = Date.now();
+  async function prepareLightThemeForPdfExport() {
+    const themeManager = window.markdownOSThemeManager;
+    themeManager?.applyTheme?.(PDF_EXPORT_THEME_ID, { emitThemeEvent: false });
+    await waitForNextPaint();
+    await rerenderMermaidDiagramsForPdfExport();
+    await waitForNextPaint();
+  }
 
-    while (Date.now() - startedAt < timeoutMs) {
-      const containers = document.querySelectorAll(".mermaid-container");
-      if (containers.length === 0) {
-        return;
-      }
-
-      const allReady = Array.from(containers).every((container) =>
-        hasRenderableMermaidDiagram(container),
-      );
-      if (allReady) {
-        return;
-      }
-
-      await new Promise((resolve) => {
-        window.setTimeout(resolve, MERMAID_POLL_INTERVAL_MS);
-      });
+  async function restoreThemeAfterPdfExport(previousThemeId) {
+    const themeManager = window.markdownOSThemeManager;
+    if (!themeManager || previousThemeId === PDF_EXPORT_THEME_ID) {
+      return;
     }
+
+    themeManager.applyTheme(previousThemeId, { emitThemeEvent: false });
+    await waitForNextPaint();
+    await rerenderMermaidDiagramsForPdfExport();
+    await waitForNextPaint();
   }
 
   async function withLightThemeForExport(callback) {
     const themeManager = window.markdownOSThemeManager;
     const previousThemeId = themeManager?.currentThemeId || PDF_EXPORT_THEME_ID;
 
-    if (previousThemeId === PDF_EXPORT_THEME_ID) {
-      return callback();
-    }
-
-    themeManager.applyTheme(PDF_EXPORT_THEME_ID, { emitThemeEvent: true });
-    await waitForNextPaint();
-    await waitForMermaidDiagrams();
+    await prepareLightThemeForPdfExport();
 
     try {
       return await callback();
     } finally {
-      themeManager.applyTheme(previousThemeId, { emitThemeEvent: true });
-      await waitForNextPaint();
-      await waitForMermaidDiagrams();
+      await restoreThemeAfterPdfExport(previousThemeId);
     }
   }
 

@@ -699,3 +699,24 @@ def test_wysiwyg_table_controls_support_row_and_column_actions() -> None:
     assert ".table-row-insert-handle" in css_source
     assert ".table-editor-wrapper.table-editor-active .table-row-delete-handle" in css_source
     assert "pointer-events: auto" in css_source
+
+
+def test_wysiwyg_clears_mermaid_canvas_before_rerender() -> None:
+    """Verify stale Mermaid SVGs are removed before async re-render completes."""
+
+    source = _read_static_js("wysiwyg.js")
+
+    assert "canvas.replaceChildren();" in source
+    assert "rerenderMermaidDiagramsForTheme," in source
+
+
+def test_pdf_export_awaits_explicit_mermaid_rerender() -> None:
+    """Verify PDF export does not treat stale Mermaid SVGs as ready."""
+
+    source = _read_static_js("pdf-export.js")
+
+    assert "emitThemeEvent: false" in source
+    assert "await window.wysiwyg.rerenderMermaidDiagramsForTheme();" in source
+    assert "await rerenderMermaidDiagramsForPdfExport();" in source
+    assert "hasRenderableMermaidDiagram" not in source
+    assert "waitForMermaidDiagrams" not in source

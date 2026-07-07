@@ -1035,6 +1035,7 @@
 
     const renderSource = normalizeMermaidSource(rawSource);
     const canvas = ensureMermaidCanvas(container);
+    canvas.replaceChildren();
 
     try {
       const renderId = `mermaid-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -3139,5 +3140,6 @@
     redo,
     insertImage,
     decorateDocument,
+    rerenderMermaidDiagramsForTheme,
   };
 })();
