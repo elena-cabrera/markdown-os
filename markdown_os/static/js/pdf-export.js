@@ -3,8 +3,9 @@
     /color-mix\((?:[^()]|\([^()]*\))*\)|oklab\([^)]*\)|oklch\([^)]*\)|(?:^|[^a-z-])lab\([^)]*\)|(?:^|[^a-z-])lch\([^)]*\)|color\([^)]*\)/gi;
   const PDF_EXPORT_THEME_ID = "light";
   const PDF_HIGHLIGHT_THEME = "github";
-  const PDF_MERMAID_THEME = "default";
   const HIGHLIGHT_THEME_BASE = "/static/vendor/highlightjs/styles";
+  const MERMAID_RENDER_WAIT_MS = 6000;
+  const MERMAID_POLL_INTERVAL_MS = 100;
   const INLINE_STYLE_PROPERTIES_TO_STRIP = [
     "color",
     "background",
@@ -18,62 +19,6 @@
     "fill",
     "stroke",
   ];
-  const PDF_LIGHT_THEME_CSS = `
-    :root,
-    html,
-    body {
-      color-scheme: light !important;
-      --bg: #f7f8fa;
-      --panel-bg: #ffffff;
-      --border: #d9dee7;
-      --text: #17233b;
-      --text-muted: #60708f;
-      --accent: #2563eb;
-      --accent-soft: #dbeafe;
-      --success: #0f766e;
-      --danger: #b91c1c;
-      --warning: #9a6700;
-      --shadow: 0 6px 20px rgba(17, 24, 39, 0.08);
-      --editor-bg: #ffffff;
-      --editor-text: #111827;
-      --preview-text: #1f2937;
-      --code-block-bg: #f8fafc;
-      --inline-code-bg: #e8eaed;
-      --code-header-bg: #f3f7ff;
-      --copy-border: #bec9dd;
-      --copy-bg: #ffffff;
-      --copy-text: #334155;
-      --code-line-number-bg: #eef2ff;
-      --code-line-number-text: #64748b;
-      --mermaid-bg: #ffffff;
-      --mermaid-error-border: #fecaca;
-      --mermaid-error-bg: #fef2f2;
-      --mermaid-error-text: #991b1b;
-      --math-display-bg: #fafcff;
-      --math-display-border: #dbeafe;
-      --math-error-text: #991b1b;
-      --math-error-bg: #fef2f2;
-      --math-error-border: #fecaca;
-      --frontmatter-bg: #f8fafc;
-      --frontmatter-border: #dbe2ee;
-      --frontmatter-key: #5b6c8d;
-      --frontmatter-chip-bg: #e9eef8;
-      --frontmatter-chip-text: #1f2c47;
-      --table-border: #d9dee7;
-      --table-header-bg: #f0f4fa;
-      --table-header-text: #17233b;
-      --table-row-alt-bg: #f7f8fa;
-      --table-row-hover-bg: #eef2f9;
-    }
-
-    html,
-    body,
-    #wysiwyg-wrapper,
-    #wysiwyg-editor {
-      background: #ffffff !important;
-      color: #111827 !important;
-    }
-  `;
 
   let exportInProgress = false;
 
@@ -168,46 +113,6 @@
     });
   }
 
-  function stripThemeInlineStyles(root) {
-    if (!(root instanceof Element)) {
-      return;
-    }
-
-    const elements = [root, ...root.querySelectorAll("[style]")];
-    elements.forEach((element) => {
-      INLINE_STYLE_PROPERTIES_TO_STRIP.forEach((property) => {
-        element.style.removeProperty(property);
-      });
-
-      if (!element.getAttribute("style")?.trim()) {
-        element.removeAttribute("style");
-      }
-    });
-  }
-
-  function injectLightThemeStyles(clonedDocument) {
-    if (!clonedDocument?.head) {
-      return;
-    }
-
-    const existingStyle = clonedDocument.getElementById("pdf-export-light-theme");
-    existingStyle?.remove();
-
-    const style = clonedDocument.createElement("style");
-    style.id = "pdf-export-light-theme";
-    style.textContent = PDF_LIGHT_THEME_CSS;
-    clonedDocument.head.appendChild(style);
-  }
-
-  function swapHighlightThemeInDocument(clonedDocument, highlightThemeId) {
-    const highlightLink = clonedDocument.getElementById("highlight-theme");
-    if (!highlightLink) {
-      return;
-    }
-
-    highlightLink.setAttribute("href", `${HIGHLIGHT_THEME_BASE}/${highlightThemeId}.min.css`);
-  }
-
   function removeEditorChromeFromClone(clonedDocument) {
     const selectors = [
       ".table-edge-layer",
@@ -248,55 +153,182 @@
     });
   }
 
-  function applyMermaidSnapshots(clonedDocument, mermaidSnapshots) {
-    if (!mermaidSnapshots?.length) {
+  function stripThemeInlineStyles(root) {
+    if (!(root instanceof Element)) {
       return;
     }
 
-    const containers = clonedDocument.querySelectorAll(".mermaid-container");
-    containers.forEach((container, index) => {
-      const snapshot = mermaidSnapshots[index];
-      if (!snapshot) {
-        return;
-      }
+    const elements = [root, ...root.querySelectorAll("[style]")];
+    elements.forEach((element) => {
+      INLINE_STYLE_PROPERTIES_TO_STRIP.forEach((property) => {
+        element.style.removeProperty(property);
+      });
 
-      const canvas = container.querySelector(".mermaid-canvas");
-      if (!canvas) {
-        return;
+      if (!element.getAttribute("style")?.trim()) {
+        element.removeAttribute("style");
       }
-
-      const template = clonedDocument.createElement("template");
-      template.innerHTML = snapshot.trim();
-      canvas.replaceChildren(...template.content.childNodes);
     });
   }
 
-  function prepareClonedDocumentForPdf(clonedDocument, mermaidSnapshots) {
+  function replaceMermaidSvgsWithImages(clonedDocument) {
+    clonedDocument.querySelectorAll(".mermaid-canvas svg").forEach((svg) => {
+      if (!(svg instanceof SVGSVGElement)) {
+        return;
+      }
+
+      const bounds = svg.getBoundingClientRect();
+      const viewBox = svg.viewBox?.baseVal;
+      const width =
+        bounds.width ||
+        viewBox?.width ||
+        Number.parseFloat(svg.getAttribute("width") || "") ||
+        320;
+      const height =
+        bounds.height ||
+        viewBox?.height ||
+        Number.parseFloat(svg.getAttribute("height") || "") ||
+        240;
+
+      const serializedSvg = new XMLSerializer().serializeToString(svg);
+      const image = clonedDocument.createElement("img");
+      image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(serializedSvg)}`;
+      image.alt = "Diagram";
+      image.style.display = "block";
+      image.style.width = `${width}px`;
+      image.style.height = `${height}px`;
+      image.style.maxWidth = "100%";
+      svg.replaceWith(image);
+    });
+  }
+
+  function forceLightReadableColors(clonedDocument) {
+    const editor = clonedDocument.getElementById("wysiwyg-editor");
+    if (!editor) {
+      return;
+    }
+
+    editor.querySelectorAll("td, th, p, li, span, strong, em, a").forEach((element) => {
+      if (element.closest("pre, .code-block, .mermaid-container")) {
+        return;
+      }
+
+      element.style.setProperty("color", "#111827", "important");
+      element.style.setProperty("-webkit-text-fill-color", "#111827", "important");
+    });
+
+    editor.querySelectorAll("code").forEach((code) => {
+      if (code.closest("pre, .code-block")) {
+        return;
+      }
+
+      code.style.setProperty("color", "#111827", "important");
+      code.style.setProperty("-webkit-text-fill-color", "#111827", "important");
+      code.style.setProperty("background-color", "#e8eaed", "important");
+    });
+  }
+
+  async function svgElementToImageMarkup(svg) {
+    const serializedSvg = new XMLSerializer().serializeToString(svg);
+    const viewBox = svg.viewBox?.baseVal;
+    const bounds = svg.getBoundingClientRect();
+    const width = Math.ceil(bounds.width || viewBox?.width || 320);
+    const height = Math.ceil(bounds.height || viewBox?.height || 240);
+    const image = document.createElement("img");
+    image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(serializedSvg)}`;
+    image.alt = "Diagram";
+    image.className = "pdf-export-mermaid-image";
+    image.style.display = "block";
+    image.style.maxWidth = "100%";
+    image.style.width = `${width}px`;
+    image.style.height = `${height}px`;
+
+    await new Promise((resolve, reject) => {
+      image.addEventListener("load", resolve, { once: true });
+      image.addEventListener("error", () => reject(new Error("Failed to load Mermaid image.")), {
+        once: true,
+      });
+    });
+
+    return image;
+  }
+
+  async function replaceMermaidWithImagesForExport(root) {
+    const replacements = [];
+
+    for (const container of root.querySelectorAll(".mermaid-container")) {
+      const canvas = container.querySelector(".mermaid-canvas");
+      const svg = canvas?.querySelector("svg");
+      if (!(svg instanceof SVGSVGElement)) {
+        continue;
+      }
+
+      const image = await svgElementToImageMarkup(svg);
+      replacements.push({ svg, image });
+      svg.replaceWith(image);
+    }
+
+    await waitForNextPaint();
+
+    return () => {
+      replacements.forEach(({ svg, image }) => {
+        image.replaceWith(svg);
+      });
+    };
+  }
+
+  function injectPdfExportStyles(clonedDocument) {
+    const style = clonedDocument.createElement("style");
+    style.id = "pdf-export-readability";
+    style.textContent = `
+      #wysiwyg-editor,
+      #wysiwyg-editor p,
+      #wysiwyg-editor li,
+      #wysiwyg-editor td,
+      #wysiwyg-editor th,
+      #wysiwyg-editor span,
+      #wysiwyg-editor strong,
+      #wysiwyg-editor em,
+      #wysiwyg-editor a {
+        color: #111827 !important;
+        -webkit-text-fill-color: #111827 !important;
+      }
+
+      #wysiwyg-editor :not(pre) > code {
+        color: #111827 !important;
+        background-color: #e8eaed !important;
+        -webkit-text-fill-color: #111827 !important;
+      }
+    `;
+    clonedDocument.head.appendChild(style);
+  }
+
+  function prepareClonedDocumentForPdf(clonedDocument) {
     if (!clonedDocument?.documentElement) {
       return;
     }
 
     clonedDocument.documentElement.setAttribute("data-theme", PDF_EXPORT_THEME_ID);
-    injectLightThemeStyles(clonedDocument);
-    swapHighlightThemeInDocument(clonedDocument, PDF_HIGHLIGHT_THEME);
+    injectPdfExportStyles(clonedDocument);
     sanitizeUnsupportedColorsInStylesheets(clonedDocument);
     removeEditorChromeFromClone(clonedDocument);
-    applyMermaidSnapshots(clonedDocument, mermaidSnapshots);
+    replaceMermaidSvgsWithImages(clonedDocument);
+
+    const highlightLink = clonedDocument.getElementById("highlight-theme");
+    if (highlightLink) {
+      highlightLink.setAttribute("href", `${HIGHLIGHT_THEME_BASE}/${PDF_HIGHLIGHT_THEME}.min.css`);
+    }
 
     const wrapper = clonedDocument.getElementById("wysiwyg-wrapper");
     if (wrapper) {
       stripThemeInlineStyles(wrapper);
-      wrapper.style.background = "#ffffff";
-      wrapper.style.color = "#111827";
     }
+
+    forceLightReadableColors(clonedDocument);
 
     const editor = clonedDocument.getElementById("wysiwyg-editor");
     if (editor) {
-      stripThemeInlineStyles(editor);
       editor.removeAttribute("contenteditable");
       editor.style.paddingBottom = "20px";
-      editor.style.background = "transparent";
-      editor.style.color = "#111827";
     }
   }
 
@@ -327,72 +359,65 @@
     window.sharedUtils?.setContentLoadingState?.(isLoading);
   }
 
-  function getMermaidContainers(sourceElement) {
-    return Array.from(sourceElement.querySelectorAll(".mermaid-container"));
-  }
-
-  function readMermaidSource(container) {
-    return container.dataset.mermaidSource || "";
-  }
-
-  async function renderLightMermaidSnapshots(sourceElement) {
-    if (!window.mermaid) {
-      return [];
-    }
-
-    const containers = getMermaidContainers(sourceElement);
-    if (containers.length === 0) {
-      return [];
-    }
-
-    const previousMermaidConfig = window.mermaid.mermaidAPI?.getConfig?.() || null;
-    window.mermaid.initialize({
-      startOnLoad: false,
-      securityLevel: "strict",
-      theme: PDF_MERMAID_THEME,
-      useMaxWidth: false,
+  function waitForNextPaint() {
+    return new Promise((resolve) => {
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(resolve);
+      });
     });
+  }
 
-    const snapshots = [];
-    for (const container of containers) {
-      const source = readMermaidSource(container).trim();
-      if (!source) {
-        snapshots.push("");
-        continue;
-      }
-
-      const renderId = `pdf-mermaid-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-      try {
-        const { svg } = await window.mermaid.render(renderId, source);
-        snapshots.push(svg);
-      } catch (error) {
-        console.error("Failed to render Mermaid diagram for PDF export.", error);
-        const canvas = container.querySelector(".mermaid-canvas");
-        snapshots.push(canvas?.innerHTML || "");
-      }
+  function hasRenderableMermaidDiagram(container) {
+    const svg = container.querySelector(".mermaid-canvas svg");
+    if (!(svg instanceof SVGSVGElement)) {
+      return false;
     }
 
-    if (previousMermaidConfig) {
-      window.mermaid.initialize(previousMermaidConfig);
-    } else {
-      const currentThemeId = window.markdownOSThemeManager?.currentThemeId || PDF_EXPORT_THEME_ID;
-      const mermaidThemeByAppTheme = {
-        light: "default",
-        dark: "dark",
-        dracula: "dark",
-        "nord-light": "neutral",
-        "nord-dark": "dark",
-        lofi: "neutral",
-      };
-      window.mermaid.initialize({
-        startOnLoad: false,
-        securityLevel: "strict",
-        theme: mermaidThemeByAppTheme[currentThemeId] || "default",
-        useMaxWidth: false,
+    const bounds = svg.getBoundingClientRect();
+    return bounds.width > 50 && bounds.height > 50;
+  }
+
+  async function waitForMermaidDiagrams(timeoutMs = MERMAID_RENDER_WAIT_MS) {
+    const startedAt = Date.now();
+
+    while (Date.now() - startedAt < timeoutMs) {
+      const containers = document.querySelectorAll(".mermaid-container");
+      if (containers.length === 0) {
+        return;
+      }
+
+      const allReady = Array.from(containers).every((container) =>
+        hasRenderableMermaidDiagram(container),
+      );
+      if (allReady) {
+        return;
+      }
+
+      await new Promise((resolve) => {
+        window.setTimeout(resolve, MERMAID_POLL_INTERVAL_MS);
       });
     }
+  }
 
-    return snapshots;
+  async function withLightThemeForExport(callback) {
+    const themeManager = window.markdownOSThemeManager;
+    const previousThemeId = themeManager?.currentThemeId || PDF_EXPORT_THEME_ID;
+
+    if (previousThemeId === PDF_EXPORT_THEME_ID) {
+      return callback();
+    }
+
+    themeManager.applyTheme(PDF_EXPORT_THEME_ID, { emitThemeEvent: true });
+    await waitForNextPaint();
+    await waitForMermaidDiagrams();
+
+    try {
+      return await callback();
+    } finally {
+      themeManager.applyTheme(previousThemeId, { emitThemeEvent: true });
+      await waitForNextPaint();
+      await waitForMermaidDiagrams();
+    }
   }
 
   async function exportToPdf() {
@@ -415,13 +440,6 @@
     setExportLoadingState(true);
     setExportStatus("Exporting PDF...", "saving");
 
-    let mermaidSnapshots = [];
-    try {
-      mermaidSnapshots = await renderLightMermaidSnapshots(sourceElement);
-    } catch (error) {
-      console.error("Failed to prepare Mermaid diagrams for PDF export.", error);
-    }
-
     const options = {
       margin: [10, 12, 10, 12],
       filename: derivePdfFilename(),
@@ -429,15 +447,20 @@
       html2canvas: {
         scale: 2,
         useCORS: true,
-        onclone: (clonedDocument) => {
-          prepareClonedDocumentForPdf(clonedDocument, mermaidSnapshots);
-        },
+        onclone: prepareClonedDocumentForPdf,
       },
       jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
     };
 
     try {
-      await window.html2pdf().set(options).from(sourceElement).save();
+      await withLightThemeForExport(async () => {
+        const restoreMermaid = await replaceMermaidWithImagesForExport(sourceElement);
+        try {
+          await window.html2pdf().set(options).from(sourceElement).save();
+        } finally {
+          restoreMermaid();
+        }
+      });
       setExportStatus("PDF exported", "saved");
     } catch (error) {
       console.error("Failed to export PDF.", error);
