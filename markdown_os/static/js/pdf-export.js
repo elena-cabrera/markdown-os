@@ -19,7 +19,32 @@
     "stroke",
   ];
 
+  const PDF_EXPORT_LIGHT_CSS = `
+    #wysiwyg-wrapper {
+      background: #ffffff !important;
+      color: #111827 !important;
+    }
+
+    #wysiwyg-editor {
+      background: transparent !important;
+      color: #111827 !important;
+    }
+
+    #wysiwyg-editor
+      :is(h1, h2, h3, h4, h5, h6, p, li, td, th, span, strong, em, a, blockquote) {
+      color: #111827 !important;
+      -webkit-text-fill-color: #111827 !important;
+    }
+
+    #wysiwyg-editor :not(pre) > code {
+      color: #111827 !important;
+      background-color: #e8eaed !important;
+      -webkit-text-fill-color: #111827 !important;
+    }
+  `;
+
   let exportInProgress = false;
+  let livePdfExportStyle = null;
 
   function toRgbColor(colorValue) {
     if (!colorValue || colorValue === "transparent") {
@@ -206,7 +231,9 @@
       return;
     }
 
-    editor.querySelectorAll("td, th, p, li, span, strong, em, a").forEach((element) => {
+    editor
+      .querySelectorAll("h1, h2, h3, h4, h5, h6, td, th, p, li, span, strong, em, a, blockquote")
+      .forEach((element) => {
       if (element.closest("pre, .code-block, .mermaid-container")) {
         return;
       }
@@ -275,29 +302,24 @@
     };
   }
 
+  function installLivePdfExportStyles() {
+    removeLivePdfExportStyles();
+
+    livePdfExportStyle = document.createElement("style");
+    livePdfExportStyle.id = "pdf-export-live-styles";
+    livePdfExportStyle.textContent = PDF_EXPORT_LIGHT_CSS;
+    document.head.appendChild(livePdfExportStyle);
+  }
+
+  function removeLivePdfExportStyles() {
+    livePdfExportStyle?.remove();
+    livePdfExportStyle = null;
+  }
+
   function injectPdfExportStyles(clonedDocument) {
     const style = clonedDocument.createElement("style");
     style.id = "pdf-export-readability";
-    style.textContent = `
-      #wysiwyg-editor,
-      #wysiwyg-editor p,
-      #wysiwyg-editor li,
-      #wysiwyg-editor td,
-      #wysiwyg-editor th,
-      #wysiwyg-editor span,
-      #wysiwyg-editor strong,
-      #wysiwyg-editor em,
-      #wysiwyg-editor a {
-        color: #111827 !important;
-        -webkit-text-fill-color: #111827 !important;
-      }
-
-      #wysiwyg-editor :not(pre) > code {
-        color: #111827 !important;
-        background-color: #e8eaed !important;
-        -webkit-text-fill-color: #111827 !important;
-      }
-    `;
+    style.textContent = PDF_EXPORT_LIGHT_CSS;
     clonedDocument.head.appendChild(style);
   }
 
@@ -410,6 +432,7 @@
 
   async function prepareLightThemeForPdfExport() {
     const themeManager = window.markdownOSThemeManager;
+    installLivePdfExportStyles();
     themeManager?.applyTheme?.(PDF_EXPORT_THEME_ID, { emitThemeEvent: false });
     await waitForNextPaint();
     await rerenderMermaidDiagramsForPdfExport();
@@ -417,6 +440,8 @@
   }
 
   async function restoreThemeAfterPdfExport(previousThemeId) {
+    removeLivePdfExportStyles();
+
     const themeManager = window.markdownOSThemeManager;
     if (!themeManager || previousThemeId === PDF_EXPORT_THEME_ID) {
       return;
@@ -487,6 +512,7 @@
       console.error("Failed to export PDF.", error);
       setExportStatus("PDF export failed", "error");
     } finally {
+      removeLivePdfExportStyles();
       exportInProgress = false;
       setExportLoadingState(false);
     }

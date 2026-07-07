@@ -1,7 +1,50 @@
 (() => {
   const UNSUPPORTED_COLOR_PATTERN =
     /color-mix\((?:[^()]|\([^()]*\))*\)|oklab\([^)]*\)|oklch\([^)]*\)|(?:^|[^a-z-])lab\([^)]*\)|(?:^|[^a-z-])lch\([^)]*\)|color\([^)]*\)/gi;
+  const PDF_EXPORT_THEME_ID = "light";
+  const PDF_HIGHLIGHT_THEME = "github";
+  const HIGHLIGHT_THEME_BASE = "/static/vendor/highlightjs/styles";
+  const PDF_MERMAID_THEME = "default";
+  const INLINE_STYLE_PROPERTIES_TO_STRIP = [
+    "color",
+    "background",
+    "background-color",
+    "background-image",
+    "border-color",
+    "border-top-color",
+    "border-right-color",
+    "border-bottom-color",
+    "border-left-color",
+    "fill",
+    "stroke",
+  ];
+
+  const PDF_EXPORT_LIGHT_CSS = `
+    #wysiwyg-wrapper {
+      background: #ffffff !important;
+      color: #111827 !important;
+    }
+
+    #wysiwyg-editor {
+      background: transparent !important;
+      color: #111827 !important;
+    }
+
+    #wysiwyg-editor
+      :is(h1, h2, h3, h4, h5, h6, p, li, td, th, span, strong, em, a, blockquote) {
+      color: #111827 !important;
+      -webkit-text-fill-color: #111827 !important;
+    }
+
+    #wysiwyg-editor :not(pre) > code {
+      color: #111827 !important;
+      background-color: #e8eaed !important;
+      -webkit-text-fill-color: #111827 !important;
+    }
+  `;
+
   let exportInProgress = false;
+  let livePdfExportStyle = null;
 
   function toRgbColor(colorValue) {
     if (!colorValue || colorValue === "transparent") {
@@ -103,6 +146,16 @@
       ".table-col-insert-handle",
       ".table-row-delete-handle",
       ".table-col-delete-handle",
+      ".mermaid-inline-toolbar",
+      ".mermaid-zoom-controls",
+      ".mermaid-fullscreen-trigger",
+      ".block-edit-trigger",
+      ".copy-button",
+      ".code-block-actions",
+      ".frontmatter-add-property",
+      ".frontmatter-edit-property",
+      ".frontmatter-delete-property",
+      ".frontmatter-property-actions",
     ];
 
     selectors.forEach((selector) => {
@@ -112,6 +165,162 @@
     clonedDocument.querySelectorAll(".table-editor-wrapper").forEach((wrapper) => {
       wrapper.classList.remove("table-editor-active");
     });
+
+    clonedDocument.querySelectorAll(".mermaid-container").forEach((container) => {
+      const canvas = container.querySelector(".mermaid-canvas");
+      if (!canvas) {
+        return;
+      }
+
+      canvas.style.maxHeight = "none";
+      canvas.style.overflow = "visible";
+    });
+  }
+
+  function stripThemeInlineStyles(root) {
+    if (!(root instanceof Element)) {
+      return;
+    }
+
+    const elements = [root, ...root.querySelectorAll("[style]")];
+    elements.forEach((element) => {
+      INLINE_STYLE_PROPERTIES_TO_STRIP.forEach((property) => {
+        element.style.removeProperty(property);
+      });
+
+      if (!element.getAttribute("style")?.trim()) {
+        element.removeAttribute("style");
+      }
+    });
+  }
+
+  function replaceMermaidSvgsWithImages(clonedDocument) {
+    clonedDocument.querySelectorAll(".mermaid-canvas svg").forEach((svg) => {
+      if (!(svg instanceof SVGSVGElement)) {
+        return;
+      }
+
+      const bounds = svg.getBoundingClientRect();
+      const viewBox = svg.viewBox?.baseVal;
+      const width =
+        bounds.width ||
+        viewBox?.width ||
+        Number.parseFloat(svg.getAttribute("width") || "") ||
+        320;
+      const height =
+        bounds.height ||
+        viewBox?.height ||
+        Number.parseFloat(svg.getAttribute("height") || "") ||
+        240;
+
+      const serializedSvg = new XMLSerializer().serializeToString(svg);
+      const image = clonedDocument.createElement("img");
+      image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(serializedSvg)}`;
+      image.alt = "Diagram";
+      image.style.display = "block";
+      image.style.width = `${width}px`;
+      image.style.height = `${height}px`;
+      image.style.maxWidth = "100%";
+      svg.replaceWith(image);
+    });
+  }
+
+  function forceLightReadableColors(clonedDocument) {
+    const editor = clonedDocument.getElementById("wysiwyg-editor");
+    if (!editor) {
+      return;
+    }
+
+    editor
+      .querySelectorAll("h1, h2, h3, h4, h5, h6, td, th, p, li, span, strong, em, a, blockquote")
+      .forEach((element) => {
+      if (element.closest("pre, .code-block, .mermaid-container")) {
+        return;
+      }
+
+      element.style.setProperty("color", "#111827", "important");
+      element.style.setProperty("-webkit-text-fill-color", "#111827", "important");
+    });
+
+    editor.querySelectorAll("code").forEach((code) => {
+      if (code.closest("pre, .code-block")) {
+        return;
+      }
+
+      code.style.setProperty("color", "#111827", "important");
+      code.style.setProperty("-webkit-text-fill-color", "#111827", "important");
+      code.style.setProperty("background-color", "#e8eaed", "important");
+    });
+  }
+
+  async function svgElementToImageMarkup(svg) {
+    const serializedSvg = new XMLSerializer().serializeToString(svg);
+    const viewBox = svg.viewBox?.baseVal;
+    const bounds = svg.getBoundingClientRect();
+    const width = Math.ceil(bounds.width || viewBox?.width || 320);
+    const height = Math.ceil(bounds.height || viewBox?.height || 240);
+    const image = document.createElement("img");
+    image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(serializedSvg)}`;
+    image.alt = "Diagram";
+    image.className = "pdf-export-mermaid-image";
+    image.style.display = "block";
+    image.style.maxWidth = "100%";
+    image.style.width = `${width}px`;
+    image.style.height = `${height}px`;
+
+    await new Promise((resolve, reject) => {
+      image.addEventListener("load", resolve, { once: true });
+      image.addEventListener("error", () => reject(new Error("Failed to load Mermaid image.")), {
+        once: true,
+      });
+    });
+
+    return image;
+  }
+
+  async function replaceMermaidWithImagesForExport(root) {
+    const replacements = [];
+
+    for (const container of root.querySelectorAll(".mermaid-container")) {
+      const canvas = container.querySelector(".mermaid-canvas");
+      const svg = canvas?.querySelector("svg");
+      if (!(svg instanceof SVGSVGElement)) {
+        continue;
+      }
+
+      const image = await svgElementToImageMarkup(svg);
+      replacements.push({ svg, image });
+      svg.replaceWith(image);
+    }
+
+    await waitForNextPaint();
+
+    return () => {
+      replacements.forEach(({ svg, image }) => {
+        image.replaceWith(svg);
+      });
+    };
+  }
+
+  function installLivePdfExportStyles() {
+    removeLivePdfExportStyles();
+
+    livePdfExportStyle = document.createElement("style");
+    livePdfExportStyle.id = "pdf-export-live-styles";
+    livePdfExportStyle.textContent = PDF_EXPORT_LIGHT_CSS;
+    document.head.appendChild(livePdfExportStyle);
+  }
+
+  function removeLivePdfExportStyles() {
+    livePdfExportStyle?.remove();
+    livePdfExportStyle = null;
+  }
+
+  function injectPdfExportStyles(clonedDocument) {
+    const style = clonedDocument.createElement("style");
+    style.id = "pdf-export-readability";
+    style.textContent = PDF_EXPORT_LIGHT_CSS;
+    clonedDocument.head.appendChild(style);
   }
 
   function prepareClonedDocumentForPdf(clonedDocument) {
@@ -119,9 +328,23 @@
       return;
     }
 
-    clonedDocument.documentElement.setAttribute("data-theme", "light");
+    clonedDocument.documentElement.setAttribute("data-theme", PDF_EXPORT_THEME_ID);
+    injectPdfExportStyles(clonedDocument);
     sanitizeUnsupportedColorsInStylesheets(clonedDocument);
     removeEditorChromeFromClone(clonedDocument);
+    replaceMermaidSvgsWithImages(clonedDocument);
+
+    const highlightLink = clonedDocument.getElementById("highlight-theme");
+    if (highlightLink) {
+      highlightLink.setAttribute("href", `${HIGHLIGHT_THEME_BASE}/${PDF_HIGHLIGHT_THEME}.min.css`);
+    }
+
+    const wrapper = clonedDocument.getElementById("wysiwyg-wrapper");
+    if (wrapper) {
+      stripThemeInlineStyles(wrapper);
+    }
+
+    forceLightReadableColors(clonedDocument);
 
     const editor = clonedDocument.getElementById("wysiwyg-editor");
     if (editor) {
@@ -157,7 +380,93 @@
     window.sharedUtils?.setContentLoadingState?.(isLoading);
   }
 
-  function exportToPdf() {
+  function waitForNextPaint() {
+    return new Promise((resolve) => {
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(resolve);
+      });
+    });
+  }
+
+  async function rerenderMermaidDiagramsForPdfExport() {
+    if (typeof window.wysiwyg?.rerenderMermaidDiagramsForTheme === "function") {
+      await window.wysiwyg.rerenderMermaidDiagramsForTheme();
+      return;
+    }
+
+    if (!window.mermaid) {
+      return;
+    }
+
+    window.mermaid.initialize({
+      startOnLoad: false,
+      securityLevel: "strict",
+      theme: PDF_MERMAID_THEME,
+      useMaxWidth: false,
+    });
+
+    const containers = document.querySelectorAll(".mermaid-container");
+    for (const container of containers) {
+      const source = (container.dataset.mermaidSource || "").trim();
+      if (!source) {
+        continue;
+      }
+
+      const canvas = container.querySelector(".mermaid-canvas");
+      if (!canvas) {
+        continue;
+      }
+
+      canvas.replaceChildren();
+      const renderId = `pdf-export-mermaid-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      try {
+        const { svg } = await window.mermaid.render(renderId, source);
+        const template = document.createElement("template");
+        template.innerHTML = svg.trim();
+        canvas.replaceChildren(...template.content.childNodes);
+      } catch (error) {
+        console.error("Failed to render Mermaid diagram for PDF export.", error);
+      }
+    }
+  }
+
+  async function prepareLightThemeForPdfExport() {
+    const themeManager = window.markdownOSThemeManager;
+    installLivePdfExportStyles();
+    themeManager?.applyTheme?.(PDF_EXPORT_THEME_ID, { emitThemeEvent: false });
+    await waitForNextPaint();
+    await rerenderMermaidDiagramsForPdfExport();
+    await waitForNextPaint();
+  }
+
+  async function restoreThemeAfterPdfExport(previousThemeId) {
+    removeLivePdfExportStyles();
+
+    const themeManager = window.markdownOSThemeManager;
+    if (!themeManager || previousThemeId === PDF_EXPORT_THEME_ID) {
+      return;
+    }
+
+    themeManager.applyTheme(previousThemeId, { emitThemeEvent: false });
+    await waitForNextPaint();
+    await rerenderMermaidDiagramsForPdfExport();
+    await waitForNextPaint();
+  }
+
+  async function withLightThemeForExport(callback) {
+    const themeManager = window.markdownOSThemeManager;
+    const previousThemeId = themeManager?.currentThemeId || PDF_EXPORT_THEME_ID;
+
+    await prepareLightThemeForPdfExport();
+
+    try {
+      return await callback();
+    } finally {
+      await restoreThemeAfterPdfExport(previousThemeId);
+    }
+  }
+
+  async function exportToPdf() {
     if (exportInProgress) {
       return;
     }
@@ -189,22 +498,24 @@
       jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
     };
 
-    window
-      .html2pdf()
-      .set(options)
-      .from(sourceElement)
-      .save()
-      .then(() => {
-        setExportStatus("PDF exported", "saved");
-      })
-      .catch((error) => {
-        console.error("Failed to export PDF.", error);
-        setExportStatus("PDF export failed", "error");
-      })
-      .finally(() => {
-        exportInProgress = false;
-        setExportLoadingState(false);
+    try {
+      await withLightThemeForExport(async () => {
+        const restoreMermaid = await replaceMermaidWithImagesForExport(sourceElement);
+        try {
+          await window.html2pdf().set(options).from(sourceElement).save();
+        } finally {
+          restoreMermaid();
+        }
       });
+      setExportStatus("PDF exported", "saved");
+    } catch (error) {
+      console.error("Failed to export PDF.", error);
+      setExportStatus("PDF export failed", "error");
+    } finally {
+      removeLivePdfExportStyles();
+      exportInProgress = false;
+      setExportLoadingState(false);
+    }
   }
 
   window.MarkdownOS = window.MarkdownOS || {};

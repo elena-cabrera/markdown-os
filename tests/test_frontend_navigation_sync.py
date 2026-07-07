@@ -718,5 +718,8 @@ def test_pdf_export_awaits_explicit_mermaid_rerender() -> None:
     assert "emitThemeEvent: false" in source
     assert "await window.wysiwyg.rerenderMermaidDiagramsForTheme();" in source
     assert "await rerenderMermaidDiagramsForPdfExport();" in source
+    assert "installLivePdfExportStyles();" in source
+    assert "#wysiwyg-editor" in source
+    assert ":is(h1, h2, h3, h4, h5, h6, p, li, td, th, span, strong, em, a, blockquote)" in source
     assert "hasRenderableMermaidDiagram" not in source
     assert "waitForMermaidDiagrams" not in source
