@@ -1,6 +1,80 @@
 (() => {
   const UNSUPPORTED_COLOR_PATTERN =
     /color-mix\((?:[^()]|\([^()]*\))*\)|oklab\([^)]*\)|oklch\([^)]*\)|(?:^|[^a-z-])lab\([^)]*\)|(?:^|[^a-z-])lch\([^)]*\)|color\([^)]*\)/gi;
+  const PDF_EXPORT_THEME_ID = "light";
+  const PDF_HIGHLIGHT_THEME = "github";
+  const PDF_MERMAID_THEME = "default";
+  const HIGHLIGHT_THEME_BASE = "/static/vendor/highlightjs/styles";
+  const INLINE_STYLE_PROPERTIES_TO_STRIP = [
+    "color",
+    "background",
+    "background-color",
+    "background-image",
+    "border-color",
+    "border-top-color",
+    "border-right-color",
+    "border-bottom-color",
+    "border-left-color",
+    "fill",
+    "stroke",
+  ];
+  const PDF_LIGHT_THEME_CSS = `
+    :root,
+    html,
+    body {
+      color-scheme: light !important;
+      --bg: #f7f8fa;
+      --panel-bg: #ffffff;
+      --border: #d9dee7;
+      --text: #17233b;
+      --text-muted: #60708f;
+      --accent: #2563eb;
+      --accent-soft: #dbeafe;
+      --success: #0f766e;
+      --danger: #b91c1c;
+      --warning: #9a6700;
+      --shadow: 0 6px 20px rgba(17, 24, 39, 0.08);
+      --editor-bg: #ffffff;
+      --editor-text: #111827;
+      --preview-text: #1f2937;
+      --code-block-bg: #f8fafc;
+      --inline-code-bg: #e8eaed;
+      --code-header-bg: #f3f7ff;
+      --copy-border: #bec9dd;
+      --copy-bg: #ffffff;
+      --copy-text: #334155;
+      --code-line-number-bg: #eef2ff;
+      --code-line-number-text: #64748b;
+      --mermaid-bg: #ffffff;
+      --mermaid-error-border: #fecaca;
+      --mermaid-error-bg: #fef2f2;
+      --mermaid-error-text: #991b1b;
+      --math-display-bg: #fafcff;
+      --math-display-border: #dbeafe;
+      --math-error-text: #991b1b;
+      --math-error-bg: #fef2f2;
+      --math-error-border: #fecaca;
+      --frontmatter-bg: #f8fafc;
+      --frontmatter-border: #dbe2ee;
+      --frontmatter-key: #5b6c8d;
+      --frontmatter-chip-bg: #e9eef8;
+      --frontmatter-chip-text: #1f2c47;
+      --table-border: #d9dee7;
+      --table-header-bg: #f0f4fa;
+      --table-header-text: #17233b;
+      --table-row-alt-bg: #f7f8fa;
+      --table-row-hover-bg: #eef2f9;
+    }
+
+    html,
+    body,
+    #wysiwyg-wrapper,
+    #wysiwyg-editor {
+      background: #ffffff !important;
+      color: #111827 !important;
+    }
+  `;
+
   let exportInProgress = false;
 
   function toRgbColor(colorValue) {
@@ -94,6 +168,46 @@
     });
   }
 
+  function stripThemeInlineStyles(root) {
+    if (!(root instanceof Element)) {
+      return;
+    }
+
+    const elements = [root, ...root.querySelectorAll("[style]")];
+    elements.forEach((element) => {
+      INLINE_STYLE_PROPERTIES_TO_STRIP.forEach((property) => {
+        element.style.removeProperty(property);
+      });
+
+      if (!element.getAttribute("style")?.trim()) {
+        element.removeAttribute("style");
+      }
+    });
+  }
+
+  function injectLightThemeStyles(clonedDocument) {
+    if (!clonedDocument?.head) {
+      return;
+    }
+
+    const existingStyle = clonedDocument.getElementById("pdf-export-light-theme");
+    existingStyle?.remove();
+
+    const style = clonedDocument.createElement("style");
+    style.id = "pdf-export-light-theme";
+    style.textContent = PDF_LIGHT_THEME_CSS;
+    clonedDocument.head.appendChild(style);
+  }
+
+  function swapHighlightThemeInDocument(clonedDocument, highlightThemeId) {
+    const highlightLink = clonedDocument.getElementById("highlight-theme");
+    if (!highlightLink) {
+      return;
+    }
+
+    highlightLink.setAttribute("href", `${HIGHLIGHT_THEME_BASE}/${highlightThemeId}.min.css`);
+  }
+
   function removeEditorChromeFromClone(clonedDocument) {
     const selectors = [
       ".table-edge-layer",
@@ -103,6 +217,16 @@
       ".table-col-insert-handle",
       ".table-row-delete-handle",
       ".table-col-delete-handle",
+      ".mermaid-inline-toolbar",
+      ".mermaid-zoom-controls",
+      ".mermaid-fullscreen-trigger",
+      ".block-edit-trigger",
+      ".copy-button",
+      ".code-block-actions",
+      ".frontmatter-add-property",
+      ".frontmatter-edit-property",
+      ".frontmatter-delete-property",
+      ".frontmatter-property-actions",
     ];
 
     selectors.forEach((selector) => {
@@ -112,21 +236,67 @@
     clonedDocument.querySelectorAll(".table-editor-wrapper").forEach((wrapper) => {
       wrapper.classList.remove("table-editor-active");
     });
+
+    clonedDocument.querySelectorAll(".mermaid-container").forEach((container) => {
+      const canvas = container.querySelector(".mermaid-canvas");
+      if (!canvas) {
+        return;
+      }
+
+      canvas.style.maxHeight = "none";
+      canvas.style.overflow = "visible";
+    });
   }
 
-  function prepareClonedDocumentForPdf(clonedDocument) {
+  function applyMermaidSnapshots(clonedDocument, mermaidSnapshots) {
+    if (!mermaidSnapshots?.length) {
+      return;
+    }
+
+    const containers = clonedDocument.querySelectorAll(".mermaid-container");
+    containers.forEach((container, index) => {
+      const snapshot = mermaidSnapshots[index];
+      if (!snapshot) {
+        return;
+      }
+
+      const canvas = container.querySelector(".mermaid-canvas");
+      if (!canvas) {
+        return;
+      }
+
+      const template = clonedDocument.createElement("template");
+      template.innerHTML = snapshot.trim();
+      canvas.replaceChildren(...template.content.childNodes);
+    });
+  }
+
+  function prepareClonedDocumentForPdf(clonedDocument, mermaidSnapshots) {
     if (!clonedDocument?.documentElement) {
       return;
     }
 
-    clonedDocument.documentElement.setAttribute("data-theme", "light");
+    clonedDocument.documentElement.setAttribute("data-theme", PDF_EXPORT_THEME_ID);
+    injectLightThemeStyles(clonedDocument);
+    swapHighlightThemeInDocument(clonedDocument, PDF_HIGHLIGHT_THEME);
     sanitizeUnsupportedColorsInStylesheets(clonedDocument);
     removeEditorChromeFromClone(clonedDocument);
+    applyMermaidSnapshots(clonedDocument, mermaidSnapshots);
+
+    const wrapper = clonedDocument.getElementById("wysiwyg-wrapper");
+    if (wrapper) {
+      stripThemeInlineStyles(wrapper);
+      wrapper.style.background = "#ffffff";
+      wrapper.style.color = "#111827";
+    }
 
     const editor = clonedDocument.getElementById("wysiwyg-editor");
     if (editor) {
+      stripThemeInlineStyles(editor);
       editor.removeAttribute("contenteditable");
       editor.style.paddingBottom = "20px";
+      editor.style.background = "transparent";
+      editor.style.color = "#111827";
     }
   }
 
@@ -157,7 +327,75 @@
     window.sharedUtils?.setContentLoadingState?.(isLoading);
   }
 
-  function exportToPdf() {
+  function getMermaidContainers(sourceElement) {
+    return Array.from(sourceElement.querySelectorAll(".mermaid-container"));
+  }
+
+  function readMermaidSource(container) {
+    return container.dataset.mermaidSource || "";
+  }
+
+  async function renderLightMermaidSnapshots(sourceElement) {
+    if (!window.mermaid) {
+      return [];
+    }
+
+    const containers = getMermaidContainers(sourceElement);
+    if (containers.length === 0) {
+      return [];
+    }
+
+    const previousMermaidConfig = window.mermaid.mermaidAPI?.getConfig?.() || null;
+    window.mermaid.initialize({
+      startOnLoad: false,
+      securityLevel: "strict",
+      theme: PDF_MERMAID_THEME,
+      useMaxWidth: false,
+    });
+
+    const snapshots = [];
+    for (const container of containers) {
+      const source = readMermaidSource(container).trim();
+      if (!source) {
+        snapshots.push("");
+        continue;
+      }
+
+      const renderId = `pdf-mermaid-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      try {
+        const { svg } = await window.mermaid.render(renderId, source);
+        snapshots.push(svg);
+      } catch (error) {
+        console.error("Failed to render Mermaid diagram for PDF export.", error);
+        const canvas = container.querySelector(".mermaid-canvas");
+        snapshots.push(canvas?.innerHTML || "");
+      }
+    }
+
+    if (previousMermaidConfig) {
+      window.mermaid.initialize(previousMermaidConfig);
+    } else {
+      const currentThemeId = window.markdownOSThemeManager?.currentThemeId || PDF_EXPORT_THEME_ID;
+      const mermaidThemeByAppTheme = {
+        light: "default",
+        dark: "dark",
+        dracula: "dark",
+        "nord-light": "neutral",
+        "nord-dark": "dark",
+        lofi: "neutral",
+      };
+      window.mermaid.initialize({
+        startOnLoad: false,
+        securityLevel: "strict",
+        theme: mermaidThemeByAppTheme[currentThemeId] || "default",
+        useMaxWidth: false,
+      });
+    }
+
+    return snapshots;
+  }
+
+  async function exportToPdf() {
     if (exportInProgress) {
       return;
     }
@@ -177,6 +415,13 @@
     setExportLoadingState(true);
     setExportStatus("Exporting PDF...", "saving");
 
+    let mermaidSnapshots = [];
+    try {
+      mermaidSnapshots = await renderLightMermaidSnapshots(sourceElement);
+    } catch (error) {
+      console.error("Failed to prepare Mermaid diagrams for PDF export.", error);
+    }
+
     const options = {
       margin: [10, 12, 10, 12],
       filename: derivePdfFilename(),
@@ -184,27 +429,23 @@
       html2canvas: {
         scale: 2,
         useCORS: true,
-        onclone: prepareClonedDocumentForPdf,
+        onclone: (clonedDocument) => {
+          prepareClonedDocumentForPdf(clonedDocument, mermaidSnapshots);
+        },
       },
       jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
     };
 
-    window
-      .html2pdf()
-      .set(options)
-      .from(sourceElement)
-      .save()
-      .then(() => {
-        setExportStatus("PDF exported", "saved");
-      })
-      .catch((error) => {
-        console.error("Failed to export PDF.", error);
-        setExportStatus("PDF export failed", "error");
-      })
-      .finally(() => {
-        exportInProgress = false;
-        setExportLoadingState(false);
-      });
+    try {
+      await window.html2pdf().set(options).from(sourceElement).save();
+      setExportStatus("PDF exported", "saved");
+    } catch (error) {
+      console.error("Failed to export PDF.", error);
+      setExportStatus("PDF export failed", "error");
+    } finally {
+      exportInProgress = false;
+      setExportLoadingState(false);
+    }
   }
 
   window.MarkdownOS = window.MarkdownOS || {};
