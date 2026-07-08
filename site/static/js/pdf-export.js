@@ -6,6 +6,11 @@
   const HIGHLIGHT_THEME_BASE = "/static/vendor/highlightjs/styles";
   const PDF_MERMAID_THEME = "default";
   const OFFSCREEN_EXPORT_ROOT_CLASS = "pdf-export-offscreen-root";
+  // A4 inner width with 12mm side margins: (210 - 24)mm at 96dpi. html2pdf
+  // re-flows the captured clone into a container of exactly this width, so
+  // preparing the off-screen layout at the same width keeps Mermaid sizing
+  // and line wrapping identical to the final capture.
+  const EXPORT_CONTENT_WIDTH_PX = Math.round(((210 - 24) * 96) / 25.4);
   const MERMAID_THEME_BY_APP_THEME = {
     light: "default",
     dark: "dark",
@@ -55,7 +60,10 @@
     "--code-line-number-bg": "#eef2ff",
     "--code-line-number-text": "#64748b",
     "--mermaid-bg": "#ffffff",
-    "--mermaid-max-height": "420px",
+    // Taller cap than the editor default (420px) so diagrams render at a
+    // readable size, but below one A4 content page (~1047px) so the
+    // page-break "avoid" rule can keep each diagram on a single page.
+    "--mermaid-max-height": "980px",
     "--mermaid-error-border": "#fecaca",
     "--mermaid-error-bg": "#fef2f2",
     "--mermaid-error-text": "#991b1b",
@@ -99,6 +107,74 @@
       color: #111827 !important;
       background-color: #e8eaed !important;
       -webkit-text-fill-color: #111827 !important;
+      white-space: pre-wrap !important;
+    }
+
+    /* --- No-crop layout overrides ------------------------------------- */
+    /* Tables scroll horizontally in the editor; a PDF page cannot scroll,
+       so lay them out as real tables and let cell content wrap instead. */
+    [data-pdf-export-root] #wysiwyg-editor table {
+      display: table !important;
+      width: 100% !important;
+      overflow-x: visible !important;
+      table-layout: auto !important;
+    }
+
+    /* Header cells keep whole words; body cells may break long words. The
+       zero-width spaces injected into code spans provide the preferred break
+       points, which html2canvas renders correctly (forced mid-token breaks
+       draw overlapping glyphs). */
+    [data-pdf-export-root] #wysiwyg-editor th {
+      white-space: normal !important;
+      word-break: normal !important;
+      overflow-wrap: normal !important;
+    }
+
+    [data-pdf-export-root] #wysiwyg-editor th,
+    [data-pdf-export-root] #wysiwyg-editor td {
+      overflow-wrap: break-word;
+      height: auto !important;
+      min-height: 0 !important;
+      min-width: 0 !important;
+    }
+
+    [data-pdf-export-root] .table-editor-wrapper {
+      padding: 0 !important;
+      overflow: visible !important;
+    }
+
+    /* Code blocks scroll in the editor; wrap long lines in the PDF. */
+    [data-pdf-export-root] .code-block-content {
+      grid-template-columns: minmax(0, 1fr) !important;
+    }
+
+    [data-pdf-export-root] .code-line-numbers {
+      display: none !important;
+    }
+
+    [data-pdf-export-root] .code-block-content pre {
+      overflow: visible !important;
+    }
+
+    [data-pdf-export-root] .code-block-content pre code {
+      white-space: pre-wrap !important;
+      word-break: break-word !important;
+      min-width: 0 !important;
+    }
+
+    [data-pdf-export-root] .mermaid-canvas {
+      max-height: none !important;
+      overflow: visible !important;
+    }
+
+    /* Keep indivisible blocks on one page where possible. */
+    [data-pdf-export-root] #wysiwyg-editor tr,
+    [data-pdf-export-root] .mermaid-container,
+    [data-pdf-export-root] .math-display,
+    [data-pdf-export-root] #wysiwyg-editor img,
+    [data-pdf-export-root] #wysiwyg-editor blockquote {
+      break-inside: avoid;
+      page-break-inside: avoid;
     }
   `;
 
@@ -224,6 +300,7 @@
       ".block-edit-trigger",
       ".copy-button",
       ".code-block-actions",
+      ".frontmatter-properties-create",
       ".frontmatter-add-property",
       ".frontmatter-edit-property",
       ".frontmatter-delete-property",
@@ -246,6 +323,31 @@
 
       canvas.style.maxHeight = "none";
       canvas.style.overflow = "visible";
+    });
+  }
+
+  function insertCodeBreakOpportunities(root) {
+    // html2canvas draws overlapping glyphs when the browser is forced to
+    // wrap monospace text mid-token. Zero-width spaces after punctuation
+    // give the layout engine clean break points instead.
+    const BREAKABLE_PUNCTUATION = /([/_\-.,:;{}()[\]@?&=+#])/g;
+
+    root.querySelectorAll("code").forEach((code) => {
+      const walker = document.createTreeWalker(code, NodeFilter.SHOW_TEXT);
+      const textNodes = [];
+      while (walker.nextNode()) {
+        textNodes.push(walker.currentNode);
+      }
+
+      textNodes.forEach((textNode) => {
+        const text = textNode.nodeValue || "";
+        if (!BREAKABLE_PUNCTUATION.test(text)) {
+          return;
+        }
+
+        BREAKABLE_PUNCTUATION.lastIndex = 0;
+        textNode.nodeValue = text.replace(BREAKABLE_PUNCTUATION, "$1\u200b");
+      });
     });
   }
 
@@ -505,8 +607,7 @@
     const host = document.createElement("div");
     host.className = OFFSCREEN_EXPORT_ROOT_CLASS;
     host.setAttribute("aria-hidden", "true");
-    host.style.cssText =
-      "position:absolute;left:-100000px;top:0;width:900px;pointer-events:none;";
+    host.style.cssText = `position:absolute;left:-100000px;top:0;width:${EXPORT_CONTENT_WIDTH_PX}px;pointer-events:none;`;
 
     const clone = sourceElement.cloneNode(true);
     host.appendChild(clone);
@@ -521,11 +622,23 @@
       clone.style.setProperty(variableName, value);
     });
 
-    removeEditorChromeFromRoot(clone);
+    insertCodeBreakOpportunities(clone);
     await prepareMermaidInExportRoot(host);
+    // Chrome removal runs after the Mermaid re-render because rendering
+    // re-attaches inline toolbars and zoom controls to each container.
+    removeEditorChromeFromRoot(clone);
     await replaceMermaidWithImagesForExport(clone);
     forceLightReadableColors(host);
     await waitForNextPaint();
+
+    // Safety net: if something still overflows 900px (e.g. an unbreakable
+    // token), widen the host so html2pdf scales content down instead of
+    // cropping it at the page edge.
+    const overflowWidth = Math.max(clone.scrollWidth, clone.offsetWidth);
+    if (overflowWidth > host.offsetWidth) {
+      host.style.width = `${overflowWidth}px`;
+      await waitForNextPaint();
+    }
 
     return host;
   }
@@ -560,6 +673,20 @@
         onclone: prepareClonedDocumentForPdf,
       },
       jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      pagebreak: {
+        mode: ["css", "legacy"],
+        avoid: [
+          "tr",
+          ".mermaid-container",
+          ".math-display",
+          "img",
+          "blockquote",
+          "h1",
+          "h2",
+          "h3",
+          "h4",
+        ],
+      },
     };
 
     let offscreenHost = null;
