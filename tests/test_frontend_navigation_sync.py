@@ -699,3 +699,49 @@ def test_wysiwyg_table_controls_support_row_and_column_actions() -> None:
     assert ".table-row-insert-handle" in css_source
     assert ".table-editor-wrapper.table-editor-active .table-row-delete-handle" in css_source
     assert "pointer-events: auto" in css_source
+
+
+def test_wysiwyg_clears_mermaid_canvas_before_rerender() -> None:
+    """Verify stale Mermaid SVGs are removed before async re-render completes."""
+
+    source = _read_static_js("wysiwyg.js")
+
+    assert "canvas.replaceChildren();" in source
+    assert "rerenderMermaidDiagramsForTheme," in source
+
+
+def test_pdf_export_awaits_explicit_mermaid_rerender() -> None:
+    """Verify PDF export prepares light content off-screen without theme flashing."""
+
+    source = _read_static_js("pdf-export.js")
+    wysiwyg_source = _read_static_js("wysiwyg.js")
+
+    assert "createOffscreenExportRoot" in source
+    assert "prepareMermaidInExportRoot" in source
+    assert "renderMermaidContainers" in source
+    assert "installLiveExportStyles();" in source
+    assert "forceLightReadableColors(host);" in source
+    assert "data-pdf-export-root" in source
+    assert "PDF_LIGHT_THEME_VARIABLES" in source
+    assert "clone.style.setProperty(variableName, value);" in source
+    assert "visibility:hidden" not in source
+    assert "applyTheme" not in source
+    assert "hasRenderableMermaidDiagram" not in source
+    assert "waitForMermaidDiagrams" not in source
+    assert "renderMermaidContainers," in wysiwyg_source
+    assert "canvas.replaceChildren();" in wysiwyg_source
+
+
+def test_pdf_export_sanitizes_unsupported_color_functions() -> None:
+    """Verify export strips the style carriers of oklab/color-mix colors."""
+
+    source = _read_static_js("pdf-export.js")
+
+    assert '"box-shadow",' in source
+    assert '"text-shadow",' in source
+    assert '"text-decoration-color",' in source
+    assert "sanitizeInlineStylesInSubtree(clone);" in source
+    assert "EDITOR_STATE_CLASSES" in source
+    assert '"table-row-highlight",' in source
+    assert "outline: none !important;" in source
+    assert "box-shadow: none !important;" in source

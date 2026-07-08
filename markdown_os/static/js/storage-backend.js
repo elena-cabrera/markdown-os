@@ -26,14 +26,23 @@ Your local CLI and desktop app still save directly to your filesystem.
     return url.searchParams.get("runtime") === "web";
   }
 
+  let modeEndpointIsAbsent = false;
+
   async function readServerMode() {
-    if (runtimeForcesWebMode()) {
+    if (runtimeForcesWebMode() || modeEndpointIsAbsent) {
       return "web";
     }
 
     try {
       const response = await fetch("/api/mode");
       if (!response.ok) {
+        // A 404 means the endpoint does not exist at all (static web
+        // deployment); remember it so we stop spamming probe requests.
+        // Desktop/CLI servers always expose /api/mode, and their mode can
+        // change at runtime, so other statuses are not cached.
+        if (response.status === 404) {
+          modeEndpointIsAbsent = true;
+        }
         return "web";
       }
       const payload = await response.json();

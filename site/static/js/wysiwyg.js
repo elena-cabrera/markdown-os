@@ -1035,6 +1035,7 @@
 
     const renderSource = normalizeMermaidSource(rawSource);
     const canvas = ensureMermaidCanvas(container);
+    canvas.replaceChildren();
 
     try {
       const renderId = `mermaid-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -3081,6 +3082,31 @@
     layoutMermaidDiagrams();
   }
 
+  async function renderMermaidContainers(containers, options = {}) {
+    const { theme = null } = options;
+
+    if (!window.mermaid || containers.length === 0) {
+      return;
+    }
+
+    if (theme) {
+      window.mermaid.initialize({
+        startOnLoad: false,
+        securityLevel: "strict",
+        theme,
+        useMaxWidth: false,
+      });
+      state.mermaidInitialized = true;
+      state.mermaidTheme = theme;
+    } else {
+      ensureMermaidInitialized();
+    }
+
+    for (const container of containers) {
+      await renderMermaidContainer(container);
+    }
+  }
+
   function bindRootEvents() {
     if (!state.root) {
       return;
@@ -3139,5 +3165,7 @@
     redo,
     insertImage,
     decorateDocument,
+    rerenderMermaidDiagramsForTheme,
+    renderMermaidContainers,
   };
 })();
