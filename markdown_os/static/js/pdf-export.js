@@ -5,6 +5,15 @@
   const PDF_HIGHLIGHT_THEME = "github";
   const HIGHLIGHT_THEME_BASE = "/static/vendor/highlightjs/styles";
   const PDF_MERMAID_THEME = "default";
+  const OFFSCREEN_EXPORT_ROOT_CLASS = "pdf-export-offscreen-root";
+  const MERMAID_THEME_BY_APP_THEME = {
+    light: "default",
+    dark: "dark",
+    dracula: "dark",
+    "nord-light": "neutral",
+    "nord-dark": "dark",
+    lofi: "neutral",
+  };
   const INLINE_STYLE_PROPERTIES_TO_STRIP = [
     "color",
     "background",
@@ -20,23 +29,53 @@
   ];
 
   const PDF_EXPORT_LIGHT_CSS = `
-    #wysiwyg-wrapper {
+    .${OFFSCREEN_EXPORT_ROOT_CLASS} {
+      color-scheme: light;
+      --bg: #f7f8fa;
+      --panel-bg: #ffffff;
+      --border: #d9dee7;
+      --text: #17233b;
+      --text-muted: #60708f;
+      --accent: #2563eb;
+      --accent-soft: #dbeafe;
+      --editor-bg: #ffffff;
+      --editor-text: #111827;
+      --preview-text: #1f2937;
+      --code-block-bg: #f8fafc;
+      --inline-code-bg: #e8eaed;
+      --code-header-bg: #f3f7ff;
+      --mermaid-bg: #ffffff;
+      --frontmatter-bg: #f8fafc;
+      --frontmatter-border: #dbe2ee;
+      --frontmatter-key: #5b6c8d;
+      --frontmatter-chip-bg: #e9eef8;
+      --frontmatter-chip-text: #1f2c47;
+      --table-border: #d9dee7;
+      --table-header-bg: #f0f4fa;
+      --table-header-text: #17233b;
+      --table-row-alt-bg: #f7f8fa;
+      --table-row-hover-bg: #eef2f9;
+      background: #ffffff;
+      color: #111827;
+    }
+
+    .${OFFSCREEN_EXPORT_ROOT_CLASS} #wysiwyg-wrapper {
       background: #ffffff !important;
       color: #111827 !important;
     }
 
-    #wysiwyg-editor {
+    .${OFFSCREEN_EXPORT_ROOT_CLASS} #wysiwyg-editor {
       background: transparent !important;
       color: #111827 !important;
     }
 
-    #wysiwyg-editor
+    .${OFFSCREEN_EXPORT_ROOT_CLASS} #wysiwyg-editor
       :is(h1, h2, h3, h4, h5, h6, p, li, td, th, span, strong, em, a, blockquote) {
       color: #111827 !important;
       -webkit-text-fill-color: #111827 !important;
     }
 
-    #wysiwyg-editor :not(pre) > code {
+    .${OFFSCREEN_EXPORT_ROOT_CLASS} #wysiwyg-editor :not(pre) > code {
       color: #111827 !important;
       background-color: #e8eaed !important;
       -webkit-text-fill-color: #111827 !important;
@@ -44,7 +83,6 @@
   `;
 
   let exportInProgress = false;
-  let livePdfExportStyle = null;
 
   function toRgbColor(colorValue) {
     if (!colorValue || colorValue === "transparent") {
@@ -137,7 +175,7 @@
     });
   }
 
-  function removeEditorChromeFromClone(clonedDocument) {
+  function removeEditorChromeFromRoot(root) {
     const selectors = [
       ".table-edge-layer",
       ".table-insert-preview-layer",
@@ -159,14 +197,14 @@
     ];
 
     selectors.forEach((selector) => {
-      clonedDocument.querySelectorAll(selector).forEach((element) => element.remove());
+      root.querySelectorAll(selector).forEach((element) => element.remove());
     });
 
-    clonedDocument.querySelectorAll(".table-editor-wrapper").forEach((wrapper) => {
+    root.querySelectorAll(".table-editor-wrapper").forEach((wrapper) => {
       wrapper.classList.remove("table-editor-active");
     });
 
-    clonedDocument.querySelectorAll(".mermaid-container").forEach((container) => {
+    root.querySelectorAll(".mermaid-container").forEach((container) => {
       const canvas = container.querySelector(".mermaid-canvas");
       if (!canvas) {
         return;
@@ -194,8 +232,8 @@
     });
   }
 
-  function replaceMermaidSvgsWithImages(clonedDocument) {
-    clonedDocument.querySelectorAll(".mermaid-canvas svg").forEach((svg) => {
+  function replaceMermaidSvgsWithImages(root) {
+    root.querySelectorAll(".mermaid-canvas svg").forEach((svg) => {
       if (!(svg instanceof SVGSVGElement)) {
         return;
       }
@@ -214,7 +252,7 @@
         240;
 
       const serializedSvg = new XMLSerializer().serializeToString(svg);
-      const image = clonedDocument.createElement("img");
+      const image = document.createElement("img");
       image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(serializedSvg)}`;
       image.alt = "Diagram";
       image.style.display = "block";
@@ -225,8 +263,8 @@
     });
   }
 
-  function forceLightReadableColors(clonedDocument) {
-    const editor = clonedDocument.getElementById("wysiwyg-editor");
+  function forceLightReadableColors(root) {
+    const editor = root.querySelector("#wysiwyg-editor");
     if (!editor) {
       return;
     }
@@ -234,13 +272,13 @@
     editor
       .querySelectorAll("h1, h2, h3, h4, h5, h6, td, th, p, li, span, strong, em, a, blockquote")
       .forEach((element) => {
-      if (element.closest("pre, .code-block, .mermaid-container")) {
-        return;
-      }
+        if (element.closest("pre, .code-block, .mermaid-container")) {
+          return;
+        }
 
-      element.style.setProperty("color", "#111827", "important");
-      element.style.setProperty("-webkit-text-fill-color", "#111827", "important");
-    });
+        element.style.setProperty("color", "#111827", "important");
+        element.style.setProperty("-webkit-text-fill-color", "#111827", "important");
+      });
 
     editor.querySelectorAll("code").forEach((code) => {
       if (code.closest("pre, .code-block")) {
@@ -293,8 +331,6 @@
       svg.replaceWith(image);
     }
 
-    await waitForNextPaint();
-
     return () => {
       replacements.forEach(({ svg, image }) => {
         image.replaceWith(svg);
@@ -302,24 +338,13 @@
     };
   }
 
-  function installLivePdfExportStyles() {
-    removeLivePdfExportStyles();
-
-    livePdfExportStyle = document.createElement("style");
-    livePdfExportStyle.id = "pdf-export-live-styles";
-    livePdfExportStyle.textContent = PDF_EXPORT_LIGHT_CSS;
-    document.head.appendChild(livePdfExportStyle);
-  }
-
-  function removeLivePdfExportStyles() {
-    livePdfExportStyle?.remove();
-    livePdfExportStyle = null;
-  }
-
   function injectPdfExportStyles(clonedDocument) {
     const style = clonedDocument.createElement("style");
     style.id = "pdf-export-readability";
-    style.textContent = PDF_EXPORT_LIGHT_CSS;
+    style.textContent = PDF_EXPORT_LIGHT_CSS.replaceAll(
+      `.${OFFSCREEN_EXPORT_ROOT_CLASS}`,
+      "",
+    );
     clonedDocument.head.appendChild(style);
   }
 
@@ -331,8 +356,11 @@
     clonedDocument.documentElement.setAttribute("data-theme", PDF_EXPORT_THEME_ID);
     injectPdfExportStyles(clonedDocument);
     sanitizeUnsupportedColorsInStylesheets(clonedDocument);
-    removeEditorChromeFromClone(clonedDocument);
-    replaceMermaidSvgsWithImages(clonedDocument);
+
+    const clonedRoot =
+      clonedDocument.getElementById("wysiwyg-wrapper") || clonedDocument.body;
+    removeEditorChromeFromRoot(clonedRoot);
+    replaceMermaidSvgsWithImages(clonedRoot);
 
     const highlightLink = clonedDocument.getElementById("highlight-theme");
     if (highlightLink) {
@@ -344,7 +372,7 @@
       stripThemeInlineStyles(wrapper);
     }
 
-    forceLightReadableColors(clonedDocument);
+    forceLightReadableColors(clonedRoot);
 
     const editor = clonedDocument.getElementById("wysiwyg-editor");
     if (editor) {
@@ -388,9 +416,35 @@
     });
   }
 
-  async function rerenderMermaidDiagramsForPdfExport() {
-    if (typeof window.wysiwyg?.rerenderMermaidDiagramsForTheme === "function") {
-      await window.wysiwyg.rerenderMermaidDiagramsForTheme();
+  function currentAppMermaidTheme() {
+    const appThemeId = document.documentElement.getAttribute("data-theme") || PDF_EXPORT_THEME_ID;
+    return MERMAID_THEME_BY_APP_THEME[appThemeId] || PDF_MERMAID_THEME;
+  }
+
+  function restoreMermaidGlobalConfig() {
+    if (!window.mermaid) {
+      return;
+    }
+
+    window.mermaid.initialize({
+      startOnLoad: false,
+      securityLevel: "strict",
+      theme: currentAppMermaidTheme(),
+      useMaxWidth: false,
+    });
+  }
+
+  async function prepareMermaidInExportRoot(exportRoot) {
+    const containers = Array.from(exportRoot.querySelectorAll(".mermaid-container"));
+    if (containers.length === 0) {
+      return;
+    }
+
+    if (typeof window.wysiwyg?.renderMermaidContainers === "function") {
+      await window.wysiwyg.renderMermaidContainers(containers, {
+        theme: PDF_MERMAID_THEME,
+      });
+      restoreMermaidGlobalConfig();
       return;
     }
 
@@ -405,15 +459,10 @@
       useMaxWidth: false,
     });
 
-    const containers = document.querySelectorAll(".mermaid-container");
     for (const container of containers) {
       const source = (container.dataset.mermaidSource || "").trim();
-      if (!source) {
-        continue;
-      }
-
       const canvas = container.querySelector(".mermaid-canvas");
-      if (!canvas) {
+      if (!source || !canvas) {
         continue;
       }
 
@@ -428,42 +477,29 @@
         console.error("Failed to render Mermaid diagram for PDF export.", error);
       }
     }
+
+    restoreMermaidGlobalConfig();
   }
 
-  async function prepareLightThemeForPdfExport() {
-    const themeManager = window.markdownOSThemeManager;
-    installLivePdfExportStyles();
-    themeManager?.applyTheme?.(PDF_EXPORT_THEME_ID, { emitThemeEvent: false });
+  async function createOffscreenExportRoot(sourceElement) {
+    const host = document.createElement("div");
+    host.className = OFFSCREEN_EXPORT_ROOT_CLASS;
+    host.setAttribute("data-theme", PDF_EXPORT_THEME_ID);
+    host.setAttribute("aria-hidden", "true");
+    host.style.cssText =
+      "position:fixed;left:-100000px;top:0;width:900px;pointer-events:none;visibility:hidden;";
+
+    const clone = sourceElement.cloneNode(true);
+    host.appendChild(clone);
+    document.body.appendChild(host);
+
+    stripThemeInlineStyles(clone);
+    removeEditorChromeFromRoot(clone);
+    await prepareMermaidInExportRoot(host);
+    await replaceMermaidWithImagesForExport(clone);
     await waitForNextPaint();
-    await rerenderMermaidDiagramsForPdfExport();
-    await waitForNextPaint();
-  }
 
-  async function restoreThemeAfterPdfExport(previousThemeId) {
-    removeLivePdfExportStyles();
-
-    const themeManager = window.markdownOSThemeManager;
-    if (!themeManager || previousThemeId === PDF_EXPORT_THEME_ID) {
-      return;
-    }
-
-    themeManager.applyTheme(previousThemeId, { emitThemeEvent: false });
-    await waitForNextPaint();
-    await rerenderMermaidDiagramsForPdfExport();
-    await waitForNextPaint();
-  }
-
-  async function withLightThemeForExport(callback) {
-    const themeManager = window.markdownOSThemeManager;
-    const previousThemeId = themeManager?.currentThemeId || PDF_EXPORT_THEME_ID;
-
-    await prepareLightThemeForPdfExport();
-
-    try {
-      return await callback();
-    } finally {
-      await restoreThemeAfterPdfExport(previousThemeId);
-    }
+    return host;
   }
 
   async function exportToPdf() {
@@ -498,21 +534,23 @@
       jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
     };
 
+    let offscreenHost = null;
+
     try {
-      await withLightThemeForExport(async () => {
-        const restoreMermaid = await replaceMermaidWithImagesForExport(sourceElement);
-        try {
-          await window.html2pdf().set(options).from(sourceElement).save();
-        } finally {
-          restoreMermaid();
-        }
-      });
+      offscreenHost = await createOffscreenExportRoot(sourceElement);
+      const exportTarget = offscreenHost.querySelector("#wysiwyg-wrapper");
+      if (!exportTarget) {
+        throw new Error("Failed to prepare off-screen PDF export content.");
+      }
+
+      await window.html2pdf().set(options).from(exportTarget).save();
       setExportStatus("PDF exported", "saved");
     } catch (error) {
       console.error("Failed to export PDF.", error);
       setExportStatus("PDF export failed", "error");
     } finally {
-      removeLivePdfExportStyles();
+      offscreenHost?.remove();
+      restoreMermaidGlobalConfig();
       exportInProgress = false;
       setExportLoadingState(false);
     }

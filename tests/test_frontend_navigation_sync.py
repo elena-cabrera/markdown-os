@@ -711,15 +711,18 @@ def test_wysiwyg_clears_mermaid_canvas_before_rerender() -> None:
 
 
 def test_pdf_export_awaits_explicit_mermaid_rerender() -> None:
-    """Verify PDF export does not treat stale Mermaid SVGs as ready."""
+    """Verify PDF export prepares light content off-screen without theme flashing."""
 
     source = _read_static_js("pdf-export.js")
+    wysiwyg_source = _read_static_js("wysiwyg.js")
 
-    assert "emitThemeEvent: false" in source
-    assert "await window.wysiwyg.rerenderMermaidDiagramsForTheme();" in source
-    assert "await rerenderMermaidDiagramsForPdfExport();" in source
-    assert "installLivePdfExportStyles();" in source
-    assert "#wysiwyg-editor" in source
-    assert ":is(h1, h2, h3, h4, h5, h6, p, li, td, th, span, strong, em, a, blockquote)" in source
+    assert "createOffscreenExportRoot" in source
+    assert "prepareMermaidInExportRoot" in source
+    assert "renderMermaidContainers" in source
+    assert "visibility:hidden" in source
+    assert "applyTheme" not in source
+    assert "installLivePdfExportStyles" not in source
     assert "hasRenderableMermaidDiagram" not in source
     assert "waitForMermaidDiagrams" not in source
+    assert "renderMermaidContainers," in wysiwyg_source
+    assert "canvas.replaceChildren();" in wysiwyg_source

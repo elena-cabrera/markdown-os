@@ -3082,6 +3082,31 @@
     layoutMermaidDiagrams();
   }
 
+  async function renderMermaidContainers(containers, options = {}) {
+    const { theme = null } = options;
+
+    if (!window.mermaid || containers.length === 0) {
+      return;
+    }
+
+    if (theme) {
+      window.mermaid.initialize({
+        startOnLoad: false,
+        securityLevel: "strict",
+        theme,
+        useMaxWidth: false,
+      });
+      state.mermaidInitialized = true;
+      state.mermaidTheme = theme;
+    } else {
+      ensureMermaidInitialized();
+    }
+
+    for (const container of containers) {
+      await renderMermaidContainer(container);
+    }
+  }
+
   function bindRootEvents() {
     if (!state.root) {
       return;
@@ -3141,5 +3166,6 @@
     insertImage,
     decorateDocument,
     rerenderMermaidDiagramsForTheme,
+    renderMermaidContainers,
   };
 })();
