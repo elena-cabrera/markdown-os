@@ -28,54 +28,74 @@
     "stroke",
   ];
 
-  const PDF_EXPORT_LIGHT_CSS = `
-    .${OFFSCREEN_EXPORT_ROOT_CLASS} {
-      color-scheme: light;
-      --bg: #f7f8fa;
-      --panel-bg: #ffffff;
-      --border: #d9dee7;
-      --text: #17233b;
-      --text-muted: #60708f;
-      --accent: #2563eb;
-      --accent-soft: #dbeafe;
-      --editor-bg: #ffffff;
-      --editor-text: #111827;
-      --preview-text: #1f2937;
-      --code-block-bg: #f8fafc;
-      --inline-code-bg: #e8eaed;
-      --code-header-bg: #f3f7ff;
-      --mermaid-bg: #ffffff;
-      --frontmatter-bg: #f8fafc;
-      --frontmatter-border: #dbe2ee;
-      --frontmatter-key: #5b6c8d;
-      --frontmatter-chip-bg: #e9eef8;
-      --frontmatter-chip-text: #1f2c47;
-      --table-border: #d9dee7;
-      --table-header-bg: #f0f4fa;
-      --table-header-text: #17233b;
-      --table-row-alt-bg: #f7f8fa;
-      --table-row-hover-bg: #eef2f9;
-      background: #ffffff;
-      color: #111827;
-    }
+  const PDF_LIGHT_THEME_VARIABLES = {
+    "--bg": "#f7f8fa",
+    "--panel-bg": "#ffffff",
+    "--border": "#d9dee7",
+    "--text": "#17233b",
+    "--text-muted": "#60708f",
+    "--accent": "#2563eb",
+    "--accent-soft": "#dbeafe",
+    "--success": "#0f766e",
+    "--danger": "#b91c1c",
+    "--warning": "#9a6700",
+    "--shadow": "0 6px 20px rgba(17, 24, 39, 0.08)",
+    "--editor-bg": "#ffffff",
+    "--editor-text": "#111827",
+    "--preview-text": "#1f2937",
+    "--code-block-bg": "#f8fafc",
+    "--inline-code-bg": "#e8eaed",
+    "--code-header-bg": "#f3f7ff",
+    "--copy-border": "#bec9dd",
+    "--copy-border-hover": "#9fb0cc",
+    "--copy-bg": "#ffffff",
+    "--copy-text": "#334155",
+    "--copy-text-hover": "#0f172a",
+    "--copy-copied-border": "#8ed4ce",
+    "--code-line-number-bg": "#eef2ff",
+    "--code-line-number-text": "#64748b",
+    "--mermaid-bg": "#ffffff",
+    "--mermaid-max-height": "420px",
+    "--mermaid-error-border": "#fecaca",
+    "--mermaid-error-bg": "#fef2f2",
+    "--mermaid-error-text": "#991b1b",
+    "--math-display-bg": "#fafcff",
+    "--math-display-border": "#dbeafe",
+    "--math-error-text": "#991b1b",
+    "--math-error-bg": "#fef2f2",
+    "--math-error-border": "#fecaca",
+    "--frontmatter-bg": "#f8fafc",
+    "--frontmatter-border": "#dbe2ee",
+    "--frontmatter-key": "#5b6c8d",
+    "--frontmatter-chip-bg": "#e9eef8",
+    "--frontmatter-chip-text": "#1f2c47",
+    "--table-border": "#d9dee7",
+    "--table-header-bg": "#f0f4fa",
+    "--table-header-text": "#17233b",
+    "--table-row-alt-bg": "#f7f8fa",
+    "--table-row-hover-bg": "#eef2f9",
+    "--drag-over-bg": "#f0f7ff",
+  };
 
-    .${OFFSCREEN_EXPORT_ROOT_CLASS} #wysiwyg-wrapper {
+  const PDF_EXPORT_LIGHT_CSS = `
+    [data-pdf-export-root] {
+      color-scheme: light;
       background: #ffffff !important;
       color: #111827 !important;
     }
 
-    .${OFFSCREEN_EXPORT_ROOT_CLASS} #wysiwyg-editor {
+    [data-pdf-export-root] #wysiwyg-editor {
       background: transparent !important;
       color: #111827 !important;
     }
 
-    .${OFFSCREEN_EXPORT_ROOT_CLASS} #wysiwyg-editor
+    [data-pdf-export-root] #wysiwyg-editor
       :is(h1, h2, h3, h4, h5, h6, p, li, td, th, span, strong, em, a, blockquote) {
       color: #111827 !important;
       -webkit-text-fill-color: #111827 !important;
     }
 
-    .${OFFSCREEN_EXPORT_ROOT_CLASS} #wysiwyg-editor :not(pre) > code {
+    [data-pdf-export-root] #wysiwyg-editor :not(pre) > code {
       color: #111827 !important;
       background-color: #e8eaed !important;
       -webkit-text-fill-color: #111827 !important;
@@ -83,6 +103,20 @@
   `;
 
   let exportInProgress = false;
+  let liveExportStyle = null;
+
+  function installLiveExportStyles() {
+    removeLiveExportStyles();
+    liveExportStyle = document.createElement("style");
+    liveExportStyle.id = "pdf-export-live-styles";
+    liveExportStyle.textContent = PDF_EXPORT_LIGHT_CSS;
+    document.head.appendChild(liveExportStyle);
+  }
+
+  function removeLiveExportStyles() {
+    liveExportStyle?.remove();
+    liveExportStyle = null;
+  }
 
   function toRgbColor(colorValue) {
     if (!colorValue || colorValue === "transparent") {
@@ -341,10 +375,7 @@
   function injectPdfExportStyles(clonedDocument) {
     const style = clonedDocument.createElement("style");
     style.id = "pdf-export-readability";
-    style.textContent = PDF_EXPORT_LIGHT_CSS.replaceAll(
-      `.${OFFSCREEN_EXPORT_ROOT_CLASS}`,
-      "",
-    );
+    style.textContent = PDF_EXPORT_LIGHT_CSS;
     clonedDocument.head.appendChild(style);
   }
 
@@ -357,28 +388,15 @@
     injectPdfExportStyles(clonedDocument);
     sanitizeUnsupportedColorsInStylesheets(clonedDocument);
 
-    const clonedRoot =
-      clonedDocument.getElementById("wysiwyg-wrapper") || clonedDocument.body;
-    removeEditorChromeFromRoot(clonedRoot);
-    replaceMermaidSvgsWithImages(clonedRoot);
-
     const highlightLink = clonedDocument.getElementById("highlight-theme");
     if (highlightLink) {
       highlightLink.setAttribute("href", `${HIGHLIGHT_THEME_BASE}/${PDF_HIGHLIGHT_THEME}.min.css`);
     }
 
-    const wrapper = clonedDocument.getElementById("wysiwyg-wrapper");
-    if (wrapper) {
-      stripThemeInlineStyles(wrapper);
-    }
-
-    forceLightReadableColors(clonedRoot);
-
-    const editor = clonedDocument.getElementById("wysiwyg-editor");
-    if (editor) {
+    clonedDocument.querySelectorAll("[data-pdf-export-root] #wysiwyg-editor").forEach((editor) => {
       editor.removeAttribute("contenteditable");
       editor.style.paddingBottom = "20px";
-    }
+    });
   }
 
   function derivePdfFilename() {
@@ -482,21 +500,31 @@
   }
 
   async function createOffscreenExportRoot(sourceElement) {
+    installLiveExportStyles();
+
     const host = document.createElement("div");
     host.className = OFFSCREEN_EXPORT_ROOT_CLASS;
-    host.setAttribute("data-theme", PDF_EXPORT_THEME_ID);
     host.setAttribute("aria-hidden", "true");
     host.style.cssText =
-      "position:fixed;left:-100000px;top:0;width:900px;pointer-events:none;visibility:hidden;";
+      "position:absolute;left:-100000px;top:0;width:900px;pointer-events:none;";
 
     const clone = sourceElement.cloneNode(true);
     host.appendChild(clone);
     document.body.appendChild(host);
 
     stripThemeInlineStyles(clone);
+
+    // The attribute and inline variables live on the export target itself so
+    // they survive html2pdf's internal cloning of the captured subtree.
+    clone.setAttribute("data-pdf-export-root", "true");
+    Object.entries(PDF_LIGHT_THEME_VARIABLES).forEach(([variableName, value]) => {
+      clone.style.setProperty(variableName, value);
+    });
+
     removeEditorChromeFromRoot(clone);
     await prepareMermaidInExportRoot(host);
     await replaceMermaidWithImagesForExport(clone);
+    forceLightReadableColors(host);
     await waitForNextPaint();
 
     return host;
@@ -538,7 +566,7 @@
 
     try {
       offscreenHost = await createOffscreenExportRoot(sourceElement);
-      const exportTarget = offscreenHost.querySelector("#wysiwyg-wrapper");
+      const exportTarget = offscreenHost.querySelector("[data-pdf-export-root]");
       if (!exportTarget) {
         throw new Error("Failed to prepare off-screen PDF export content.");
       }
@@ -550,6 +578,7 @@
       setExportStatus("PDF export failed", "error");
     } finally {
       offscreenHost?.remove();
+      removeLiveExportStyles();
       restoreMermaidGlobalConfig();
       exportInProgress = false;
       setExportLoadingState(false);

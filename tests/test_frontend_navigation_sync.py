@@ -719,9 +719,13 @@ def test_pdf_export_awaits_explicit_mermaid_rerender() -> None:
     assert "createOffscreenExportRoot" in source
     assert "prepareMermaidInExportRoot" in source
     assert "renderMermaidContainers" in source
-    assert "visibility:hidden" in source
+    assert "installLiveExportStyles();" in source
+    assert "forceLightReadableColors(host);" in source
+    assert "data-pdf-export-root" in source
+    assert "PDF_LIGHT_THEME_VARIABLES" in source
+    assert "clone.style.setProperty(variableName, value);" in source
+    assert "visibility:hidden" not in source
     assert "applyTheme" not in source
-    assert "installLivePdfExportStyles" not in source
     assert "hasRenderableMermaidDiagram" not in source
     assert "waitForMermaidDiagrams" not in source
     assert "renderMermaidContainers," in wysiwyg_source
