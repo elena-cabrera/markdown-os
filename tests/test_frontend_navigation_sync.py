@@ -730,3 +730,18 @@ def test_pdf_export_awaits_explicit_mermaid_rerender() -> None:
     assert "waitForMermaidDiagrams" not in source
     assert "renderMermaidContainers," in wysiwyg_source
     assert "canvas.replaceChildren();" in wysiwyg_source
+
+
+def test_pdf_export_sanitizes_unsupported_color_functions() -> None:
+    """Verify export strips the style carriers of oklab/color-mix colors."""
+
+    source = _read_static_js("pdf-export.js")
+
+    assert '"box-shadow",' in source
+    assert '"text-shadow",' in source
+    assert '"text-decoration-color",' in source
+    assert "sanitizeInlineStylesInSubtree(clone);" in source
+    assert "EDITOR_STATE_CLASSES" in source
+    assert '"table-row-highlight",' in source
+    assert "outline: none !important;" in source
+    assert "box-shadow: none !important;" in source

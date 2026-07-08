@@ -31,6 +31,27 @@
     "border-left-color",
     "fill",
     "stroke",
+    // Decorative-only in print; their colors can serialize to color
+    // functions (oklab/oklch/color) that html2canvas cannot parse.
+    "box-shadow",
+    "text-shadow",
+    "outline",
+    "outline-color",
+    "text-decoration-color",
+    "caret-color",
+  ];
+  // Editor interaction-state classes whose rules use color-mix() outlines
+  // and backgrounds; harmless in the editor, fatal for html2canvas.
+  const EDITOR_STATE_CLASSES = [
+    "table-editor-active",
+    "table-row-highlight",
+    "table-col-highlight",
+    "table-row-delete-preview",
+    "table-col-delete-preview",
+    "table-delete-preview",
+    "table-delete-selected",
+    "table-editor-delete-selected",
+    "drag-over",
   ];
 
   const PDF_LIGHT_THEME_VARIABLES = {
@@ -108,6 +129,16 @@
       background-color: #e8eaed !important;
       -webkit-text-fill-color: #111827 !important;
       white-space: pre-wrap !important;
+    }
+
+    /* Print never needs focus rings or shadows, and their colors are the
+       main carriers of color-mix()/oklab() values html2canvas rejects. */
+    [data-pdf-export-root] *,
+    [data-pdf-export-root] *::before,
+    [data-pdf-export-root] *::after {
+      outline: none !important;
+      box-shadow: none !important;
+      text-shadow: none !important;
     }
 
     /* --- No-crop layout overrides ------------------------------------- */
@@ -285,6 +316,22 @@
     });
   }
 
+  function sanitizeInlineStylesInSubtree(root) {
+    if (!(root instanceof Element)) {
+      return;
+    }
+
+    const elements = [root, ...root.querySelectorAll("[style]")];
+    elements.forEach((element) => {
+      const cssText = element.getAttribute("style");
+      if (!cssTextNeedsColorSanitization(cssText)) {
+        return;
+      }
+
+      element.setAttribute("style", sanitizeCssText(cssText));
+    });
+  }
+
   function removeEditorChromeFromRoot(root) {
     const selectors = [
       ".table-edge-layer",
@@ -311,8 +358,10 @@
       root.querySelectorAll(selector).forEach((element) => element.remove());
     });
 
-    root.querySelectorAll(".table-editor-wrapper").forEach((wrapper) => {
-      wrapper.classList.remove("table-editor-active");
+    EDITOR_STATE_CLASSES.forEach((className) => {
+      root.querySelectorAll(`.${className}`).forEach((element) => {
+        element.classList.remove(className);
+      });
     });
 
     root.querySelectorAll(".mermaid-container").forEach((container) => {
@@ -614,6 +663,7 @@
     document.body.appendChild(host);
 
     stripThemeInlineStyles(clone);
+    sanitizeInlineStylesInSubtree(clone);
 
     // The attribute and inline variables live on the export target itself so
     // they survive html2pdf's internal cloning of the captured subtree.
