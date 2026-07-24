@@ -763,7 +763,8 @@
 
   function flashCopied(button) {
     const originalIcon = button.innerHTML;
-    const originalTitle = button.getAttribute("title") || "";
+    const originalTitle =
+      button.getAttribute("data-tooltip") || button.getAttribute("title") || "";
     const originalLabel = button.getAttribute("aria-label") || "";
     const previousTimerId = Number.parseInt(
       button.dataset.copyTimerId || "",
@@ -774,7 +775,8 @@
     }
 
     button.innerHTML = actionIconSvg("check");
-    button.setAttribute("title", "Copied");
+    button.setAttribute("data-tooltip", "Copied");
+    button.removeAttribute("title");
     button.setAttribute("aria-label", "Copied");
     button.classList.add("copied");
 
@@ -782,8 +784,10 @@
       button.classList.remove("copied");
       button.innerHTML = originalIcon;
       if (originalTitle) {
-        button.setAttribute("title", originalTitle);
+        button.setAttribute("data-tooltip", originalTitle);
+        button.removeAttribute("title");
       } else {
+        button.removeAttribute("data-tooltip");
         button.removeAttribute("title");
       }
       if (originalLabel) {
