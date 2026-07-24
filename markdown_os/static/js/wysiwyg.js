@@ -978,6 +978,7 @@
       startOnLoad: false,
       securityLevel: "strict",
       theme,
+      fontFamily: "Inter, sans-serif",
       useMaxWidth: false,
     });
     state.mermaidInitialized = true;
@@ -3094,6 +3095,7 @@
         startOnLoad: false,
         securityLevel: "strict",
         theme,
+        fontFamily: "Inter, sans-serif",
         useMaxWidth: false,
       });
       state.mermaidInitialized = true;

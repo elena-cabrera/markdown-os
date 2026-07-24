@@ -66,11 +66,8 @@
                 --color-surface: #f5f5f5;
                 --color-dark: #1a1a1a;
                 --color-dark-hover: #333333;
-                --font-sans:
-                    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
-                    sans-serif;
-                --font-mono:
-                    "SF Mono", "Monaco", "Inconsolata", "Courier New", monospace;
+                --font-sans: "Inter", sans-serif;
+                --font-mono: "JetBrains Mono", monospace;
                 --max-width: 1120px;
                 --radius: 8px;
                 --radius-lg: 12px;
@@ -86,6 +83,13 @@
                 background: var(--color-bg);
                 line-height: 1.6;
                 -webkit-font-smoothing: antialiased;
+            }
+
+            button,
+            input,
+            select,
+            textarea {
+                font-family: inherit;
             }
 
             a {
@@ -1790,7 +1794,7 @@
                                                 text-anchor="middle"
                                                 fill="#0c4a6e"
                                                 font-size="10"
-                                                font-family="sans-serif"
+                                                font-family="Inter, sans-serif"
                                             >
                                                 CLI
                                             </text>
@@ -1821,7 +1825,7 @@
                                                 text-anchor="middle"
                                                 fill="#0c4a6e"
                                                 font-size="10"
-                                                font-family="sans-serif"
+                                                font-family="Inter, sans-serif"
                                             >
                                                 Server
                                             </text>
@@ -1852,7 +1856,7 @@
                                                 text-anchor="middle"
                                                 fill="#0c4a6e"
                                                 font-size="10"
-                                                font-family="sans-serif"
+                                                font-family="Inter, sans-serif"
                                             >
                                                 Browser
                                             </text>
@@ -1883,7 +1887,7 @@
                                                 text-anchor="middle"
                                                 fill="#0c4a6e"
                                                 font-size="10"
-                                                font-family="sans-serif"
+                                                font-family="Inter, sans-serif"
                                             >
                                                 Editor
                                             </text>
