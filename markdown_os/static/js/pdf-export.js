@@ -461,8 +461,8 @@
           return;
         }
 
-        element.style.setProperty("color", "#1f1c19", "important");
-        element.style.setProperty("-webkit-text-fill-color", "#1f1c19", "important");
+        element.style.setProperty("color", "#1a1a1a", "important");
+        element.style.setProperty("-webkit-text-fill-color", "#1a1a1a", "important");
       });
 
     editor.querySelectorAll("code").forEach((code) => {
@@ -470,9 +470,9 @@
         return;
       }
 
-      code.style.setProperty("color", "#1f1c19", "important");
-      code.style.setProperty("-webkit-text-fill-color", "#1f1c19", "important");
-      code.style.setProperty("background-color", "#ede4d8", "important");
+      code.style.setProperty("color", "#1a1a1a", "important");
+      code.style.setProperty("-webkit-text-fill-color", "#1a1a1a", "important");
+      code.style.setProperty("background-color", "#eeeeee", "important");
     });
   }
 
