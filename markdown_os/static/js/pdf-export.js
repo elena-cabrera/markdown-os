@@ -55,79 +55,79 @@
   ];
 
   const PDF_LIGHT_THEME_VARIABLES = {
-    "--bg": "#f7f8fa",
-    "--panel-bg": "#ffffff",
-    "--border": "#d9dee7",
-    "--text": "#17233b",
-    "--text-muted": "#60708f",
-    "--accent": "#2563eb",
-    "--accent-soft": "#dbeafe",
-    "--success": "#0f766e",
+    "--bg": "#f9f3ed",
+    "--panel-bg": "#fffbf7",
+    "--border": "#e5d9ce",
+    "--text": "#2a2622",
+    "--text-muted": "#7a7268",
+    "--accent": "#5c534a",
+    "--accent-soft": "#ede4d8",
+    "--success": "#3d6b5c",
     "--danger": "#b91c1c",
     "--warning": "#9a6700",
-    "--shadow": "0 6px 20px rgba(17, 24, 39, 0.08)",
-    "--editor-bg": "#ffffff",
-    "--editor-text": "#111827",
-    "--preview-text": "#1f2937",
-    "--code-block-bg": "#f8fafc",
-    "--inline-code-bg": "#e8eaed",
-    "--code-header-bg": "#f3f7ff",
-    "--copy-border": "#bec9dd",
-    "--copy-border-hover": "#9fb0cc",
-    "--copy-bg": "#ffffff",
-    "--copy-text": "#334155",
-    "--copy-text-hover": "#0f172a",
-    "--copy-copied-border": "#8ed4ce",
-    "--code-line-number-bg": "#eef2ff",
-    "--code-line-number-text": "#64748b",
-    "--mermaid-bg": "#ffffff",
+    "--shadow": "0 6px 20px rgba(42, 38, 34, 0.08)",
+    "--editor-bg": "#fffbf7",
+    "--editor-text": "#1f1c19",
+    "--preview-text": "#2a2622",
+    "--code-block-bg": "#f3ebe2",
+    "--inline-code-bg": "#ede4d8",
+    "--code-header-bg": "#ede4d8",
+    "--copy-border": "#d4c8ba",
+    "--copy-border-hover": "#b8a99a",
+    "--copy-bg": "#fffbf7",
+    "--copy-text": "#5c534a",
+    "--copy-text-hover": "#2a2622",
+    "--copy-copied-border": "#7a9e8f",
+    "--code-line-number-bg": "#ede4d8",
+    "--code-line-number-text": "#8a7f72",
+    "--mermaid-bg": "#fffbf7",
     // Taller cap than the editor default (420px) so diagrams render at a
     // readable size, but below one A4 content page (~1047px) so the
     // page-break "avoid" rule can keep each diagram on a single page.
     "--mermaid-max-height": "980px",
-    "--mermaid-error-border": "#fecaca",
-    "--mermaid-error-bg": "#fef2f2",
+    "--mermaid-error-border": "#e8c4c4",
+    "--mermaid-error-bg": "#faf0f0",
     "--mermaid-error-text": "#991b1b",
-    "--math-display-bg": "#fafcff",
-    "--math-display-border": "#dbeafe",
+    "--math-display-bg": "#f5eee6",
+    "--math-display-border": "#e5d9ce",
     "--math-error-text": "#991b1b",
-    "--math-error-bg": "#fef2f2",
-    "--math-error-border": "#fecaca",
-    "--frontmatter-bg": "#f8fafc",
-    "--frontmatter-border": "#dbe2ee",
-    "--frontmatter-key": "#5b6c8d",
-    "--frontmatter-chip-bg": "#e9eef8",
-    "--frontmatter-chip-text": "#1f2c47",
-    "--table-border": "#d9dee7",
-    "--table-header-bg": "#f0f4fa",
-    "--table-header-text": "#17233b",
-    "--table-row-alt-bg": "#f7f8fa",
-    "--table-row-hover-bg": "#eef2f9",
-    "--drag-over-bg": "#f0f7ff",
+    "--math-error-bg": "#faf0f0",
+    "--math-error-border": "#e8c4c4",
+    "--frontmatter-bg": "#f3ebe2",
+    "--frontmatter-border": "#e5d9ce",
+    "--frontmatter-key": "#7a7268",
+    "--frontmatter-chip-bg": "#ede4d8",
+    "--frontmatter-chip-text": "#2a2622",
+    "--table-border": "#e5d9ce",
+    "--table-header-bg": "#ede4d8",
+    "--table-header-text": "#2a2622",
+    "--table-row-alt-bg": "#f5eee6",
+    "--table-row-hover-bg": "#ede4d8",
+    "--drag-over-bg": "#f0e8de",
   };
 
   const PDF_EXPORT_LIGHT_CSS = `
     [data-pdf-export-root] {
       color-scheme: light;
-      background: #ffffff !important;
-      color: #111827 !important;
+      background: #fffbf7 !important;
+      color: #1f1c19 !important;
     }
 
     [data-pdf-export-root] #wysiwyg-editor {
       background: transparent !important;
-      color: #111827 !important;
+      color: #1f1c19 !important;
     }
 
     [data-pdf-export-root] #wysiwyg-editor
       :is(h1, h2, h3, h4, h5, h6, p, li, td, th, span, strong, em, a, blockquote) {
-      color: #111827 !important;
-      -webkit-text-fill-color: #111827 !important;
+      color: #1f1c19 !important;
+      -webkit-text-fill-color: #1f1c19 !important;
     }
 
     [data-pdf-export-root] #wysiwyg-editor :not(pre) > code {
-      color: #111827 !important;
-      background-color: #e8eaed !important;
-      -webkit-text-fill-color: #111827 !important;
+      color: #1f1c19 !important;
+      background-color: #ede4d8 !important;
+      -webkit-text-fill-color: #1f1c19 !important;
       white-space: pre-wrap !important;
     }
 
@@ -461,8 +461,8 @@
           return;
         }
 
-        element.style.setProperty("color", "#111827", "important");
-        element.style.setProperty("-webkit-text-fill-color", "#111827", "important");
+        element.style.setProperty("color", "#1f1c19", "important");
+        element.style.setProperty("-webkit-text-fill-color", "#1f1c19", "important");
       });
 
     editor.querySelectorAll("code").forEach((code) => {
@@ -470,9 +470,9 @@
         return;
       }
 
-      code.style.setProperty("color", "#111827", "important");
-      code.style.setProperty("-webkit-text-fill-color", "#111827", "important");
-      code.style.setProperty("background-color", "#e8eaed", "important");
+      code.style.setProperty("color", "#1f1c19", "important");
+      code.style.setProperty("-webkit-text-fill-color", "#1f1c19", "important");
+      code.style.setProperty("background-color", "#ede4d8", "important");
     });
   }
 
