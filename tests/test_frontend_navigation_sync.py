@@ -760,3 +760,29 @@ def test_pdf_export_sanitizes_unsupported_color_functions() -> None:
     assert '"table-row-highlight",' in source
     assert "outline: none !important;" in source
     assert "box-shadow: none !important;" in source
+
+
+def test_custom_tooltips_replace_native_title_tooltips() -> None:
+    """Verify custom tooltips are loaded and theme-styled with shortcut keys."""
+
+    html_source = Path(__file__).resolve().parents[1].joinpath(
+        "markdown_os",
+        "static",
+        "index.html",
+    ).read_text(encoding="utf-8")
+    tooltip_source = _read_static_js("tooltip.js")
+    styles_source = _read_static_css("styles.css")
+    themes_source = _read_static_css("themes.css")
+    wysiwyg_source = _read_static_js("wysiwyg.js")
+
+    assert '/static/js/tooltip.js' in html_source
+    assert html_source.index('/static/js/tooltip.js') < html_source.index('/static/js/editor.js')
+    assert "window.MarkdownOS.tooltip" in tooltip_source
+    assert "parseTooltipText" in tooltip_source
+    assert "data-tooltip" in tooltip_source
+    assert "app-tooltip-kbd" in tooltip_source
+    assert "--tooltip-bg" in styles_source
+    assert "--tooltip-border" in styles_source
+    assert ".app-tooltip" in styles_source
+    assert "--tooltip-bg: #2a2a2a" in themes_source
+    assert 'button.getAttribute("data-tooltip") || button.getAttribute("title")' in wysiwyg_source
