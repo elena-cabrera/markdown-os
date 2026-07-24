@@ -90,6 +90,14 @@
   --table-row-hover-bg: #f0f0f0;
   --drag-over-bg: #eeeeee;
 
+  --tooltip-bg: #ffffff;
+  --tooltip-border: #e0e0e0;
+  --tooltip-text: #1a1a1a;
+  --tooltip-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --tooltip-kbd-bg: #f0f0f0;
+  --tooltip-kbd-border: #e0e0e0;
+  --tooltip-kbd-text: #555555;
+
   /* Blank space below the last line so content can scroll above the floating toolbar (normal + focus mode). */
   --editor-end-scroll-padding: 80px;
 }
@@ -2791,4 +2799,72 @@ body.focus-mode-css-fallback {
   .mermaid-fullscreen-content {
     padding: 10px;
   }
+}
+
+/* Custom app tooltips (replace native title tooltips) */
+.app-tooltip {
+  position: fixed;
+  z-index: 10000;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(320px, calc(100vw - 16px));
+  padding: 6px 10px;
+  border: 1px solid var(--tooltip-border);
+  border-radius: 8px;
+  background: var(--tooltip-bg);
+  color: var(--tooltip-text);
+  box-shadow: var(--tooltip-shadow);
+  font-family: "Inter", system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.3;
+  letter-spacing: 0.01em;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(2px);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+
+.app-tooltip.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.app-tooltip[hidden] {
+  display: none !important;
+}
+
+.app-tooltip-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app-tooltip-keys {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.app-tooltip-keys[hidden] {
+  display: none !important;
+}
+
+.app-tooltip-kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25em;
+  padding: 1px 5px;
+  border: 1px solid var(--tooltip-kbd-border);
+  border-radius: 4px;
+  background: var(--tooltip-kbd-bg);
+  color: var(--tooltip-kbd-text);
+  font-family: "Inter", system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.35;
+  white-space: nowrap;
 }
