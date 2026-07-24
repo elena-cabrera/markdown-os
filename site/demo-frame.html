@@ -507,7 +507,7 @@ def apply_patch(content: str, patch: list[dict], base_version: int) -> tuple[str
   });
 
   if (window.mermaid) {
-    window.mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose', fontFamily: 'Inter, sans-serif' });
+    window.mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' });
     window.mermaid.run({ querySelector: '.mermaid-container .mermaid', suppressErrors: true }).catch(function () {});
   }
 
