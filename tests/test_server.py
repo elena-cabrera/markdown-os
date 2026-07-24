@@ -833,6 +833,21 @@ def test_create_file_endpoint_creates_file_in_folder_mode(tmp_path: Path) -> Non
     assert (workspace / "docs" / "new.md").exists()
 
 
+def test_create_file_endpoint_appends_md_extension_when_missing(tmp_path: Path) -> None:
+    """Verify the create endpoint appends .md for extensionless filenames."""
+
+    workspace = tmp_path / "workspace"
+    workspace.mkdir(parents=True, exist_ok=True)
+
+    with _build_folder_client(workspace) as client:
+        response = client.post("/api/files/create", json={"path": "docs/notes"})
+
+    assert response.status_code == 200
+    assert response.json() == {"path": "docs/notes.md"}
+    assert (workspace / "docs" / "notes.md").exists()
+    assert not (workspace / "docs" / "notes").exists()
+
+
 def test_rename_file_endpoint_renames_file_in_folder_mode(tmp_path: Path) -> None:
     workspace = tmp_path / "workspace"
     workspace.mkdir(parents=True, exist_ok=True)

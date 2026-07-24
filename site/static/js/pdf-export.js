@@ -55,79 +55,79 @@
   ];
 
   const PDF_LIGHT_THEME_VARIABLES = {
-    "--bg": "#f7f8fa",
+    "--bg": "#f5f5f5",
     "--panel-bg": "#ffffff",
-    "--border": "#d9dee7",
-    "--text": "#17233b",
-    "--text-muted": "#60708f",
-    "--accent": "#2563eb",
-    "--accent-soft": "#dbeafe",
-    "--success": "#0f766e",
+    "--border": "#e8e8e8",
+    "--text": "#1a1a1a",
+    "--text-muted": "#666666",
+    "--accent": "#1a1a1a",
+    "--accent-soft": "#f0f0f0",
+    "--success": "#3d6b5c",
     "--danger": "#b91c1c",
     "--warning": "#9a6700",
-    "--shadow": "0 6px 20px rgba(17, 24, 39, 0.08)",
+    "--shadow": "0 6px 20px rgba(0, 0, 0, 0.08)",
     "--editor-bg": "#ffffff",
-    "--editor-text": "#111827",
-    "--preview-text": "#1f2937",
-    "--code-block-bg": "#f8fafc",
-    "--inline-code-bg": "#e8eaed",
-    "--code-header-bg": "#f3f7ff",
-    "--copy-border": "#bec9dd",
-    "--copy-border-hover": "#9fb0cc",
+    "--editor-text": "#1a1a1a",
+    "--preview-text": "#1a1a1a",
+    "--code-block-bg": "#f5f5f5",
+    "--inline-code-bg": "#eeeeee",
+    "--code-header-bg": "#f0f0f0",
+    "--copy-border": "#d4d4d4",
+    "--copy-border-hover": "#b0b0b0",
     "--copy-bg": "#ffffff",
-    "--copy-text": "#334155",
-    "--copy-text-hover": "#0f172a",
-    "--copy-copied-border": "#8ed4ce",
-    "--code-line-number-bg": "#eef2ff",
-    "--code-line-number-text": "#64748b",
+    "--copy-text": "#555555",
+    "--copy-text-hover": "#1a1a1a",
+    "--copy-copied-border": "#7a9e8f",
+    "--code-line-number-bg": "#eeeeee",
+    "--code-line-number-text": "#888888",
     "--mermaid-bg": "#ffffff",
     // Taller cap than the editor default (420px) so diagrams render at a
     // readable size, but below one A4 content page (~1047px) so the
     // page-break "avoid" rule can keep each diagram on a single page.
     "--mermaid-max-height": "980px",
-    "--mermaid-error-border": "#fecaca",
-    "--mermaid-error-bg": "#fef2f2",
+    "--mermaid-error-border": "#e8c4c4",
+    "--mermaid-error-bg": "#faf0f0",
     "--mermaid-error-text": "#991b1b",
-    "--math-display-bg": "#fafcff",
-    "--math-display-border": "#dbeafe",
+    "--math-display-bg": "#f9f9f9",
+    "--math-display-border": "#e8e8e8",
     "--math-error-text": "#991b1b",
-    "--math-error-bg": "#fef2f2",
-    "--math-error-border": "#fecaca",
-    "--frontmatter-bg": "#f8fafc",
-    "--frontmatter-border": "#dbe2ee",
-    "--frontmatter-key": "#5b6c8d",
-    "--frontmatter-chip-bg": "#e9eef8",
-    "--frontmatter-chip-text": "#1f2c47",
-    "--table-border": "#d9dee7",
-    "--table-header-bg": "#f0f4fa",
-    "--table-header-text": "#17233b",
-    "--table-row-alt-bg": "#f7f8fa",
-    "--table-row-hover-bg": "#eef2f9",
-    "--drag-over-bg": "#f0f7ff",
+    "--math-error-bg": "#faf0f0",
+    "--math-error-border": "#e8c4c4",
+    "--frontmatter-bg": "#f5f5f5",
+    "--frontmatter-border": "#e8e8e8",
+    "--frontmatter-key": "#666666",
+    "--frontmatter-chip-bg": "#eeeeee",
+    "--frontmatter-chip-text": "#1a1a1a",
+    "--table-border": "#e8e8e8",
+    "--table-header-bg": "#f0f0f0",
+    "--table-header-text": "#1a1a1a",
+    "--table-row-alt-bg": "#f9f9f9",
+    "--table-row-hover-bg": "#f0f0f0",
+    "--drag-over-bg": "#eeeeee",
   };
 
   const PDF_EXPORT_LIGHT_CSS = `
     [data-pdf-export-root] {
       color-scheme: light;
       background: #ffffff !important;
-      color: #111827 !important;
+      color: #1a1a1a !important;
     }
 
     [data-pdf-export-root] #wysiwyg-editor {
       background: transparent !important;
-      color: #111827 !important;
+      color: #1a1a1a !important;
     }
 
     [data-pdf-export-root] #wysiwyg-editor
       :is(h1, h2, h3, h4, h5, h6, p, li, td, th, span, strong, em, a, blockquote) {
-      color: #111827 !important;
-      -webkit-text-fill-color: #111827 !important;
+      color: #1a1a1a !important;
+      -webkit-text-fill-color: #1a1a1a !important;
     }
 
     [data-pdf-export-root] #wysiwyg-editor :not(pre) > code {
-      color: #111827 !important;
-      background-color: #e8eaed !important;
-      -webkit-text-fill-color: #111827 !important;
+      color: #1a1a1a !important;
+      background-color: #eeeeee !important;
+      -webkit-text-fill-color: #1a1a1a !important;
       white-space: pre-wrap !important;
     }
 
@@ -461,8 +461,8 @@
           return;
         }
 
-        element.style.setProperty("color", "#111827", "important");
-        element.style.setProperty("-webkit-text-fill-color", "#111827", "important");
+        element.style.setProperty("color", "#1a1a1a", "important");
+        element.style.setProperty("-webkit-text-fill-color", "#1a1a1a", "important");
       });
 
     editor.querySelectorAll("code").forEach((code) => {
@@ -470,9 +470,9 @@
         return;
       }
 
-      code.style.setProperty("color", "#111827", "important");
-      code.style.setProperty("-webkit-text-fill-color", "#111827", "important");
-      code.style.setProperty("background-color", "#e8eaed", "important");
+      code.style.setProperty("color", "#1a1a1a", "important");
+      code.style.setProperty("-webkit-text-fill-color", "#1a1a1a", "important");
+      code.style.setProperty("background-color", "#eeeeee", "important");
     });
   }
 

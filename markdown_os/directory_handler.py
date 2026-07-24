@@ -172,9 +172,19 @@ class DirectoryHandler:
             file_handler.cleanup()
 
     def create_file(self, relative_path: str) -> Path:
-        """Create an empty file in the workspace and return its absolute path."""
+        """
+        Create an empty markdown file in the workspace and return its absolute path.
 
-        _, absolute_path = self._resolve_workspace_path(relative_path)
+        Args:
+        - relative_path (str): File path relative to the workspace root. If the path
+          has no ``.md``/``.markdown`` extension, ``.md`` is appended automatically.
+
+        Returns:
+        - Path: Absolute path of the newly created markdown file.
+        """
+
+        markdown_path = self._ensure_markdown_extension(relative_path)
+        _, absolute_path = self._resolve_workspace_path(markdown_path)
         if absolute_path.exists():
             raise FileWriteError(f"File already exists: {absolute_path}")
 
@@ -185,6 +195,22 @@ class DirectoryHandler:
             raise FileWriteError(f"Failed to create file: {absolute_path}") from exc
 
         return absolute_path
+
+    def _ensure_markdown_extension(self, relative_path: str) -> str:
+        """
+        Append ``.md`` when the path has no markdown extension.
+
+        Args:
+        - relative_path (str): Candidate file path relative to the workspace.
+
+        Returns:
+        - str: Normalized relative path ending in ``.md`` or ``.markdown``.
+        """
+
+        normalized = self._normalize_relative_path(relative_path)
+        if normalized.suffix.lower() in MARKDOWN_EXTENSIONS:
+            return normalized.as_posix()
+        return f"{normalized.as_posix()}.md"
 
     def rename_path(self, relative_path: str, new_name: str) -> Path:
         """Rename a file or folder entry to a new name in the same parent directory."""

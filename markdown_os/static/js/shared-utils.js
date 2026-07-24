@@ -53,10 +53,19 @@
     overlay.setAttribute("aria-hidden", "true");
   }
 
+  function ensureMarkdownExtension(path) {
+    const normalized = String(path || "").trim();
+    if (!normalized) {
+      return normalized;
+    }
+    return /\.(md|markdown)$/i.test(normalized) ? normalized : `${normalized}.md`;
+  }
+
   window.sharedUtils = {
     AUTOSAVE_DELAY_MS,
     focusWithoutScroll,
     setSaveStatus,
     setContentLoadingState,
+    ensureMarkdownExtension,
   };
 })();

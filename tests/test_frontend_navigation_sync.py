@@ -319,11 +319,26 @@ def test_shared_frontend_modules_delegate_to_storage_backend() -> None:
 
     assert "window.MarkdownOS?.storage?.getFileTree" in file_tree_source
     assert "window.MarkdownOS?.storage?.createFile" in file_tree_source
+    assert "window.sharedUtils?.ensureMarkdownExtension?.(rawPath)" in file_tree_source
     assert "window.MarkdownOS?.storage?.renamePath" in file_tree_source
     assert "window.MarkdownOS?.storage?.deletePath" in file_tree_source
     assert "mode === \"folder\" || mode === \"web\"" in file_tree_source
 
     assert "mode === \"web\"" in websocket_source
+
+
+def test_create_file_auto_appends_markdown_extension() -> None:
+    """Verify new-file creation appends .md when the user omits the extension."""
+
+    shared_utils_source = _read_static_js("shared-utils.js")
+    file_tree_source = _read_static_js("file-tree.js")
+    storage_source = _read_static_js("storage-backend.js")
+
+    assert "function ensureMarkdownExtension(path)" in shared_utils_source
+    assert "ensureMarkdownExtension," in shared_utils_source
+    assert "window.sharedUtils?.ensureMarkdownExtension?.(rawPath)" in file_tree_source
+    assert "window.sharedUtils?.ensureMarkdownExtension?.(" in storage_source
+    assert "normalizeWorkspacePath(path)," in storage_source
 
 
 def test_folder_mode_sidebar_can_be_collapsed_and_restored() -> None:

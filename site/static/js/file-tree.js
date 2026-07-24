@@ -307,7 +307,10 @@
       return;
     }
 
-    const targetPath = parentPath ? `${parentPath}/${trimmedName}` : trimmedName;
+    const rawPath = parentPath ? `${parentPath}/${trimmedName}` : trimmedName;
+    const targetPath =
+      window.sharedUtils?.ensureMarkdownExtension?.(rawPath) ||
+      (/\.(md|markdown)$/i.test(rawPath) ? rawPath : `${rawPath}.md`);
 
     try {
       const payload = await window.MarkdownOS?.storage?.createFile?.(targetPath);
