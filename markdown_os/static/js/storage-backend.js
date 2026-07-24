@@ -528,8 +528,10 @@ Your local CLI and desktop app still save directly to your filesystem.
       },
 
       async createFile(path) {
-        const normalizedPath = normalizeWorkspacePath(path);
-        if (!isMarkdownPath(normalizedPath)) {
+        const normalizedPath = window.sharedUtils?.ensureMarkdownExtension?.(
+          normalizeWorkspacePath(path),
+        );
+        if (!normalizedPath || !isMarkdownPath(normalizedPath)) {
           throw new Error("Web workspace files must end with .md or .markdown.");
         }
         if (await readRecord(normalizedPath)) {
