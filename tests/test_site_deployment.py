@@ -40,8 +40,24 @@ def test_vercel_site_contains_web_editor_entrypoint() -> None:
     deployed = root / "site" / "app" / "index.html"
 
     assert deployed.is_file()
-    assert deployed.read_text(encoding="utf-8") == source.read_text(encoding="utf-8")
-    assert '/static/js/storage-backend.js' in deployed.read_text(encoding="utf-8")
+    source_html = source.read_text(encoding="utf-8")
+    deployed_html = deployed.read_text(encoding="utf-8")
+    # Web /app injects Google Fonts after fonts.css; everything else matches.
+    assert 'href="/static/css/fonts.css"' in deployed_html
+    assert "fonts.googleapis.com" in deployed_html
+    assert "fonts.googleapis.com" not in source_html
+    assert '/static/js/storage-backend.js' in deployed_html
+    assert deployed_html.replace(
+        '    <link rel="stylesheet" href="/static/css/fonts.css" />\n'
+        '    <link rel="preconnect" href="https://fonts.googleapis.com" />\n'
+        '    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />\n'
+        "    <link\n"
+        '      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap"\n'
+        '      rel="stylesheet"\n'
+        "    />\n",
+        '    <link rel="stylesheet" href="/static/css/fonts.css" />\n',
+        1,
+    ) == source_html
 
 
 def test_vercel_site_contains_static_editor_assets() -> None:
@@ -52,8 +68,10 @@ def test_vercel_site_contains_static_editor_assets() -> None:
     deployed_root = root / "site" / "static"
     required_files = [
         Path("favicon.svg"),
+        Path("css/fonts.css"),
         Path("css/styles.css"),
         Path("css/themes.css"),
+        Path("fonts/inter/inter-latin-400-normal.woff2"),
         Path("js/storage-backend.js"),
         Path("js/editor.js"),
         Path("vendor/marked/marked.min.js"),

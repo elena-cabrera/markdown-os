@@ -982,6 +982,7 @@
       startOnLoad: false,
       securityLevel: "strict",
       theme,
+      fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       useMaxWidth: false,
     });
     state.mermaidInitialized = true;
@@ -3098,6 +3099,7 @@
         startOnLoad: false,
         securityLevel: "strict",
         theme,
+        fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         useMaxWidth: false,
       });
       state.mermaidInitialized = true;

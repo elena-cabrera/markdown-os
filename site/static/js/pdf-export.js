@@ -599,6 +599,7 @@
       startOnLoad: false,
       securityLevel: "strict",
       theme: currentAppMermaidTheme(),
+      fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       useMaxWidth: false,
     });
   }
@@ -625,6 +626,7 @@
       startOnLoad: false,
       securityLevel: "strict",
       theme: PDF_MERMAID_THEME,
+      fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       useMaxWidth: false,
     });
 

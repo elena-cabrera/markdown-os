@@ -1,5 +1,22 @@
 :root {
   color-scheme: light;
+  --font-sans:
+    "Inter",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+  --font-mono:
+    "JetBrains Mono",
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    "Liberation Mono",
+    "Courier New",
+    monospace;
   /* Neutral palette aligned with the landing page (site/index.html). */
   --bg: #f5f5f5;
   --panel-bg: #ffffff;
@@ -106,15 +123,18 @@ body {
   margin: 0;
   height: 100%;
   overflow: hidden;
-  font-family:
-    Inter,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    Roboto,
-    sans-serif;
+  font-family: var(--font-sans);
   color: var(--text);
   background: var(--bg);
+}
+
+/* Form controls do not inherit font-family from body in browsers (UA
+   stylesheet), which left buttons/inputs on system Arial after Inter landed. */
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
 }
 
 .loading-banner {
@@ -1975,16 +1995,7 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 }
 
 #wysiwyg-editor code {
-  font-family:
-    "JetBrains Mono",
-    ui-monospace,
-    SFMono-Regular,
-    Menlo,
-    Monaco,
-    Consolas,
-    "Liberation Mono",
-    "Courier New",
-    monospace;
+  font-family: var(--font-mono);
 }
 
 #wysiwyg-editor :not(pre) > code {
@@ -2094,16 +2105,7 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   text-align: right;
   font-size: 13px;
   line-height: 1.6;
-  font-family:
-    "JetBrains Mono",
-    ui-monospace,
-    SFMono-Regular,
-    Menlo,
-    Monaco,
-    Consolas,
-    "Liberation Mono",
-    "Courier New",
-    monospace;
+  font-family: var(--font-mono);
   user-select: none;
 }
 
@@ -2297,7 +2299,7 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   background: var(--math-error-bg);
   color: var(--math-error-text);
   white-space: pre-wrap;
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: 0.85em;
   text-align: left;
 }
@@ -2503,16 +2505,7 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   border-radius: 8px;
   background: var(--panel-bg);
   color: var(--editor-text);
-  font-family:
-    "JetBrains Mono",
-    ui-monospace,
-    SFMono-Regular,
-    Menlo,
-    Monaco,
-    Consolas,
-    "Liberation Mono",
-    "Courier New",
-    monospace;
+  font-family: var(--font-mono);
   font-size: 13px;
   outline: none;
 }
