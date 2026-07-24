@@ -172,6 +172,55 @@ def test_create_file_creates_empty_file(tmp_path: Path) -> None:
     assert created.read_text(encoding="utf-8") == ""
 
 
+def test_create_file_appends_md_extension_when_missing(tmp_path: Path) -> None:
+    """Verify create_file appends .md when the path has no markdown extension."""
+
+    workspace = tmp_path / "workspace"
+    workspace.mkdir(parents=True, exist_ok=True)
+    handler = DirectoryHandler(workspace)
+
+    created = handler.create_file("docs/notes")
+
+    assert created == (workspace / "docs" / "notes.md").resolve()
+    assert created.exists()
+    assert created.read_text(encoding="utf-8") == ""
+
+
+def test_create_file_preserves_markdown_extension(tmp_path: Path) -> None:
+    """Verify create_file keeps an existing .markdown extension unchanged."""
+
+    workspace = tmp_path / "workspace"
+    workspace.mkdir(parents=True, exist_ok=True)
+    handler = DirectoryHandler(workspace)
+
+    created = handler.create_file("guide.markdown")
+
+    assert created == (workspace / "guide.markdown").resolve()
+    assert created.exists()
+
+
+def test_create_file_raises_when_file_exists(tmp_path: Path) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir(parents=True, exist_ok=True)
+    (workspace / "notes.md").write_text("text", encoding="utf-8")
+    handler = DirectoryHandler(workspace)
+
+    with pytest.raises(FileWriteError):
+        handler.create_file("notes.md")
+
+
+def test_create_file_raises_when_extensionless_name_collides(tmp_path: Path) -> None:
+    """Verify creating 'notes' conflicts with an existing notes.md file."""
+
+    workspace = tmp_path / "workspace"
+    workspace.mkdir(parents=True, exist_ok=True)
+    (workspace / "notes.md").write_text("text", encoding="utf-8")
+    handler = DirectoryHandler(workspace)
+
+    with pytest.raises(FileWriteError):
+        handler.create_file("notes")
+
+
 def test_rename_path_renames_file(tmp_path: Path) -> None:
     workspace = tmp_path / "workspace"
     workspace.mkdir(parents=True, exist_ok=True)
@@ -205,13 +254,3 @@ def test_delete_file_raises_for_missing_path(tmp_path: Path) -> None:
 
     with pytest.raises(FileReadError):
         handler.delete_file("missing.md")
-
-
-def test_create_file_raises_when_file_exists(tmp_path: Path) -> None:
-    workspace = tmp_path / "workspace"
-    workspace.mkdir(parents=True, exist_ok=True)
-    (workspace / "notes.md").write_text("text", encoding="utf-8")
-    handler = DirectoryHandler(workspace)
-
-    with pytest.raises(FileWriteError):
-        handler.create_file("notes.md")
