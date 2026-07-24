@@ -55,32 +55,32 @@
   ];
 
   const PDF_LIGHT_THEME_VARIABLES = {
-    "--bg": "#f9f3ed",
-    "--panel-bg": "#fffbf7",
-    "--border": "#e5d9ce",
-    "--text": "#2a2622",
-    "--text-muted": "#7a7268",
-    "--accent": "#5c534a",
-    "--accent-soft": "#ede4d8",
+    "--bg": "#f5f5f5",
+    "--panel-bg": "#ffffff",
+    "--border": "#e8e8e8",
+    "--text": "#1a1a1a",
+    "--text-muted": "#666666",
+    "--accent": "#1a1a1a",
+    "--accent-soft": "#f0f0f0",
     "--success": "#3d6b5c",
     "--danger": "#b91c1c",
     "--warning": "#9a6700",
-    "--shadow": "0 6px 20px rgba(42, 38, 34, 0.08)",
-    "--editor-bg": "#fffbf7",
-    "--editor-text": "#1f1c19",
-    "--preview-text": "#2a2622",
-    "--code-block-bg": "#f3ebe2",
-    "--inline-code-bg": "#ede4d8",
-    "--code-header-bg": "#ede4d8",
-    "--copy-border": "#d4c8ba",
-    "--copy-border-hover": "#b8a99a",
-    "--copy-bg": "#fffbf7",
-    "--copy-text": "#5c534a",
-    "--copy-text-hover": "#2a2622",
+    "--shadow": "0 6px 20px rgba(0, 0, 0, 0.08)",
+    "--editor-bg": "#ffffff",
+    "--editor-text": "#1a1a1a",
+    "--preview-text": "#1a1a1a",
+    "--code-block-bg": "#f5f5f5",
+    "--inline-code-bg": "#eeeeee",
+    "--code-header-bg": "#f0f0f0",
+    "--copy-border": "#d4d4d4",
+    "--copy-border-hover": "#b0b0b0",
+    "--copy-bg": "#ffffff",
+    "--copy-text": "#555555",
+    "--copy-text-hover": "#1a1a1a",
     "--copy-copied-border": "#7a9e8f",
-    "--code-line-number-bg": "#ede4d8",
-    "--code-line-number-text": "#8a7f72",
-    "--mermaid-bg": "#fffbf7",
+    "--code-line-number-bg": "#eeeeee",
+    "--code-line-number-text": "#888888",
+    "--mermaid-bg": "#ffffff",
     // Taller cap than the editor default (420px) so diagrams render at a
     // readable size, but below one A4 content page (~1047px) so the
     // page-break "avoid" rule can keep each diagram on a single page.
@@ -88,46 +88,46 @@
     "--mermaid-error-border": "#e8c4c4",
     "--mermaid-error-bg": "#faf0f0",
     "--mermaid-error-text": "#991b1b",
-    "--math-display-bg": "#f5eee6",
-    "--math-display-border": "#e5d9ce",
+    "--math-display-bg": "#f9f9f9",
+    "--math-display-border": "#e8e8e8",
     "--math-error-text": "#991b1b",
     "--math-error-bg": "#faf0f0",
     "--math-error-border": "#e8c4c4",
-    "--frontmatter-bg": "#f3ebe2",
-    "--frontmatter-border": "#e5d9ce",
-    "--frontmatter-key": "#7a7268",
-    "--frontmatter-chip-bg": "#ede4d8",
-    "--frontmatter-chip-text": "#2a2622",
-    "--table-border": "#e5d9ce",
-    "--table-header-bg": "#ede4d8",
-    "--table-header-text": "#2a2622",
-    "--table-row-alt-bg": "#f5eee6",
-    "--table-row-hover-bg": "#ede4d8",
-    "--drag-over-bg": "#f0e8de",
+    "--frontmatter-bg": "#f5f5f5",
+    "--frontmatter-border": "#e8e8e8",
+    "--frontmatter-key": "#666666",
+    "--frontmatter-chip-bg": "#eeeeee",
+    "--frontmatter-chip-text": "#1a1a1a",
+    "--table-border": "#e8e8e8",
+    "--table-header-bg": "#f0f0f0",
+    "--table-header-text": "#1a1a1a",
+    "--table-row-alt-bg": "#f9f9f9",
+    "--table-row-hover-bg": "#f0f0f0",
+    "--drag-over-bg": "#eeeeee",
   };
 
   const PDF_EXPORT_LIGHT_CSS = `
     [data-pdf-export-root] {
       color-scheme: light;
-      background: #fffbf7 !important;
-      color: #1f1c19 !important;
+      background: #ffffff !important;
+      color: #1a1a1a !important;
     }
 
     [data-pdf-export-root] #wysiwyg-editor {
       background: transparent !important;
-      color: #1f1c19 !important;
+      color: #1a1a1a !important;
     }
 
     [data-pdf-export-root] #wysiwyg-editor
       :is(h1, h2, h3, h4, h5, h6, p, li, td, th, span, strong, em, a, blockquote) {
-      color: #1f1c19 !important;
-      -webkit-text-fill-color: #1f1c19 !important;
+      color: #1a1a1a !important;
+      -webkit-text-fill-color: #1a1a1a !important;
     }
 
     [data-pdf-export-root] #wysiwyg-editor :not(pre) > code {
-      color: #1f1c19 !important;
-      background-color: #ede4d8 !important;
-      -webkit-text-fill-color: #1f1c19 !important;
+      color: #1a1a1a !important;
+      background-color: #eeeeee !important;
+      -webkit-text-fill-color: #1a1a1a !important;
       white-space: pre-wrap !important;
     }
 
