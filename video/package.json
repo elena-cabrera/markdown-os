@@ -1,0 +1,11 @@
+{
+  "name": "markdown-os-motion",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npx --yes hyperframes@0.7.70 preview",
+    "check": "npx --yes hyperframes@0.7.70 check",
+    "render": "npx --yes hyperframes@0.7.70 render -q high -o ./renders/markdown-os-motion.mp4",
+    "beats": "npx --yes hyperframes@0.7.70 beats"
+  }
+}

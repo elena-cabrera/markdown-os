@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1920, height=1080">
+    <title>markdown-os motion</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #000;
+      }
+      body {
+        font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      .mono {
+        font-family: "JetBrains Mono", ui-monospace, monospace;
+      }
+      #root {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        color: #1a1a1a;
+      }
+      .clip {
+        position: absolute;
+        inset: 0;
+      }
+      .bg-fill {
+        position: absolute;
+        inset: 0;
+        background: #ffffff;
+      }
+      .bg-grid {
+        position: absolute;
+        inset: -40px;
+        background-image:
+          linear-gradient(#e8e8e8 1px, transparent 1px),
+          linear-gradient(90deg, #e8e8e8 1px, transparent 1px);
+        background-size: 64px 64px;
+        opacity: 0.35;
+        transform-origin: center center;
+      }
+      .bg-accent {
+        position: absolute;
+        width: 720px;
+        height: 720px;
+        border-radius: 50%;
+        background: radial-gradient(circle, #f5f5f5 0%, rgba(245, 245, 245, 0) 70%);
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+      }
+      .center-stack {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 28px;
+        padding: 80px;
+      }
+      .logo-row {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+      }
+      #main-logo {
+        width: 88px;
+        height: 88px;
+        border-radius: 18px;
+        box-shadow: 0 12px 40px rgba(26, 26, 26, 0.12);
+      }
+      #brand-name {
+        font-size: 72px;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+      }
+      .headline-layout {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 100px 0 120px;
+        gap: 48px;
+      }
+      .headline-copy {
+        flex: 0 1 920px;
+        display: flex;
+        flex-direction: column;
+        gap: 22px;
+      }
+      #hero-line {
+        font-size: 76px;
+        font-weight: 800;
+        letter-spacing: -0.04em;
+        line-height: 1.05;
+      }
+      #hero-line .md-chip {
+        display: inline-block;
+        padding: 4px 22px 10px;
+        margin: 0 6px;
+        background: #f5f5f5;
+        border: 1px solid #e8e8e8;
+        border-radius: 12px;
+        font-size: 0.92em;
+      }
+      #hero-sub {
+        font-size: 34px;
+        font-weight: 500;
+        color: #666666;
+        line-height: 1.35;
+        max-width: 780px;
+      }
+      .editor-card {
+        flex: 0 0 480px;
+        width: 480px;
+        border-radius: 12px;
+        border: 1px solid #e8e8e8;
+        background: #ffffff;
+        box-shadow: 0 24px 80px rgba(26, 26, 26, 0.14);
+        overflow: hidden;
+      }
+      .editor-chrome {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 14px 18px;
+        background: #f5f5f5;
+        border-bottom: 1px solid #e8e8e8;
+      }
+      .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #e8e8e8;
+      }
+      .editor-body {
+        padding: 28px 32px 36px;
+        font-size: 22px;
+        line-height: 1.55;
+      }
+      .editor-body .h {
+        font-weight: 700;
+        font-size: 26px;
+        margin-bottom: 12px;
+      }
+      .feature-layout {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        padding: 0 100px;
+        gap: 64px;
+      }
+      .feature-copy {
+        flex: 0 0 640px;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+      .feature-eyebrow {
+        font-size: 22px;
+        font-weight: 600;
+        color: #666666;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+      }
+      .feature-title {
+        font-size: 56px;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        line-height: 1.08;
+      }
+      .feature-desc {
+        font-size: 28px;
+        font-weight: 500;
+        color: #666666;
+        line-height: 1.4;
+        max-width: 560px;
+      }
+      .demo-panel {
+        flex: 1;
+        min-height: 560px;
+        border-radius: 12px;
+        border: 1px solid #e8e8e8;
+        background: #f5f5f5;
+        box-shadow: 0 24px 80px rgba(26, 26, 26, 0.1);
+        overflow: hidden;
+        display: flex;
+        align-items: stretch;
+      }
+      .demo-mermaid {
+        display: flex;
+        width: 100%;
+        gap: 0;
+      }
+      .demo-mermaid-code {
+        flex: 0 0 42%;
+        padding: 36px 32px;
+        font-size: 20px;
+        line-height: 1.65;
+        background: #ffffff;
+        border-right: 1px solid #e8e8e8;
+      }
+      .demo-mermaid-code .kw {
+        color: #7c3aed;
+        font-weight: 600;
+      }
+      .demo-mermaid-code .str {
+        color: #027dbc;
+      }
+      .demo-mermaid-code .arrow {
+        color: #666666;
+      }
+      .demo-mermaid-diagram {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #ffffff;
+        padding: 24px;
+      }
+      .demo-mermaid-diagram svg {
+        width: 200px;
+        height: auto;
+      }
+      .mm-node {
+        opacity: 0;
+        transform-origin: center;
+      }
+      .mm-edge {
+        stroke-dasharray: 40;
+        stroke-dashoffset: 40;
+      }
+      .demo-download {
+        width: 100%;
+        padding: 48px 56px;
+        display: flex;
+        flex-direction: column;
+        gap: 28px;
+        background: #ffffff;
+      }
+      .dl-buttons {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+      .dl-btn {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 18px 28px;
+        font-size: 24px;
+        font-weight: 600;
+        border-radius: 8px;
+        border: 1px solid #e8e8e8;
+        background: #ffffff;
+        box-shadow: 0 8px 24px rgba(26, 26, 26, 0.06);
+      }
+      .dl-btn.primary {
+        background: #1a1a1a;
+        color: #ffffff;
+        border-color: #1a1a1a;
+      }
+      .dl-icon {
+        width: 28px;
+        height: 28px;
+        display: block;
+      }
+      .default-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 22px 28px;
+        border-radius: 12px;
+        border: 1px solid #e8e8e8;
+        background: #f5f5f5;
+        font-size: 24px;
+        font-weight: 600;
+      }
+      .toggle {
+        width: 56px;
+        height: 32px;
+        border-radius: 999px;
+        background: #e8e8e8;
+        position: relative;
+      }
+      .toggle-knob {
+        position: absolute;
+        top: 4px;
+        left: 4px;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: #ffffff;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+      }
+      .demo-pdf {
+        display: flex;
+        width: 100%;
+        background: #ffffff;
+      }
+      .pdf-editor {
+        flex: 1;
+        padding: 40px 36px;
+        border-right: 1px solid #e8e8e8;
+      }
+      .pdf-toolbar {
+        display: flex;
+        justify-content: flex-end;
+        margin-bottom: 24px;
+      }
+      .pdf-export-btn {
+        padding: 12px 22px;
+        font-size: 20px;
+        font-weight: 600;
+        border-radius: 8px;
+        background: #1a1a1a;
+        color: #ffffff;
+      }
+      .pdf-line {
+        height: 10px;
+        border-radius: 4px;
+        background: #e8e8e8;
+        margin-bottom: 12px;
+      }
+      .pdf-preview-wrap {
+        flex: 0 0 46%;
+        padding: 32px;
+        background: #f5f5f5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .pdf-page {
+        width: 280px;
+        height: 380px;
+        background: #ffffff;
+        border: 1px solid #e8e8e8;
+        border-radius: 4px;
+        box-shadow: 0 16px 48px rgba(26, 26, 26, 0.12);
+        padding: 28px 24px;
+        transform-origin: center;
+      }
+      .pdf-page h4 {
+        font-size: 22px;
+        font-weight: 700;
+        margin-bottom: 16px;
+      }
+      .more-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        justify-content: center;
+        max-width: 1100px;
+        margin-top: 12px;
+      }
+      .more-chip {
+        padding: 12px 22px;
+        font-size: 22px;
+        font-weight: 600;
+        color: #666666;
+        background: #ffffff;
+        border: 1px dashed #e8e8e8;
+        border-radius: 999px;
+      }
+      #more-headline {
+        font-size: 64px;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        text-align: center;
+      }
+      .cta-wrap {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+      }
+      #cta-btn {
+        display: block;
+        padding: 22px 48px;
+        font-size: 32px;
+        font-weight: 600;
+        color: #ffffff;
+        background: #1a1a1a;
+        border-radius: 8px;
+        box-shadow: 0 16px 48px rgba(26, 26, 26, 0.22);
+      }
+      #cta-url {
+        font-size: 28px;
+        font-weight: 500;
+        color: #666666;
+      }
+    </style>
+  </head>
+  <body>
+    <div data-hf-id="hf-j7pz" id="root" data-composition-id="main" data-start="0" data-duration="22" data-width="1920" data-height="1080">
+      <audio data-hf-id="hf-cl7g" id="bgm" src="assets/music.mp3" data-timeline-role="music" data-start="0" data-duration="22" data-track-index="20" data-volume="0.72" data-media-start="0.848"></audio>
+
+      <div data-hf-id="hf-w1bl" id="bg-fill" class="bg-fill" aria-hidden="true"></div>
+
+      <div data-hf-id="hf-kdkc" id="bg-layer" class="clip" data-start="0" data-duration="22" data-track-index="0">
+        <div data-hf-id="hf-er9m" id="bg-grid" class="bg-grid"></div>
+        <div data-hf-id="hf-cytq" id="bg-accent" class="bg-accent"></div>
+      </div>
+
+      <div data-hf-id="hf-0re6" id="scene-open" class="clip" data-start="0" data-duration="2" data-track-index="1">
+        <div data-hf-id="hf-gobo" class="center-stack">
+          <div data-hf-id="hf-761a" class="logo-row">
+            <img data-hf-id="hf-pfs1" id="main-logo" src="assets/logo.svg" width="88" height="88" alt="">
+            <span data-hf-id="hf-grbr" id="brand-name">markdown-os</span>
+          </div>
+        </div>
+      </div>
+
+      <div data-hf-id="hf-1qnl" id="scene-headline" class="clip" data-start="2" data-duration="2.2" data-track-index="2">
+        <div data-hf-id="hf-7c93" class="headline-layout">
+          <div data-hf-id="hf-lwtm" class="headline-copy">
+            <h1 data-hf-id="hf-w7xu" id="hero-line">
+              Read &amp; edit <span data-hf-id="hf-e059" class="md-chip mono">.md</span> in your browser
+            </h1>
+            <p data-hf-id="hf-6oi8" id="hero-sub">Local-first. Your files never leave your machine.</p>
+          </div>
+          <div data-hf-id="hf-4r3u" id="editor-card" class="editor-card">
+            <div data-hf-id="hf-lioa" class="editor-chrome">
+              <span data-hf-id="hf-9gry" class="dot"></span>
+              <span data-hf-id="hf-zcc2" class="dot"></span>
+              <span data-hf-id="hf-zqn3" class="dot"></span>
+            </div>
+            <div data-hf-id="hf-hj4t" class="editor-body mono">
+              <div data-hf-id="hf-z5ez" class="h"># notes.md</div>
+              <div data-hf-id="hf-vlr8">**Ship** faster with _real_ previews.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div data-hf-id="hf-3ya2" id="scene-feat-mermaid" class="clip" data-start="4.2" data-duration="3.6" data-track-index="3">
+        <div data-hf-id="hf-60w9" class="feature-layout">
+          <div data-hf-id="hf-khco" class="feature-copy">
+            <span data-hf-id="hf-hium" id="f1-eyebrow" class="feature-eyebrow">Feature</span>
+            <h2 data-hf-id="hf-gfw7" id="f1-title" class="feature-title">Visualize Mermaid diagrams</h2>
+            <p data-hf-id="hf-hhhm" id="f1-desc" class="feature-desc">
+              Flowcharts and sequence diagrams render live—with zoom and pan your IDE preview
+              can’t match.
+            </p>
+          </div>
+          <div data-hf-id="hf-ftqf" id="f1-demo" class="demo-panel">
+            <div data-hf-id="hf-xatv" class="demo-mermaid">
+              <div data-hf-id="hf-074k" class="demo-mermaid-code mono">
+                <div data-hf-id="hf-d3uw"><span data-hf-id="hf-vcih" class="kw">graph</span> TD</div>
+                <div data-hf-id="hf-m9rn">&#160;&#160;A[<span data-hf-id="hf-n0w4" class="str">CLI</span>] <span data-hf-id="hf-ttx0" class="arrow">--&gt;</span> B[<span data-hf-id="hf-5iot" class="str">Server</span>]</div>
+                <div data-hf-id="hf-7w5v">&#160;&#160;B <span data-hf-id="hf-fgek" class="arrow">--&gt;</span> C[<span data-hf-id="hf-nysu" class="str">Browser</span>]</div>
+                <div data-hf-id="hf-eq9v">&#160;&#160;C <span data-hf-id="hf-e9hh" class="arrow">--&gt;</span> D[<span data-hf-id="hf-jvgb" class="str">Editor</span>]</div>
+              </div>
+              <div data-hf-id="hf-5c97" class="demo-mermaid-diagram">
+                <svg data-hf-id="hf-d0rr" viewBox="0 0 120 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <g data-hf-id="hf-jvhx" class="mm-node" id="mm-n1">
+                    <rect data-hf-id="hf-k7yf" x="30" y="4" width="60" height="26" rx="4" fill="#e0f2fe" stroke="#0284c7" stroke-width="1.5" />
+                    <text data-hf-id="hf-cly7" x="60" y="21" text-anchor="middle" fill="#0c4a6e" font-size="10" font-family="Inter, sans-serif">CLI</text>
+                  </g>
+                  <line data-hf-id="hf-jfs3" x1="60" y1="30" x2="60" y2="44" stroke="#0284c7" stroke-width="1.5" class="mm-edge" id="mm-e1" />
+                  <g data-hf-id="hf-ntly" class="mm-node" id="mm-n2">
+                    <rect data-hf-id="hf-jkgx" x="24" y="44" width="72" height="26" rx="4" fill="#e0f2fe" stroke="#0284c7" stroke-width="1.5" />
+                    <text data-hf-id="hf-1skk" x="60" y="61" text-anchor="middle" fill="#0c4a6e" font-size="10" font-family="Inter, sans-serif">Server</text>
+                  </g>
+                  <line data-hf-id="hf-pe5i" x1="60" y1="70" x2="60" y2="86" stroke="#0284c7" stroke-width="1.5" class="mm-edge" id="mm-e2" />
+                  <g data-hf-id="hf-tzbr" class="mm-node" id="mm-n3">
+                    <rect data-hf-id="hf-av8s" x="20" y="86" width="80" height="26" rx="4" fill="#e0f2fe" stroke="#0284c7" stroke-width="1.5" />
+                    <text data-hf-id="hf-4yei" x="60" y="103" text-anchor="middle" fill="#0c4a6e" font-size="10" font-family="Inter, sans-serif">Browser</text>
+                  </g>
+                  <line data-hf-id="hf-30jl" x1="60" y1="112" x2="60" y2="126" stroke="#0284c7" stroke-width="1.5" class="mm-edge" id="mm-e3" />
+                  <g data-hf-id="hf-xxfs" class="mm-node" id="mm-n4">
+                    <rect data-hf-id="hf-7j3v" x="26" y="126" width="68" height="26" rx="4" fill="#e0f2fe" stroke="#0284c7" stroke-width="1.5" />
+                    <text data-hf-id="hf-lhln" x="60" y="143" text-anchor="middle" fill="#0c4a6e" font-size="10" font-family="Inter, sans-serif">Editor</text>
+                  </g>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div data-hf-id="hf-dsmi" id="scene-feat-download" class="clip" data-start="7.8" data-duration="3.6" data-track-index="4">
+        <div data-hf-id="hf-3i7x" class="feature-layout">
+          <div data-hf-id="hf-35tc" class="feature-copy">
+            <span data-hf-id="hf-brs1" id="f2-eyebrow" class="feature-eyebrow">Desktop</span>
+            <h2 data-hf-id="hf-zhux" id="f2-title" class="feature-title">Download for macOS or Windows</h2>
+            <p data-hf-id="hf-ohvl" id="f2-desc" class="feature-desc">
+              Install the desktop app and set markdown-os as your default editor for
+              <span data-hf-id="hf-m3hf" class="mono">.md</span> files.
+            </p>
+          </div>
+          <div data-hf-id="hf-hyi6" id="f2-demo" class="demo-panel">
+            <div data-hf-id="hf-mxoy" class="demo-download">
+              <div data-hf-id="hf-q97g" class="dl-buttons">
+                <span data-hf-id="hf-t0vh" id="dl-mac" class="dl-btn primary">
+                  <svg data-hf-id="hf-092n" class="dl-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path data-hf-id="hf-n4ry" d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
+                  </svg>
+                  macOS
+                </span>
+                <span data-hf-id="hf-7kd2" id="dl-win" class="dl-btn">
+                  <svg data-hf-id="hf-7imn" class="dl-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path data-hf-id="hf-jc75" d="M3 5.5L10.5 4.5V11.5H3V5.5ZM10.5 12.5V19.5L3 18.4V12.5H10.5ZM11.5 4.3L21 3V11.5H11.5V4.3ZM21 12.5V21L11.5 19.7V12.5H21Z" />
+                  </svg>
+                  Windows
+                </span>
+              </div>
+              <div data-hf-id="hf-b34a" id="default-row" class="default-row">
+                <span data-hf-id="hf-s445">Default app for <span data-hf-id="hf-3ggz" class="mono">.md</span> files</span>
+                <div data-hf-id="hf-oyom" id="default-toggle" class="toggle">
+                  <div data-hf-id="hf-g0fb" id="default-knob" class="toggle-knob"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div data-hf-id="hf-2pwz" id="scene-feat-pdf" class="clip" data-start="11.4" data-duration="3.6" data-track-index="5">
+        <div data-hf-id="hf-4p50" class="feature-layout">
+          <div data-hf-id="hf-1yw9" class="feature-copy">
+            <span data-hf-id="hf-x3j0" id="f3-eyebrow" class="feature-eyebrow">Export</span>
+            <h2 data-hf-id="hf-y4k1" id="f3-title" class="feature-title">Export .md files to PDF</h2>
+            <p data-hf-id="hf-ng0t" id="f3-desc" class="feature-desc">
+              One click to a print-ready PDF—diagrams, code blocks, and styling included.
+            </p>
+          </div>
+          <div data-hf-id="hf-9l5t" id="f3-demo" class="demo-panel">
+            <div data-hf-id="hf-5n8c" class="demo-pdf">
+              <div data-hf-id="hf-euw4" class="pdf-editor">
+                <div data-hf-id="hf-zg78" class="pdf-toolbar">
+                  <span data-hf-id="hf-jc23" id="pdf-export-btn" class="pdf-export-btn">Export PDF</span>
+                </div>
+                <div data-hf-id="hf-hjnq" class="pdf-line" style="width: 55%"></div>
+                <div data-hf-id="hf-juv9" class="pdf-line" style="width: 90%"></div>
+                <div data-hf-id="hf-t3ur" class="pdf-line" style="width: 78%"></div>
+                <div data-hf-id="hf-z0qn" class="pdf-line" style="width: 85%"></div>
+              </div>
+              <div data-hf-id="hf-eisa" class="pdf-preview-wrap">
+                <div data-hf-id="hf-sb4q" id="pdf-page" class="pdf-page">
+                  <h4 data-hf-id="hf-yzox">notes.md</h4>
+                  <div data-hf-id="hf-r0s5" class="pdf-line" style="width: 100%"></div>
+                  <div data-hf-id="hf-8qzg" class="pdf-line" style="width: 88%"></div>
+                  <div data-hf-id="hf-mpfp" class="pdf-line" style="width: 72%"></div>
+                  <div data-hf-id="hf-f7c9" class="pdf-line" style="width: 94%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div data-hf-id="hf-rbg2" id="scene-more" class="clip" data-start="15" data-duration="2.2" data-track-index="6">
+        <div data-hf-id="hf-g9uk" class="center-stack">
+          <h2 data-hf-id="hf-1dgs" id="more-headline">+ many more features</h2>
+          <div data-hf-id="hf-3vh8" class="more-grid">
+            <span data-hf-id="hf-0vzz" id="more-1" class="more-chip">WYSIWYG editing</span>
+            <span data-hf-id="hf-49yu" id="more-2" class="more-chip">Syntax highlighting</span>
+            <span data-hf-id="hf-ms9w" id="more-3" class="more-chip">File tree &amp; tabs</span>
+            <span data-hf-id="hf-0xv5" id="more-4" class="more-chip">Auto table of contents</span>
+            <span data-hf-id="hf-y01a" id="more-5" class="more-chip">Task lists</span>
+            <span data-hf-id="hf-6qlk" id="more-6" class="more-chip">KaTeX math</span>
+          </div>
+        </div>
+      </div>
+
+      <div data-hf-id="hf-yjxz" id="scene-cta" class="clip" data-start="17.2" data-duration="4.8" data-track-index="7">
+        <div data-hf-id="hf-f2xh" class="center-stack">
+          <div data-hf-id="hf-466v" class="cta-wrap">
+            <span data-hf-id="hf-p63z" id="cta-btn">Try online</span>
+            <span data-hf-id="hf-yaq4" id="cta-url" class="mono">markdown-os.elenacabrera.xyz</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+
+      const BEATS = [
+        0, 0.174, 0.348, 0.51, 0.673, 0.986, 1.102, 1.23, 1.439, 1.59, 1.869, 2.403, 2.786, 3.181,
+        3.378, 3.599, 3.784, 3.97, 4.202, 4.376, 4.574, 4.794, 4.899, 5.085, 5.375, 5.479, 5.688, 5.99,
+        6.373, 6.478, 6.977, 8.382, 9.589, 10.181, 10.983, 11.575, 12.48, 12.782, 13.188, 13.583,
+        15.998, 16.579, 16.88, 17.38, 17.983, 18.877, 19.214, 19.806, 19.945, 20.259, 20.596, 20.863,
+        21.188, 21.582, 21.861, 22.058, 22.384, 22.778, 23.185, 23.788, 24.38, 25.274, 25.588, 26.18,
+        27.596, 28.723, 29.593, 29.872,
+      ];
+
+      const beatAt = (index, fallback) => (BEATS[index] !== undefined ? BEATS[index] : fallback);
+      const beatAfter = (t, fallback = t) => {
+        const hit = BEATS.find((b) => b >= t);
+        return hit !== undefined ? hit : fallback;
+      };
+
+      const tl = gsap.timeline({ paused: true });
+
+      BEATS.forEach((t, i) => {
+        if (i % 4 !== 0) return;
+        tl.to(
+          "#bg-grid",
+          { scale: 1.025, duration: 0.1, ease: "power2.out", yoyo: true, repeat: 1 },
+          t,
+        );
+      });
+
+      const T = {
+        open: 0,
+        headline: 2,
+        f1: 4.2,
+        f2: 7.8,
+        f3: 11.4,
+        more: 15,
+        cta: 17.2,
+      };
+
+      tl.from("#main-logo", { scale: 0.4, rotation: -12, opacity: 0, duration: 0.35, ease: "back.out(2)" }, beatAt(0, 0));
+      tl.from("#brand-name", { x: -40, opacity: 0, duration: 0.32, ease: "power3.out" }, beatAt(0, 0) + 0.08);
+
+      tl.from("#hero-line", { y: 48, opacity: 0, duration: 0.36, ease: "power4.out" }, beatAfter(T.headline));
+      tl.from("#hero-line .md-chip", { scale: 0.65, opacity: 0, duration: 0.26, ease: "back.out(3)" }, beatAt(13, 2.786));
+      tl.from("#hero-sub", { y: 20, opacity: 0, duration: 0.3, ease: "power2.out" }, beatAt(14, 3.181));
+      tl.from("#editor-card", { x: 60, opacity: 0, duration: 0.4, ease: "power3.out" }, beatAt(15, 3.378));
+
+      function featureIntro(prefix, start, titleSel, demoSel) {
+        const t0 = beatAfter(start);
+        tl.from(`${prefix}-eyebrow`, { y: 12, opacity: 0, duration: 0.16, ease: "power2.out" }, t0);
+        tl.from(titleSel, { x: -28, opacity: 0, duration: 0.26, ease: "power3.out" }, t0 + 0.04);
+        tl.from(`${prefix}-desc`, { y: 12, opacity: 0, duration: 0.2, ease: "power2.out" }, t0 + 0.08);
+        tl.from(demoSel, { x: 36, opacity: 0, scale: 0.97, duration: 0.3, ease: "power3.out" }, t0 + 0.12);
+      }
+
+      featureIntro("#f1", T.f1, "#f1-title", "#f1-demo");
+      const m1 = beatAfter(T.f1) + 0.28;
+      tl.to(".mm-node", { opacity: 1, scale: 1, duration: 0.16, stagger: 0.07, ease: "back.out(2)" }, m1);
+      tl.to(".mm-edge", { strokeDashoffset: 0, duration: 0.2, stagger: 0.07, ease: "power2.inOut" }, m1 + 0.12);
+
+      featureIntro("#f2", T.f2, "#f2-title", "#f2-demo");
+      const d2 = beatAfter(T.f2) + 0.22;
+      tl.from("#dl-mac", { y: 16, opacity: 0, duration: 0.2, ease: "back.out(2)" }, d2);
+      tl.from("#dl-win", { y: 16, opacity: 0, duration: 0.2, ease: "back.out(2)" }, d2 + 0.14);
+      tl.from("#default-row", { opacity: 0, y: 12, duration: 0.22, ease: "power2.out" }, d2 + 0.28);
+      const toggleOn = d2 + 0.55;
+      tl.to("#default-toggle", { backgroundColor: "#1a1a1a", duration: 0.16, ease: "power2.inOut" }, toggleOn);
+      tl.to("#default-knob", { x: 24, duration: 0.18, ease: "back.out(2)" }, toggleOn);
+
+      featureIntro("#f3", T.f3, "#f3-title", "#f3-demo");
+      const pdfClick = beatAfter(T.f3) + 0.24;
+      tl.from("#pdf-export-btn", { scale: 0.85, opacity: 0, duration: 0.18, ease: "back.out(2.5)" }, pdfClick);
+      tl.to("#pdf-export-btn", { scale: 0.94, duration: 0.06, ease: "power2.in" }, pdfClick + 0.2);
+      tl.to("#pdf-export-btn", { scale: 1, duration: 0.1, ease: "power2.out" }, pdfClick + 0.26);
+      tl.from("#pdf-page", { x: 32, opacity: 0, scale: 0.9, duration: 0.28, ease: "power3.out" }, pdfClick + 0.32);
+
+      tl.from("#more-headline", { scale: 0.9, opacity: 0, duration: 0.24, ease: "back.out(2)" }, beatAfter(T.more));
+      ["#more-1", "#more-2", "#more-3", "#more-4", "#more-5", "#more-6"].forEach((sel, idx) => {
+        tl.from(sel, { y: 14, opacity: 0, duration: 0.14, ease: "power2.out" }, beatAfter(T.more) + 0.18 + idx * 0.05);
+      });
+
+      tl.from("#cta-btn", { scale: 0.78, opacity: 0, duration: 0.26, ease: "back.out(2.8)" }, beatAfter(T.cta));
+      tl.from("#cta-url", { y: 12, opacity: 0, duration: 0.22, ease: "power2.out" }, beatAfter(T.cta) + 0.2);
+      tl.to("#cta-btn", { scale: 1.04, duration: 0.12, ease: "power2.out", yoyo: true, repeat: 1 }, beatAfter(T.cta) + 0.45);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>
