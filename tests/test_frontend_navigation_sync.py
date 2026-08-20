@@ -383,10 +383,27 @@ def test_wysiwyg_restores_editable_body_for_empty_documents() -> None:
 
     source = _read_static_js("wysiwyg.js")
 
-    assert "function ensureEditableBody()" in source
-    assert "node.matches(\".frontmatter-properties, .frontmatter-properties-create\")" in source
+    assert "function ensureEditableGaps()" in source
+    assert "function createEmptyParagraph()" in source
     assert "paragraph.appendChild(document.createElement(\"br\"));" in source
-    assert "refreshFrontmatterPanel();\n    ensureEditableBody();" in source
+    assert "window.wysiwygTables?.decorateTables?.(state.root);\n    ensureEditableGaps();" in source
+
+
+def test_wysiwyg_keeps_gaps_around_atomic_blocks() -> None:
+    """Verify diagrams and other locked blocks stay typeable and removable."""
+
+    source = _read_static_js("wysiwyg.js")
+    styles = _read_static_css("styles.css")
+
+    assert "const ATOMIC_BLOCK_SELECTOR =" in source
+    assert "function attachGapInsertHandles(block)" in source
+    assert "Add paragraph above" in source
+    assert "Add paragraph below" in source
+    assert "function deleteAtomicBlock(block)" in source
+    assert 'createActionButton("delete", "Remove diagram")' in source
+    assert ".block-gap-insert" in styles
+    assert ".block-gap-insert-before" in styles
+    assert ".block-gap-insert-after" in styles
 
 
 def test_wysiwyg_uses_icon_action_buttons_for_edit_and_copy() -> None:
@@ -515,12 +532,17 @@ def test_wysiwyg_links_support_open_and_edit_click_paths() -> None:
 
 
 def test_wysiwyg_mermaid_canvas_click_no_longer_opens_editor() -> None:
-    """Verify Mermaid block clicks do not trigger click-to-edit modal."""
+    """Verify Mermaid canvas clicks do not trigger click-to-edit modal."""
 
     source = _read_static_js("wysiwyg.js")
+    mermaid_click_branch = source.split(
+        'if (block.classList.contains("mermaid-container"))',
+        1,
+    )[1].split('if (block.classList.contains("code-block"))', 1)[0]
 
     assert 'event.target.closest("button, input")' in source
-    assert 'block.classList.contains("mermaid-container")' not in source
+    assert "selectAtomicBlock(block);" in mermaid_click_branch
+    assert "openBlockEditor(" not in mermaid_click_branch
 
 
 def test_wysiwyg_modifier_key_updates_link_cursor_state() -> None:

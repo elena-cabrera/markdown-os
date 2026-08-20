@@ -51,6 +51,7 @@
     "table-delete-preview",
     "table-delete-selected",
     "table-editor-delete-selected",
+    "is-block-selected",
     "drag-over",
   ];
 
@@ -345,6 +346,8 @@
       ".mermaid-zoom-controls",
       ".mermaid-fullscreen-trigger",
       ".block-edit-trigger",
+      ".block-delete-trigger",
+      ".block-gap-insert",
       ".copy-button",
       ".code-block-actions",
       ".frontmatter-properties-create",

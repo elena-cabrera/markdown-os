@@ -2009,15 +2009,18 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 }
 
 .code-block {
+  position: relative;
   border: 1px solid var(--border);
   border-radius: 10px;
-  overflow: hidden;
+  overflow: visible;
+  margin: 16px 0;
   background: var(--code-block-bg);
 }
 
 .code-block-header {
   height: 34px;
   border-bottom: 1px solid var(--border);
+  border-radius: 10px 10px 0 0;
   padding: 0 10px;
   display: flex;
   align-items: center;
@@ -2070,6 +2073,13 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   opacity: 1;
 }
 
+.block-delete-trigger:hover,
+.block-delete-trigger:focus-visible {
+  opacity: 1;
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+}
+
 .action-icon-button:focus-visible,
 .copy-button:focus-visible,
 .block-edit-trigger:focus-visible {
@@ -2094,6 +2104,8 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 .code-block-content {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
+  overflow: hidden;
+  border-radius: 0 0 10px 10px;
 }
 
 .code-line-numbers {
@@ -2138,10 +2150,90 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   border: 1px solid var(--border);
   border-radius: 10px;
   margin: 16px 0;
-  overflow: hidden;
+  overflow: visible;
   background: var(--mermaid-bg);
   display: flex;
   flex-direction: column;
+}
+
+.mermaid-container.is-block-selected,
+.code-block.is-block-selected,
+.math-display.is-block-selected {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.block-gap-insert {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 32px;
+  z-index: 6;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  user-select: none;
+  transition: opacity 0.12s ease;
+}
+
+.block-gap-insert-before {
+  top: -18px;
+}
+
+.block-gap-insert-after {
+  bottom: -18px;
+}
+
+.mermaid-container:hover > .block-gap-insert,
+.code-block:hover > .block-gap-insert,
+.math-display:hover > .block-gap-insert,
+.block-gap-insert:hover,
+.block-gap-insert:focus-visible {
+  opacity: 1;
+}
+
+.block-gap-insert-line {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 50%;
+  border-top: 2px dashed color-mix(in srgb, var(--accent) 50%, var(--border));
+}
+
+.block-gap-insert-plus {
+  position: relative;
+  z-index: 1;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--panel-bg);
+  color: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow);
+}
+
+.block-gap-insert-plus svg {
+  width: 12px;
+  height: 12px;
+}
+
+.block-gap-insert:hover .block-gap-insert-plus,
+.block-gap-insert:focus-visible .block-gap-insert-plus {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.block-gap-insert:focus-visible {
+  outline: none;
 }
 
 .mermaid-inline-toolbar {
@@ -2152,6 +2244,7 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   gap: 6px;
   padding: 4px 8px;
   border-bottom: 1px solid var(--border);
+  border-radius: 10px 10px 0 0;
   background: var(--panel-bg);
   z-index: 4;
 }
@@ -2165,6 +2258,7 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   min-height: 120px;
   max-height: var(--mermaid-max-height);
   overflow: auto;
+  border-radius: 0 0 10px 10px;
 }
 
 .mermaid-container .mermaid {
@@ -2244,8 +2338,10 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 
 .mermaid-inline-toolbar .block-edit-trigger,
 .mermaid-inline-toolbar .mermaid-fullscreen-trigger,
+.mermaid-inline-toolbar .block-delete-trigger,
 .mermaid-container .block-edit-trigger,
-.mermaid-container .mermaid-fullscreen-trigger {
+.mermaid-container .mermaid-fullscreen-trigger,
+.mermaid-container .block-delete-trigger {
   cursor: pointer !important;
 }
 
@@ -2277,13 +2373,14 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   border-radius: 10px;
   padding: 20px 24px;
   margin: 16px 0;
-  overflow-x: auto;
+  overflow: visible;
   text-align: center;
   background: var(--math-display-bg);
 }
 
 .math-display .katex-display {
   margin: 0;
+  overflow-x: auto;
 }
 
 .math-inline.math-error {
