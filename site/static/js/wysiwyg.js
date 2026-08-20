@@ -720,24 +720,11 @@
     const next = adjacentContentSibling(block, "after");
     const prev = adjacentContentSibling(block, "before");
 
-    state.root.focus();
-    const selection = window.getSelection();
-    if (selection) {
-      const range = document.createRange();
-      range.selectNode(block);
-      selection.removeAllRanges();
-      selection.addRange(range);
-      const deleted = document.execCommand("delete", false);
-      if (!deleted && block.isConnected) {
-        block.remove();
-      }
-    } else if (block.isConnected) {
-      block.remove();
-    }
-
+    block.remove();
     clearAtomicBlockSelection();
     ensureEditableGaps();
 
+    state.root.focus();
     if (next && state.root.contains(next)) {
       placeCaretAtStart(next);
     } else if (prev && state.root.contains(prev)) {

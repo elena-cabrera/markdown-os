@@ -400,6 +400,7 @@ def test_wysiwyg_keeps_gaps_around_atomic_blocks() -> None:
     assert "Add paragraph above" in source
     assert "Add paragraph below" in source
     assert "function deleteAtomicBlock(block)" in source
+    assert "block.remove();" in source.split("function deleteAtomicBlock(block)", 1)[1].split("function bindAtomicBlockDeleteButton", 1)[0]
     assert 'createActionButton("delete", "Remove diagram")' in source
     assert ".block-gap-insert" in styles
     assert ".block-gap-insert-before" in styles
