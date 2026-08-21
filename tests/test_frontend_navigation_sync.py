@@ -714,6 +714,11 @@ def test_wysiwyg_table_controls_support_row_and_column_actions() -> None:
     assert ".table-row-insert-handle" in css_source
     assert ".table-editor-wrapper.table-editor-active .table-row-delete-handle" in css_source
     assert "pointer-events: auto" in css_source
+    assert "--table-radius: 8px" in css_source
+    assert "border-radius: var(--table-radius)" in css_source
+    assert "border-collapse: separate" in css_source
+    assert "#wysiwyg-editor table > :first-child > tr:first-child > :first-child" in css_source
+    assert "#wysiwyg-editor tbody tr:nth-child(even)" not in css_source
 
 
 def test_wysiwyg_clears_mermaid_canvas_before_rerender() -> None:
