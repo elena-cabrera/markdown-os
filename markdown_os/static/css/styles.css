@@ -2208,8 +2208,8 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   bottom: -8px;
 }
 
-.block-gap-insert:hover,
-.block-gap-insert:focus-visible,
+.block-gap-insert:hover:not(.is-locked),
+.block-gap-insert:focus-visible:not(.is-locked),
 .block-gap-insert.is-preview {
   height: var(--block-gap-preview-height);
   opacity: 1;
@@ -2221,11 +2221,16 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   transition: height 0.16s ease, opacity 0s linear 0.1s;
 }
 
-.block-gap-insert:hover .block-gap-insert-hit,
-.block-gap-insert:focus-visible .block-gap-insert-hit,
+.block-gap-insert:hover:not(.is-locked) .block-gap-insert-hit,
+.block-gap-insert:focus-visible:not(.is-locked) .block-gap-insert-hit,
 .block-gap-insert.is-preview .block-gap-insert-hit {
   inset: 0;
   height: auto;
+}
+
+.block-gap-insert.is-locked,
+.block-gap-insert.is-locked .block-gap-insert-hit {
+  pointer-events: none;
 }
 
 .block-gap-insert-plus {
@@ -2251,8 +2256,8 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   height: 12px;
 }
 
-.block-gap-insert:hover .block-gap-insert-plus,
-.block-gap-insert:focus-visible .block-gap-insert-plus,
+.block-gap-insert:hover:not(.is-locked) .block-gap-insert-plus,
+.block-gap-insert:focus-visible:not(.is-locked) .block-gap-insert-plus,
 .block-gap-insert.is-preview .block-gap-insert-plus {
   border-color: var(--accent);
   color: var(--accent);

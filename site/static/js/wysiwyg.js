@@ -649,13 +649,36 @@
     );
   }
 
+  function setGapPreviewLocked(block, locked) {
+    if (!block) {
+      return;
+    }
+
+    if (locked) {
+      block.dataset.gapPreviewLocked = "true";
+    } else {
+      delete block.dataset.gapPreviewLocked;
+    }
+
+    gapHandleFor(block, "before")?.classList.toggle("is-locked", locked);
+    gapHandleFor(block, "after")?.classList.toggle("is-locked", locked);
+  }
+
   function bindGapPreviewHover(block) {
     if (block.dataset.gapPreviewBound === "true") {
       return;
     }
     block.dataset.gapPreviewBound = "true";
 
+    block.addEventListener("mouseenter", () => {
+      setGapPreviewLocked(block, false);
+    });
+
     block.addEventListener("mousemove", (event) => {
+      if (block.dataset.gapPreviewLocked === "true") {
+        return;
+      }
+
       const rect = block.getBoundingClientRect();
       const edgePx = 40;
       if (event.clientY <= rect.top + edgePx) {
@@ -745,33 +768,27 @@
 
     const sibling = adjacentContentSibling(block, side);
     if (sibling && isEmptyParagraph(sibling)) {
+      setBlockGapPreview(block, null);
+      setGapPreviewLocked(block, true);
       state.root.focus();
       placeCaretAtStart(sibling);
       return;
     }
 
     const paragraph = createEmptyParagraph();
-    const handle =
-      side === "before"
-        ? block.previousElementSibling?.matches(".block-gap-insert-before")
-          ? block.previousElementSibling
-          : null
-        : block.nextElementSibling?.matches(".block-gap-insert-after")
-          ? block.nextElementSibling
-          : null;
+    const handle = gapHandleFor(block, side);
 
     if (handle) {
-      if (side === "before") {
-        handle.before(paragraph);
-      } else {
-        handle.after(paragraph);
-      }
+      handle.replaceWith(paragraph);
     } else if (side === "before") {
       block.before(paragraph);
     } else {
       block.after(paragraph);
     }
 
+    attachGapInsertHandles(block);
+    setBlockGapPreview(block, null);
+    setGapPreviewLocked(block, true);
     state.root.focus();
     placeCaretAtStart(paragraph);
     emitChange();

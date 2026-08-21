@@ -414,7 +414,12 @@ def test_wysiwyg_keeps_gaps_around_atomic_blocks() -> None:
     assert "function pruneOrphanGapInserts()" in source
     assert "function bindGapPreviewHover(block)" in source
     assert "setBlockGapPreview(block, \"before\")" in source
+    assert "handle.replaceWith(paragraph)" in source
+    assert "function setGapPreviewLocked(block, locked)" in source
+    assert 'block.dataset.gapPreviewLocked = "true"' in source
     assert ".block-gap-insert.is-preview" in styles
+    assert ".block-gap-insert.is-locked" in styles
+    assert ".block-gap-insert:hover:not(.is-locked)" in styles
 
 
 def test_wysiwyg_uses_icon_action_buttons_for_edit_and_copy() -> None:
