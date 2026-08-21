@@ -99,6 +99,8 @@
     "--frontmatter-chip-bg": "#eeeeee",
     "--frontmatter-chip-text": "#1a1a1a",
     "--table-border": "#e8e8e8",
+    "--table-border-active": "#b0b0b0",
+    "--table-insert-preview": "#8a8a8a",
     "--table-header-bg": "#f5f5f5",
     "--table-header-text": "#1a1a1a",
     "--table-row-alt-bg": "#ffffff",

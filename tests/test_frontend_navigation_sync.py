@@ -696,6 +696,12 @@ def test_wysiwyg_table_controls_support_row_and_column_actions() -> None:
     assert "height: 4rem" in css_source
     assert "min-width: 4rem" in css_source
     assert "previewInsertColumn(wrapper, table, colIndex)" in tables_source
+    assert "table-insert-after-row" in tables_source
+    assert "table-insert-after-last-column" in tables_source
+    assert ".table-insert-preview-line" not in css_source
+    assert ".table-editor-wrapper.table-editor-active > table" in css_source
+    assert "border-width: 2px" in css_source
+    assert "border: 1px solid var(--border)" in css_source
     assert "table-row-insert-handle" in tables_source
     assert "function getTableContentRect(table)" in tables_source
     assert "function ensureTableBody(table)" in tables_source
@@ -706,7 +712,7 @@ def test_wysiwyg_table_controls_support_row_and_column_actions() -> None:
     assert "window.wysiwygTables?.cleanupTableWrappers?.(cloneRoot);" in wysiwyg_source
     assert ".table-floating-toolbar" in css_source
     assert ".table-stepper-group" in css_source
-    assert ".table-insert-preview-line" in css_source
+    assert "table-insert-after-row" in css_source
     assert ".table-editor-wrapper {" in css_source
     wrapper_css = css_source.split(".table-editor-wrapper {", 1)[1].split("}", 1)[0]
     assert "padding-left" not in wrapper_css

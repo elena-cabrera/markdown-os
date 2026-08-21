@@ -500,64 +500,57 @@
     table.classList.remove(DELETE_TABLE_PREVIEW_CLASS);
   }
 
-  function ensureInsertPreviewLayer(wrapper) {
-    let layer = wrapper.querySelector(".table-insert-preview-layer");
-    if (!layer) {
-      layer = document.createElement("div");
-      layer.className = "table-insert-preview-layer";
-      layer.setAttribute("contenteditable", "false");
-      layer.setAttribute("aria-hidden", "true");
-      wrapper.appendChild(layer);
-    }
-    return layer;
-  }
-
   function clearInsertPreview(wrapper) {
-    wrapper?.querySelector(".table-insert-preview-layer")?.replaceChildren();
+    const table = wrapper?.querySelector("table");
+    if (!table) {
+      return;
+    }
+
+    table.classList.remove(
+      "table-insert-after-last-row",
+      "table-insert-after-last-column",
+    );
+    table
+      .querySelectorAll(".table-insert-after-row, .table-insert-after-column")
+      .forEach((node) => {
+        node.classList.remove(
+          "table-insert-after-row",
+          "table-insert-after-column",
+        );
+      });
   }
 
   function previewInsertRow(wrapper, table, rowIndex) {
+    clearInsertPreview(wrapper);
     const rows = getTableRows(table);
     const row = rows[rowIndex];
     if (!row) {
       return;
     }
 
-    const layer = ensureInsertPreviewLayer(wrapper);
-    layer.replaceChildren();
-
-    const contentRect = getTableContentRect(table);
-    const wrapperRect = wrapper.getBoundingClientRect();
-    const rowRect = row.getBoundingClientRect();
-    const line = document.createElement("div");
-    line.className = "table-insert-preview-line table-insert-preview-line-row";
-    line.style.left = `${contentRect.left - wrapperRect.left}px`;
-    line.style.top = `${rowRect.bottom - wrapperRect.top}px`;
-    line.style.width = `${contentRect.width}px`;
-    layer.appendChild(line);
-  }
-
-  function previewInsertColumn(wrapper, table, colIndex) {
-    const position = getCursorPosition(table);
-    const rows = getTableRows(table);
-    const row = rows[position?.rowIndex ?? 0];
-    const cell = row?.cells[colIndex];
-    if (!cell) {
+    if (rowIndex === rows.length - 1) {
+      table.classList.add("table-insert-after-last-row");
       return;
     }
 
-    const layer = ensureInsertPreviewLayer(wrapper);
-    layer.replaceChildren();
+    row.classList.add("table-insert-after-row");
+  }
 
-    const contentRect = getTableContentRect(table);
-    const wrapperRect = wrapper.getBoundingClientRect();
-    const cellRect = cell.getBoundingClientRect();
-    const line = document.createElement("div");
-    line.className = "table-insert-preview-line table-insert-preview-line-column";
-    line.style.left = `${cellRect.right - wrapperRect.left}px`;
-    line.style.top = `${contentRect.top - wrapperRect.top}px`;
-    line.style.height = `${contentRect.height}px`;
-    layer.appendChild(line);
+  function previewInsertColumn(wrapper, table, colIndex) {
+    clearInsertPreview(wrapper);
+    const rows = getTableRows(table);
+    if (rows.length === 0 || colIndex < 0) {
+      return;
+    }
+
+    if (colIndex === getColumnCount(table) - 1) {
+      table.classList.add("table-insert-after-last-column");
+      return;
+    }
+
+    rows.forEach((row) => {
+      row.cells[colIndex]?.classList.add("table-insert-after-column");
+    });
   }
 
   function clearHighlights(table) {
