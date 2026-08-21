@@ -1555,6 +1555,12 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 #wysiwyg-editor h5,
 #wysiwyg-editor h6 {
   scroll-margin-top: 14px;
+  font-weight: 600;
+}
+
+#wysiwyg-editor strong,
+#wysiwyg-editor b {
+  font-weight: 600;
 }
 
 #wysiwyg-editor pre {
