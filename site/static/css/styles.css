@@ -1800,12 +1800,12 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 }
 
 #wysiwyg-editor table.table-insert-after-last-row {
-  border-bottom-width: 2px;
+  border-bottom-width: 3px;
   border-bottom-color: var(--table-insert-preview);
 }
 
 #wysiwyg-editor table.table-insert-after-last-column {
-  border-right-width: 2px;
+  border-right-width: 3px;
   border-right-color: var(--table-insert-preview);
 }
 
