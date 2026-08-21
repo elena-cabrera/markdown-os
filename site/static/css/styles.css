@@ -2187,6 +2187,7 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   overflow: visible;
   user-select: none;
   z-index: 3;
+  pointer-events: none;
   transition:
     height 0.16s ease,
     border-width 0.16s ease,
@@ -2199,29 +2200,33 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   position: absolute;
   left: 0;
   right: 0;
-  height: 28px;
+  height: 40px;
   z-index: 3;
+  pointer-events: auto;
 }
 
 .block-gap-insert-before .block-gap-insert-hit {
-  top: 0;
+  top: -8px;
 }
 
 .block-gap-insert-after .block-gap-insert-hit {
-  bottom: 0;
+  bottom: -8px;
 }
 
 .block-gap-insert:hover,
-.block-gap-insert:focus-visible {
+.block-gap-insert:focus-visible,
+.block-gap-insert.is-preview {
   height: var(--block-gap-preview-height);
   opacity: 1;
   border-width: 2px;
   border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
   background: color-mix(in srgb, var(--accent) 6%, transparent);
+  pointer-events: auto;
 }
 
 .block-gap-insert:hover .block-gap-insert-hit,
-.block-gap-insert:focus-visible .block-gap-insert-hit {
+.block-gap-insert:focus-visible .block-gap-insert-hit,
+.block-gap-insert.is-preview .block-gap-insert-hit {
   inset: 0;
   height: auto;
 }
@@ -2248,7 +2253,8 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 }
 
 .block-gap-insert:hover .block-gap-insert-plus,
-.block-gap-insert:focus-visible .block-gap-insert-plus {
+.block-gap-insert:focus-visible .block-gap-insert-plus,
+.block-gap-insert.is-preview .block-gap-insert-plus {
   border-color: var(--accent);
   color: var(--accent);
 }

@@ -615,6 +615,79 @@
     return button;
   }
 
+  function gapHandleFor(block, side) {
+    const sibling =
+      side === "before" ? block.previousElementSibling : block.nextElementSibling;
+    const className =
+      side === "before" ? "block-gap-insert-before" : "block-gap-insert-after";
+    return sibling?.matches(`.${className}`) ? sibling : null;
+  }
+
+  function setBlockGapPreview(block, side) {
+    const before = gapHandleFor(block, "before");
+    const after = gapHandleFor(block, "after");
+    before?.classList.toggle("is-preview", side === "before");
+    after?.classList.toggle("is-preview", side === "after");
+  }
+
+  function isGapPreviewTarget(block, node) {
+    if (!block || !node) {
+      return false;
+    }
+
+    const target = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
+    if (!target) {
+      return false;
+    }
+    if (block.contains(target)) {
+      return true;
+    }
+
+    return Boolean(
+      gapHandleFor(block, "before")?.contains(target) ||
+        gapHandleFor(block, "after")?.contains(target),
+    );
+  }
+
+  function bindGapPreviewHover(block) {
+    if (block.dataset.gapPreviewBound === "true") {
+      return;
+    }
+    block.dataset.gapPreviewBound = "true";
+
+    block.addEventListener("mousemove", (event) => {
+      const rect = block.getBoundingClientRect();
+      const edgePx = 40;
+      if (event.clientY <= rect.top + edgePx) {
+        setBlockGapPreview(block, "before");
+      } else if (event.clientY >= rect.bottom - edgePx) {
+        setBlockGapPreview(block, "after");
+      } else {
+        setBlockGapPreview(block, null);
+      }
+    });
+
+    block.addEventListener("mouseleave", (event) => {
+      if (isGapPreviewTarget(block, event.relatedTarget)) {
+        return;
+      }
+      setBlockGapPreview(block, null);
+    });
+  }
+
+  function bindGapHandleLeave(block, handle) {
+    if (!handle || handle.dataset.gapPreviewBound === "true") {
+      return;
+    }
+    handle.dataset.gapPreviewBound = "true";
+    handle.addEventListener("mouseleave", (event) => {
+      if (isGapPreviewTarget(block, event.relatedTarget)) {
+        return;
+      }
+      setBlockGapPreview(block, null);
+    });
+  }
+
   function attachGapInsertHandles(block) {
     if (!isGapInsertHost(block) || !block.parentElement) {
       return;
@@ -629,6 +702,10 @@
     if (!next || !next.matches(".block-gap-insert-after")) {
       block.after(createGapInsertButton(block, "after"));
     }
+
+    bindGapPreviewHover(block);
+    bindGapHandleLeave(block, gapHandleFor(block, "before"));
+    bindGapHandleLeave(block, gapHandleFor(block, "after"));
   }
 
   function decorateAtomicBlockInsertHandles() {
