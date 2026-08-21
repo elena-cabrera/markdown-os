@@ -708,11 +708,31 @@
     bindGapHandleLeave(block, gapHandleFor(block, "after"));
   }
 
+  function pruneOrphanGapInserts() {
+    if (!state.root) {
+      return;
+    }
+
+    state.root.querySelectorAll(".block-gap-insert-before").forEach((handle) => {
+      const next = handle.nextElementSibling;
+      if (!next || !isGapInsertHost(next)) {
+        handle.remove();
+      }
+    });
+    state.root.querySelectorAll(".block-gap-insert-after").forEach((handle) => {
+      const previous = handle.previousElementSibling;
+      if (!previous || !isGapInsertHost(previous)) {
+        handle.remove();
+      }
+    });
+  }
+
   function decorateAtomicBlockInsertHandles() {
     if (!state.root) {
       return;
     }
 
+    pruneOrphanGapInserts();
     state.root.querySelectorAll(ATOMIC_GAP_HOST_SELECTOR).forEach((block) => {
       attachGapInsertHandles(block);
     });
@@ -825,7 +845,8 @@
 
     const next = adjacentContentSibling(block, "after");
     const prev = adjacentContentSibling(block, "before");
-
+    gapHandleFor(block, "before")?.remove();
+    gapHandleFor(block, "after")?.remove();
     block.remove();
     clearAtomicBlockSelection();
     ensureEditableGaps();

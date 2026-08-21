@@ -411,6 +411,7 @@ def test_wysiwyg_keeps_gaps_around_atomic_blocks() -> None:
     assert "height: var(--block-gap-preview-height);" in styles
     assert "border: 0 dashed transparent;" in styles
     assert "border-width: 2px;" in styles
+    assert "function pruneOrphanGapInserts()" in source
     assert "function bindGapPreviewHover(block)" in source
     assert "setBlockGapPreview(block, \"before\")" in source
     assert ".block-gap-insert.is-preview" in styles

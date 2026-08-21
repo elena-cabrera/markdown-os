@@ -2188,12 +2188,7 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   user-select: none;
   z-index: 3;
   pointer-events: none;
-  transition:
-    height 0.16s ease,
-    border-width 0.16s ease,
-    opacity 0.12s ease,
-    border-color 0.12s ease,
-    background-color 0.12s ease;
+  transition: height 0.16s ease, opacity 0s;
 }
 
 .block-gap-insert-hit {
@@ -2218,10 +2213,12 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 .block-gap-insert.is-preview {
   height: var(--block-gap-preview-height);
   opacity: 1;
+  overflow: hidden;
   border-width: 2px;
   border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
   background: color-mix(in srgb, var(--accent) 6%, transparent);
   pointer-events: auto;
+  transition: height 0.16s ease, opacity 0s linear 0.1s;
 }
 
 .block-gap-insert:hover .block-gap-insert-hit,
@@ -2236,6 +2233,7 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   z-index: 1;
   width: 22px;
   height: 22px;
+  flex-shrink: 0;
   border-radius: 50%;
   border: 1px solid var(--border);
   background: var(--panel-bg);
@@ -2245,6 +2243,7 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   justify-content: center;
   box-shadow: var(--shadow);
   pointer-events: none;
+  opacity: 0;
 }
 
 .block-gap-insert-plus svg {
@@ -2257,6 +2256,8 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 .block-gap-insert.is-preview .block-gap-insert-plus {
   border-color: var(--accent);
   color: var(--accent);
+  opacity: 1;
+  transition: opacity 0.12s ease 0.1s;
 }
 
 .block-gap-insert:focus-visible {
