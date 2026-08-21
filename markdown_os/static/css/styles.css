@@ -1520,6 +1520,7 @@ body.file-drop-active #app-container {
   color: var(--editor-text);
   line-height: 1.7;
   font-size: 16px;
+  --block-gap-preview-height: 1.7em;
   /* In-flow space after the last line (padding extends the scrollable box reliably in normal mode). */
   padding-bottom: calc(20px + var(--editor-end-scroll-padding));
 }
@@ -2012,7 +2013,7 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   position: relative;
   border: 1px solid var(--border);
   border-radius: 10px;
-  overflow: visible;
+  overflow: hidden;
   margin: 16px 0;
   background: var(--code-block-bg);
 }
@@ -2150,7 +2151,7 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   border: 1px solid var(--border);
   border-radius: 10px;
   margin: 16px 0;
-  overflow: visible;
+  overflow: hidden;
   background: var(--mermaid-bg);
   display: flex;
   flex-direction: column;
@@ -2164,46 +2165,65 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 }
 
 .block-gap-insert {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 32px;
-  z-index: 6;
-  border: 0;
-  padding: 0;
-  margin: 0;
-  background: transparent;
-  cursor: pointer;
+  position: relative;
+  appearance: none;
+  -webkit-appearance: none;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-sizing: border-box;
+  width: 100%;
+  height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0 dashed transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--accent);
+  font-size: inherit;
+  line-height: inherit;
+  cursor: pointer;
   opacity: 0;
+  overflow: visible;
   user-select: none;
-  transition: opacity 0.12s ease;
+  z-index: 3;
+  transition:
+    height 0.16s ease,
+    border-width 0.16s ease,
+    opacity 0.12s ease,
+    border-color 0.12s ease,
+    background-color 0.12s ease;
 }
 
-.block-gap-insert-before {
-  top: -18px;
+.block-gap-insert-hit {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 28px;
+  z-index: 3;
 }
 
-.block-gap-insert-after {
-  bottom: -18px;
+.block-gap-insert-before .block-gap-insert-hit {
+  top: 0;
 }
 
-.mermaid-container:hover > .block-gap-insert,
-.code-block:hover > .block-gap-insert,
-.math-display:hover > .block-gap-insert,
+.block-gap-insert-after .block-gap-insert-hit {
+  bottom: 0;
+}
+
 .block-gap-insert:hover,
 .block-gap-insert:focus-visible {
+  height: var(--block-gap-preview-height);
   opacity: 1;
+  border-width: 2px;
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
 }
 
-.block-gap-insert-line {
-  position: absolute;
-  left: 8px;
-  right: 8px;
-  top: 50%;
-  border-top: 2px dashed color-mix(in srgb, var(--accent) 50%, var(--border));
+.block-gap-insert:hover .block-gap-insert-hit,
+.block-gap-insert:focus-visible .block-gap-insert-hit {
+  inset: 0;
+  height: auto;
 }
 
 .block-gap-insert-plus {
@@ -2219,6 +2239,7 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   align-items: center;
   justify-content: center;
   box-shadow: var(--shadow);
+  pointer-events: none;
 }
 
 .block-gap-insert-plus svg {
@@ -2373,14 +2394,13 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   border-radius: 10px;
   padding: 20px 24px;
   margin: 16px 0;
-  overflow: visible;
+  overflow-x: auto;
   text-align: center;
   background: var(--math-display-bg);
 }
 
 .math-display .katex-display {
   margin: 0;
-  overflow-x: auto;
 }
 
 .math-inline.math-error {

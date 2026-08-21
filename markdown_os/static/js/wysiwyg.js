@@ -478,6 +478,17 @@
     );
   }
 
+  function isGapInsertNode(node) {
+    return Boolean(
+      node?.nodeType === Node.ELEMENT_NODE &&
+        node.matches(".block-gap-insert"),
+    );
+  }
+
+  function isEditorChromeNode(node) {
+    return isFrontmatterNode(node) || isGapInsertNode(node);
+  }
+
   function isAtomicEditorBlock(node) {
     return Boolean(
       node?.nodeType === Node.ELEMENT_NODE && node.matches(ATOMIC_BLOCK_SELECTOR),
@@ -520,7 +531,7 @@
     }
 
     return Array.from(state.root.children).filter(
-      (node) => node.nodeType === Node.ELEMENT_NODE && !isFrontmatterNode(node),
+      (node) => node.nodeType === Node.ELEMENT_NODE && !isEditorChromeNode(node),
     );
   }
 
@@ -528,7 +539,7 @@
     let sibling =
       direction === "before" ? node?.previousElementSibling : node?.nextElementSibling;
     while (sibling) {
-      if (!isFrontmatterNode(sibling) && !sibling.matches(".block-gap-insert")) {
+      if (!isEditorChromeNode(sibling)) {
         return sibling;
       }
       sibling =
@@ -579,16 +590,16 @@
     button.setAttribute("data-tooltip", label);
     button.tabIndex = -1;
 
-    const line = document.createElement("span");
-    line.className = "block-gap-insert-line";
-    line.setAttribute("aria-hidden", "true");
+    const hit = document.createElement("span");
+    hit.className = "block-gap-insert-hit";
+    hit.setAttribute("aria-hidden", "true");
 
     const plus = document.createElement("span");
     plus.className = "block-gap-insert-plus";
     plus.setAttribute("aria-hidden", "true");
     plus.innerHTML = actionIconSvg("add");
 
-    button.appendChild(line);
+    button.appendChild(hit);
     button.appendChild(plus);
 
     button.addEventListener("mousedown", (event) => {
@@ -605,15 +616,18 @@
   }
 
   function attachGapInsertHandles(block) {
-    if (!isGapInsertHost(block)) {
+    if (!isGapInsertHost(block) || !block.parentElement) {
       return;
     }
 
-    if (!block.querySelector(":scope > .block-gap-insert-before")) {
-      block.prepend(createGapInsertButton(block, "before"));
+    const previous = block.previousElementSibling;
+    if (!previous || !previous.matches(".block-gap-insert-before")) {
+      block.before(createGapInsertButton(block, "before"));
     }
-    if (!block.querySelector(":scope > .block-gap-insert-after")) {
-      block.append(createGapInsertButton(block, "after"));
+
+    const next = block.nextElementSibling;
+    if (!next || !next.matches(".block-gap-insert-after")) {
+      block.after(createGapInsertButton(block, "after"));
     }
   }
 
@@ -640,7 +654,22 @@
     }
 
     const paragraph = createEmptyParagraph();
-    if (side === "before") {
+    const handle =
+      side === "before"
+        ? block.previousElementSibling?.matches(".block-gap-insert-before")
+          ? block.previousElementSibling
+          : null
+        : block.nextElementSibling?.matches(".block-gap-insert-after")
+          ? block.nextElementSibling
+          : null;
+
+    if (handle) {
+      if (side === "before") {
+        handle.before(paragraph);
+      } else {
+        handle.after(paragraph);
+      }
+    } else if (side === "before") {
       block.before(paragraph);
     } else {
       block.after(paragraph);
@@ -752,35 +781,33 @@
       return;
     }
 
-    let children = editorContentChildren();
+    decorateAtomicBlockInsertHandles();
+
+    const children = editorContentChildren();
     if (children.length === 0) {
       state.root.appendChild(createEmptyParagraph());
-      decorateAtomicBlockInsertHandles();
       return;
     }
 
-    if (isAtomicEditorBlock(children[0])) {
-      children[0].before(createEmptyParagraph());
-    }
-
-    children = editorContentChildren();
-    for (let index = 0; index < children.length - 1; index += 1) {
-      if (
-        isAtomicEditorBlock(children[index]) &&
-        isAtomicEditorBlock(children[index + 1])
-      ) {
-        children[index].after(createEmptyParagraph());
-        children = editorContentChildren();
+    children.forEach((node) => {
+      if (!isAtomicEditorBlock(node) || isGapInsertHost(node)) {
+        return;
       }
-    }
 
-    children = editorContentChildren();
-    const last = children[children.length - 1];
-    if (isAtomicEditorBlock(last)) {
-      last.after(createEmptyParagraph());
-    }
+      const previous = adjacentContentSibling(node, "before");
+      if (!previous || isAtomicEditorBlock(previous)) {
+        node.before(createEmptyParagraph());
+      }
 
-    decorateAtomicBlockInsertHandles();
+      const next = adjacentContentSibling(node, "after");
+      if (!next || isAtomicEditorBlock(next)) {
+        node.after(createEmptyParagraph());
+      }
+    });
+
+    if (editorContentChildren().length === 0) {
+      state.root.appendChild(createEmptyParagraph());
+    }
   }
 
   async function promptFrontmatterProperty(initial = null) {
