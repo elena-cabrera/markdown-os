@@ -708,8 +708,9 @@ def test_wysiwyg_table_controls_support_row_and_column_actions() -> None:
     assert ".table-stepper-group" in css_source
     assert ".table-insert-preview-line" in css_source
     assert ".table-editor-wrapper {" in css_source
-    assert "padding-top: 12px" in css_source
-    assert "padding-left: 12px" in css_source
+    wrapper_css = css_source.split(".table-editor-wrapper {", 1)[1].split("}", 1)[0]
+    assert "padding-left" not in wrapper_css
+    assert "padding-top" not in wrapper_css
     assert "#wysiwyg-editor td:empty::before" in css_source
     assert ".table-row-insert-handle" in css_source
     assert ".table-editor-wrapper.table-editor-active .table-row-delete-handle" in css_source
