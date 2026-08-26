@@ -960,6 +960,9 @@
       const button = createIconButton(spec.kind, spec.title, spec.className);
       button.dataset.tableAction = spec.action;
       button.tabIndex = -1;
+      button.addEventListener("pointerenter", () => {
+        wrapper.classList.add(HOVERED_CLASS);
+      });
       edgeLayer.appendChild(button);
     });
 
@@ -1064,26 +1067,26 @@
     if (rowInsert) {
       rowInsert.hidden = false;
       rowInsert.style.top = `${rowInsertTop}px`;
-      rowInsert.style.left = `${contentLeft - 12}px`;
+      rowInsert.style.left = `${contentLeft - 4}px`;
     }
 
     if (rowDelete) {
       rowDelete.hidden = false;
       rowDelete.style.top = `${rowDeleteTop}px`;
-      rowDelete.style.left = `${contentLeft - 12}px`;
+      rowDelete.style.left = `${contentLeft - 4}px`;
       rowDelete.disabled = rows.length <= 1;
     }
 
     if (colInsert) {
       colInsert.hidden = false;
       colInsert.style.left = `${columnBorderLeft - 12}px`;
-      colInsert.style.top = `${contentTop - 12}px`;
+      colInsert.style.top = `${contentTop - 4}px`;
     }
 
     if (colDelete) {
       colDelete.hidden = false;
       colDelete.style.left = `${cellRect.left - wrapperRect.left + cellRect.width / 2 - 12}px`;
-      colDelete.style.top = `${contentTop - 12}px`;
+      colDelete.style.top = `${contentTop - 4}px`;
       colDelete.disabled = getColumnCount(table) <= 1;
     }
 
