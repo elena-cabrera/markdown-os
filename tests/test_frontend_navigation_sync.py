@@ -757,6 +757,12 @@ def test_wysiwyg_table_controls_support_row_and_column_actions() -> None:
     assert "height: 4rem" in css_source
     assert "min-width: 4rem" in css_source
     assert "previewInsertColumn(wrapper, table, colIndex)" in tables_source
+    assert "table-insert-after-row" in tables_source
+    assert "table-insert-after-last-column" in tables_source
+    assert ".table-insert-preview-line" not in css_source
+    assert ".table-editor-wrapper.table-editor-active > table" in css_source
+    assert "border-width: 2px" in css_source
+    assert "border: 1px solid var(--border)" in css_source
     assert "table-row-insert-handle" in tables_source
     assert "function getTableContentRect(table)" in tables_source
     assert "function ensureTableBody(table)" in tables_source
@@ -767,14 +773,42 @@ def test_wysiwyg_table_controls_support_row_and_column_actions() -> None:
     assert "window.wysiwygTables?.cleanupTableWrappers?.(cloneRoot);" in wysiwyg_source
     assert ".table-floating-toolbar" in css_source
     assert ".table-stepper-group" in css_source
-    assert ".table-insert-preview-line" in css_source
+    assert "table-insert-after-row" in css_source
     assert ".table-editor-wrapper {" in css_source
-    assert "padding-top: 12px" in css_source
-    assert "padding-left: 12px" in css_source
+    wrapper_css = css_source.split(".table-editor-wrapper {", 1)[1].split("}", 1)[0]
+    assert "padding-left" not in wrapper_css
+    assert "padding-top" not in wrapper_css
     assert "#wysiwyg-editor td:empty::before" in css_source
     assert ".table-row-insert-handle" in css_source
-    assert ".table-editor-wrapper.table-editor-active .table-row-delete-handle" in css_source
+    assert ".table-editor-wrapper:hover .table-row-delete-handle" in css_source
+    assert ".table-editor-wrapper.table-editor-hovered .table-row-delete-handle" in css_source
+    assert ".table-row-insert-handle:hover" in css_source
+    assert "pointerenter" in tables_source
+    assert ".table-editor-wrapper.table-editor-active .table-row-delete-handle" not in css_source
+    assert ".table-hover-bridge-top" in css_source
+    assert ".table-hover-bridge-left" in css_source
+    assert ".table-editor-wrapper:hover .table-hover-bridge" in css_source
+    assert "z-index: 5;" in css_source.split(".table-editor-wrapper.table-editor-hovered {", 1)[1].split("}", 1)[0]
+    assert "function bindWrapperHover(wrapper)" in tables_source
+    assert "function ensureHoverBridges(wrapper)" in tables_source
+    assert "function ensureHandleGutters(wrapper)" not in tables_source
+    assert "HANDLE_HOVER_HIDE_DELAY_MS" in tables_source
+    assert "HANDLE_GUTTER_PX" in tables_source
+    assert "table-editor-hovered" in tables_source
+    assert "isPointerInHandleGutter" in tables_source
+    assert "function getHandleActionPosition(wrapper, table)" in tables_source
+    assert ".table-row-insert-handle::after" in css_source
+    table_css = css_source.split("#wysiwyg-editor table {", 1)[1].split("}", 1)[0]
+    assert "display: table;" in table_css
+    assert "display: block;" not in table_css
+    assert "overflow-x: auto;" not in table_css
+    assert "table-layout: auto;" in table_css
     assert "pointer-events: auto" in css_source
+    assert "--table-radius: 8px" in css_source
+    assert "border-radius: var(--table-radius)" in css_source
+    assert "border-collapse: separate" in css_source
+    assert "#wysiwyg-editor table > :first-child > tr:first-child > :first-child" in css_source
+    assert "#wysiwyg-editor tbody tr:nth-child(even)" not in css_source
 
 
 def test_wysiwyg_clears_mermaid_canvas_before_rerender() -> None:

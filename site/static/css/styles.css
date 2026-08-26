@@ -84,10 +84,13 @@
   --modal-neutral-hover: #d4d4d4;
   --modal-neutral-text: #1a1a1a;
   --table-border: #e8e8e8;
-  --table-header-bg: #f0f0f0;
+  --table-border-active: #b0b0b0;
+  --table-insert-preview: #8a8a8a;
+  --table-header-bg: #f5f5f5;
   --table-header-text: #1a1a1a;
-  --table-row-alt-bg: #f9f9f9;
-  --table-row-hover-bg: #f0f0f0;
+  --table-row-alt-bg: #ffffff;
+  --table-row-hover-bg: #f7f7f7;
+  --table-radius: 8px;
   --drag-over-bg: #eeeeee;
 
   --tooltip-bg: #ffffff;
@@ -1683,11 +1686,15 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 
 #wysiwyg-editor table {
   width: 100%;
-  border-collapse: collapse;
+  table-layout: auto;
+  border-collapse: separate;
+  border-spacing: 0;
   margin: 16px 0 20px;
   font-size: 15px;
-  display: block;
-  overflow-x: auto;
+  display: table;
+  border: 1px solid var(--table-border);
+  border-radius: var(--table-radius);
+  background: var(--editor-bg);
 }
 
 #wysiwyg-editor thead {
@@ -1711,6 +1718,36 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   height: 4rem;
   min-width: 4rem;
   box-sizing: border-box;
+  padding: 12px 16px;
+  border: 0;
+  border-right: 1px solid var(--table-border);
+  border-bottom: 1px solid var(--table-border);
+}
+
+#wysiwyg-editor th:last-child,
+#wysiwyg-editor td:last-child {
+  border-right: 0;
+}
+
+#wysiwyg-editor table > :last-child > tr:last-child > th,
+#wysiwyg-editor table > :last-child > tr:last-child > td {
+  border-bottom: 0;
+}
+
+#wysiwyg-editor table > :first-child > tr:first-child > :first-child {
+  border-top-left-radius: var(--table-radius);
+}
+
+#wysiwyg-editor table > :first-child > tr:first-child > :last-child {
+  border-top-right-radius: var(--table-radius);
+}
+
+#wysiwyg-editor table > :last-child > tr:last-child > :first-child {
+  border-bottom-left-radius: var(--table-radius);
+}
+
+#wysiwyg-editor table > :last-child > tr:last-child > :last-child {
+  border-bottom-right-radius: var(--table-radius);
 }
 
 #wysiwyg-editor th:empty::before,
@@ -1720,8 +1757,6 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 }
 
 #wysiwyg-editor th {
-  border: 1px solid var(--table-border);
-  padding: 11px 14px;
   font-weight: 600;
   background: var(--table-header-bg);
   color: var(--table-header-text);
@@ -1729,23 +1764,17 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 }
 
 #wysiwyg-editor td {
-  border: 1px solid var(--table-border);
-  padding: 11px 14px;
+  background: var(--editor-bg);
 }
 
-#wysiwyg-editor tbody tr:nth-child(even) {
-  background: var(--table-row-alt-bg);
-}
-
-#wysiwyg-editor tbody tr:hover {
+#wysiwyg-editor tbody tr:hover > td {
   background: var(--table-row-hover-bg);
 }
 
 .table-editor-wrapper {
   position: relative;
   margin: 16px 0 20px;
-  padding-top: 12px;
-  padding-left: 12px;
+  overflow: visible;
 }
 
 .table-editor-wrapper > table {
@@ -1753,8 +1782,38 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 }
 
 .table-editor-wrapper.table-editor-active > table {
-  outline: 2px solid color-mix(in srgb, var(--accent) 35%, transparent);
-  outline-offset: 2px;
+  border-width: 2px;
+  border-color: var(--table-border-active);
+}
+
+.table-hover-bridge {
+  position: absolute;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.table-hover-bridge-left {
+  top: -40px;
+  left: -40px;
+  width: 40px;
+  bottom: 0;
+}
+
+.table-hover-bridge-top {
+  top: -40px;
+  left: 0;
+  right: 0;
+  height: 40px;
+}
+
+.table-editor-wrapper:hover,
+.table-editor-wrapper.table-editor-hovered {
+  z-index: 5;
+}
+
+.table-editor-wrapper:hover .table-hover-bridge,
+.table-editor-wrapper.table-editor-hovered .table-hover-bridge {
+  pointer-events: auto;
 }
 
 .table-edge-layer {
@@ -1764,29 +1823,26 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   z-index: 3;
 }
 
-.table-insert-preview-layer {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 2;
+#wysiwyg-editor tr.table-insert-after-row > th,
+#wysiwyg-editor tr.table-insert-after-row > td {
+  border-bottom-width: 2px;
+  border-bottom-color: var(--table-insert-preview);
 }
 
-.table-insert-preview-line {
-  position: absolute;
-  pointer-events: none;
-  background: var(--accent);
-  border-radius: 2px;
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+#wysiwyg-editor th.table-insert-after-column,
+#wysiwyg-editor td.table-insert-after-column {
+  border-right-width: 2px;
+  border-right-color: var(--table-insert-preview);
 }
 
-.table-insert-preview-line-row {
-  height: 4px;
-  transform: translateY(-50%);
+#wysiwyg-editor table.table-insert-after-last-row {
+  border-bottom-width: 3px;
+  border-bottom-color: var(--table-insert-preview);
 }
 
-.table-insert-preview-line-column {
-  width: 4px;
-  transform: translateX(-50%);
+#wysiwyg-editor table.table-insert-after-last-column {
+  border-right-width: 3px;
+  border-right-color: var(--table-insert-preview);
 }
 
 .table-control-button,
@@ -1795,10 +1851,10 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   position: absolute;
   width: 24px;
   height: 24px;
-  border: 1px solid var(--accent);
+  border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--panel-bg);
-  color: var(--accent);
+  color: var(--text-muted);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -1807,8 +1863,17 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   pointer-events: none;
   opacity: 0;
   transform: scale(0.92);
-  transition: opacity 0.15s ease, transform 0.15s ease;
-  box-shadow: var(--shadow);
+  z-index: 4;
+  transition: opacity 0.15s ease, transform 0.15s ease, color 0.15s ease,
+    border-color 0.15s ease, background 0.15s ease;
+  box-shadow: none;
+}
+
+.table-row-insert-handle:hover,
+.table-col-insert-handle:hover {
+  border-color: var(--table-border-active);
+  color: var(--text);
+  background: var(--accent-soft);
 }
 
 .table-row-delete-handle,
@@ -1828,6 +1893,7 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   pointer-events: none;
   opacity: 0;
   transform: scale(0.92);
+  z-index: 4;
   transition: opacity 0.15s ease, transform 0.15s ease, color 0.15s ease;
   box-shadow: none;
 }
@@ -1841,13 +1907,24 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   height: 14px;
 }
 
-.table-editor-wrapper.table-editor-active .table-row-insert-handle,
-.table-editor-wrapper.table-editor-active .table-col-insert-handle,
-.table-editor-wrapper.table-editor-active .table-row-delete-handle,
-.table-editor-wrapper.table-editor-active .table-col-delete-handle {
-  opacity: 1;
-  transform: scale(1);
-  pointer-events: auto;
+.table-row-insert-handle::after,
+.table-row-delete-handle::after {
+  content: "";
+  position: absolute;
+  top: -6px;
+  bottom: -6px;
+  left: 0;
+  width: 40px;
+}
+
+.table-col-insert-handle::after,
+.table-col-delete-handle::after {
+  content: "";
+  position: absolute;
+  left: -6px;
+  right: -6px;
+  top: 0;
+  height: 40px;
 }
 
 .table-row-delete-handle,
@@ -1861,6 +1938,23 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 .table-col-delete-handle:hover {
   color: #ef4444;
   background: color-mix(in srgb, #ef4444 12%, var(--panel-bg));
+}
+
+.table-editor-wrapper:hover .table-row-insert-handle,
+.table-editor-wrapper:hover .table-col-insert-handle,
+.table-editor-wrapper:hover .table-row-delete-handle,
+.table-editor-wrapper:hover .table-col-delete-handle,
+.table-editor-wrapper.table-editor-hovered .table-row-insert-handle,
+.table-editor-wrapper.table-editor-hovered .table-col-insert-handle,
+.table-editor-wrapper.table-editor-hovered .table-row-delete-handle,
+.table-editor-wrapper.table-editor-hovered .table-col-delete-handle,
+.table-row-insert-handle:hover,
+.table-col-insert-handle:hover,
+.table-row-delete-handle:hover,
+.table-col-delete-handle:hover {
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
 }
 
 .table-floating-toolbar {
@@ -1996,8 +2090,8 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 }
 
 .table-editor-wrapper.table-editor-delete-selected > table {
-  outline: 2px solid color-mix(in srgb, #ef4444 55%, transparent);
-  outline-offset: 2px;
+  border-width: 2px;
+  border-color: color-mix(in srgb, #ef4444 70%, var(--table-border-active));
 }
 
 #wysiwyg-editor code {

@@ -99,10 +99,13 @@
     "--frontmatter-chip-bg": "#eeeeee",
     "--frontmatter-chip-text": "#1a1a1a",
     "--table-border": "#e8e8e8",
-    "--table-header-bg": "#f0f0f0",
+    "--table-border-active": "#b0b0b0",
+    "--table-insert-preview": "#8a8a8a",
+    "--table-header-bg": "#f5f5f5",
     "--table-header-text": "#1a1a1a",
-    "--table-row-alt-bg": "#f9f9f9",
-    "--table-row-hover-bg": "#f0f0f0",
+    "--table-row-alt-bg": "#ffffff",
+    "--table-row-hover-bg": "#f7f7f7",
+    "--table-radius": "8px",
     "--drag-over-bg": "#eeeeee",
   };
 
@@ -147,8 +150,10 @@
     [data-pdf-export-root] #wysiwyg-editor table {
       display: table !important;
       width: 100% !important;
-      overflow-x: visible !important;
+      overflow: hidden !important;
       table-layout: auto !important;
+      border-collapse: separate !important;
+      border-spacing: 0 !important;
     }
 
     /* Header cells keep whole words; body cells may break long words. The

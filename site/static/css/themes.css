@@ -66,6 +66,8 @@
   --modal-neutral-hover: #4a4a4a;
   --modal-neutral-text: #e0e0e0;
   --table-border: #2e2e2e;
+  --table-border-active: #5a5a5a;
+  --table-insert-preview: #8a8a8a;
   --table-header-bg: #242424;
   --table-header-text: #e0e0e0;
   --table-row-alt-bg: #181818;
@@ -148,6 +150,8 @@
   --modal-neutral-hover: #616783;
   --modal-neutral-text: #f8f8f2;
   --table-border: #6272a4;
+  --table-border-active: #8b96c4;
+  --table-insert-preview: #aeb6d6;
   --table-header-bg: #3a3d4d;
   --table-header-text: #f8f8f2;
   --table-row-alt-bg: #323547;
@@ -230,6 +234,8 @@
   --modal-neutral-hover: #cbd3e1;
   --modal-neutral-text: #2e3440;
   --table-border: #c7d0df;
+  --table-border-active: #8c9bb3;
+  --table-insert-preview: #5e81ac;
   --table-header-bg: #d8e3f2;
   --table-header-text: #2e3440;
   --table-row-alt-bg: #e6ebf3;
@@ -312,6 +318,8 @@
   --modal-neutral-hover: #5e6a82;
   --modal-neutral-text: #eceff4;
   --table-border: #4c566a;
+  --table-border-active: #7b88a1;
+  --table-insert-preview: #88c0d0;
   --table-header-bg: #434c5e;
   --table-header-text: #eceff4;
   --table-row-alt-bg: #343b4a;
@@ -394,6 +402,8 @@
   --modal-neutral-hover: #d6d6d6;
   --modal-neutral-text: #333333;
   --table-border: #d0d0d0;
+  --table-border-active: #a0a0a0;
+  --table-insert-preview: #777777;
   --table-header-bg: #eeeeee;
   --table-header-text: #333333;
   --table-row-alt-bg: #f3f3f3;
