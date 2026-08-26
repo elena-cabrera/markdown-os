@@ -598,6 +598,7 @@
     window.mermaid.initialize({
       startOnLoad: false,
       securityLevel: "strict",
+      suppressErrorRendering: true,
       theme: currentAppMermaidTheme(),
       fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       useMaxWidth: false,
@@ -625,6 +626,7 @@
     window.mermaid.initialize({
       startOnLoad: false,
       securityLevel: "strict",
+      suppressErrorRendering: true,
       theme: PDF_MERMAID_THEME,
       fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       useMaxWidth: false,
@@ -641,11 +643,24 @@
       const renderId = `pdf-export-mermaid-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
       try {
         const { svg } = await window.mermaid.render(renderId, source);
+        document.getElementById(renderId)?.remove();
+        document.getElementById(`d${renderId}`)?.remove();
+        document.getElementById(`i${renderId}`)?.remove();
+        if (
+          !svg ||
+          svg.includes('class="error-icon"') ||
+          svg.includes("class='error-icon'")
+        ) {
+          continue;
+        }
         const template = document.createElement("template");
         template.innerHTML = svg.trim();
         canvas.replaceChildren(...template.content.childNodes);
       } catch (error) {
         console.error("Failed to render Mermaid diagram for PDF export.", error);
+        document.getElementById(renderId)?.remove();
+        document.getElementById(`d${renderId}`)?.remove();
+        document.getElementById(`i${renderId}`)?.remove();
       }
     }
 

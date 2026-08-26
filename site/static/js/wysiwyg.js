@@ -968,6 +968,22 @@
     });
   }
 
+  /**
+   * Builds the shared Mermaid.initialize() options for the editor.
+   * @param {string} theme - Mermaid theme name mapped from the app theme.
+   * @returns {object} - Config that never paints Mermaid's bomb error SVG.
+   */
+  function mermaidInitializeOptions(theme) {
+    return {
+      startOnLoad: false,
+      securityLevel: "strict",
+      suppressErrorRendering: true,
+      theme,
+      fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      useMaxWidth: false,
+    };
+  }
+
   function ensureMermaidInitialized() {
     if (!window.mermaid) {
       return;
@@ -978,15 +994,41 @@
       return;
     }
 
-    window.mermaid.initialize({
-      startOnLoad: false,
-      securityLevel: "strict",
-      theme,
-      fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-      useMaxWidth: false,
-    });
+    window.mermaid.initialize(mermaidInitializeOptions(theme));
     state.mermaidInitialized = true;
     state.mermaidTheme = theme;
+  }
+
+  /**
+   * Removes Mermaid's temporary render nodes from document.body.
+   * mermaid.render() mounts `#id`, `#d{id}`, and `#i{id}` while drawing;
+   * parse/draw failures can leave the bomb + "Syntax error in text" SVG.
+   * @param {string} renderId - ID passed to mermaid.render().
+   * @returns {void}
+   */
+  function removeMermaidTempElements(renderId) {
+    if (!renderId) {
+      return;
+    }
+    document.getElementById(renderId)?.remove();
+    document.getElementById(`d${renderId}`)?.remove();
+    document.getElementById(`i${renderId}`)?.remove();
+  }
+
+  /**
+   * Detects Mermaid's built-in parse-error diagram by its bomb-icon class.
+   * Visible label text is not used: a valid diagram can contain that phrase.
+   * @param {string} svgMarkup - SVG markup returned by mermaid.render().
+   * @returns {boolean} - True when the markup is the error diagram, not a chart.
+   */
+  function isMermaidErrorSvg(svgMarkup) {
+    if (!svgMarkup) {
+      return true;
+    }
+    return (
+      svgMarkup.includes('class="error-icon"') ||
+      svgMarkup.includes("class='error-icon'")
+    );
   }
 
   function createMermaidSourceNode(sourceContent) {
@@ -1041,13 +1083,23 @@
     const renderSource = normalizeMermaidSource(rawSource);
     const canvas = ensureMermaidCanvas(container);
     canvas.replaceChildren();
+    // Callers may already have initialized Mermaid with an explicit theme
+    // (PDF export uses light). Do not recompute from the live app theme.
+    if (!state.mermaidInitialized) {
+      ensureMermaidInitialized();
+    }
 
+    const renderId = `mermaid-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     try {
-      const renderId = `mermaid-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
       const { svg, bindFunctions } = await window.mermaid.render(
         renderId,
         renderSource,
       );
+      removeMermaidTempElements(renderId);
+      if (isMermaidErrorSvg(svg)) {
+        renderMermaidError(container, rawSource);
+        return;
+      }
       const template = document.createElement("template");
       template.innerHTML = svg.trim();
       canvas.replaceChildren(...template.content.childNodes);
@@ -1057,6 +1109,7 @@
       layoutMermaidDiagram(container);
     } catch (error) {
       console.error("Mermaid render error.", error);
+      removeMermaidTempElements(renderId);
       renderMermaidError(container, rawSource);
     }
   }
@@ -2108,21 +2161,7 @@
         );
         await renderMermaidDiagrams();
       } else {
-        ensureMermaidInitialized();
-        const mermaidNode = inserted.querySelector(".mermaid-canvas .mermaid");
-        if (mermaidNode && window.mermaid) {
-          try {
-            await window.mermaid.run({ nodes: [mermaidNode] });
-            fixMermaidSvgDimensions();
-            applyZoomToDiagrams();
-            addMermaidControls(inserted);
-          } catch (error) {
-            console.error("Mermaid render error.", error);
-            renderMermaidError(inserted, inserted.dataset.mermaidSource || "");
-          }
-        } else {
-          addMermaidControls(inserted);
-        }
+        await renderMermaidContainer(inserted);
       }
       emitChange();
     }
@@ -2337,23 +2376,27 @@
     let svgElement = null;
 
     if (mermaidSource && window.mermaid) {
+      const fullscreenId = `mermaid-fullscreen-${Date.now()}`;
       try {
         ensureMermaidInitialized();
-        const fullscreenId = `mermaid-fullscreen-${Date.now()}`;
         const result = await window.mermaid.render(
           fullscreenId,
           normalizeMermaidSource(mermaidSource),
         );
+        removeMermaidTempElements(fullscreenId);
         if (
           renderToken !== state.fullscreenRenderToken ||
           modal.classList.contains("hidden")
         ) {
           return;
         }
-        content.innerHTML = result.svg;
-        svgElement = content.querySelector("svg");
+        if (!isMermaidErrorSvg(result.svg)) {
+          content.innerHTML = result.svg;
+          svgElement = content.querySelector("svg");
+        }
       } catch (error) {
         console.error("Mermaid fullscreen render error.", error);
+        removeMermaidTempElements(fullscreenId);
       }
     }
 
@@ -3095,13 +3138,7 @@
     }
 
     if (theme) {
-      window.mermaid.initialize({
-        startOnLoad: false,
-        securityLevel: "strict",
-        theme,
-        fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-        useMaxWidth: false,
-      });
+      window.mermaid.initialize(mermaidInitializeOptions(theme));
       state.mermaidInitialized = true;
       state.mermaidTheme = theme;
     } else {

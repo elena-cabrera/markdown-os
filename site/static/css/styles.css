@@ -2269,6 +2269,12 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   white-space: pre-wrap;
 }
 
+/* Mermaid injects its bomb + "Syntax error in text" SVG onto document.body. */
+body > svg:has(.error-icon),
+body > div:has(> svg .error-icon) {
+  display: none !important;
+}
+
 .math-inline {
   padding: 0 2px;
 }
