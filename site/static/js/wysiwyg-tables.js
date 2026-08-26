@@ -185,6 +185,18 @@
     return getCursorPosition(table) || getStoredCursorPosition(wrapper);
   }
 
+  function getDefaultHandlePosition() {
+    return { rowIndex: 0, colIndex: 0 };
+  }
+
+  function getHandleActionPosition(wrapper, table) {
+    return (
+      getStoredCursorPosition(wrapper) ||
+      getCursorPosition(table) ||
+      getDefaultHandlePosition()
+    );
+  }
+
   function iconSvg(kind) {
     if (kind === "add") {
       return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>';
@@ -849,7 +861,7 @@
   }
 
   function handleEdgeAction(wrapper, table, action) {
-    const position = getEffectiveCursorPosition(wrapper, table);
+    const position = getHandleActionPosition(wrapper, table);
     if (!position) {
       return;
     }
@@ -943,6 +955,7 @@
     handleSpecs.forEach((spec) => {
       const button = createIconButton(spec.kind, spec.title, spec.className);
       button.dataset.tableAction = spec.action;
+      button.tabIndex = -1;
       edgeLayer.appendChild(button);
     });
 
@@ -971,7 +984,7 @@
           return;
         }
 
-        const position = getEffectiveCursorPosition(wrapper, table);
+        const position = getHandleActionPosition(wrapper, table);
         if (!position) {
           return;
         }
@@ -1014,18 +1027,12 @@
 
   function updateEdgeHandlePositions(wrapper, table, cursorPosition) {
     const edgeLayer = ensureEdgeLayer(wrapper, table);
-    if (!cursorPosition) {
-      edgeLayer.querySelectorAll("button[data-table-action]").forEach((button) => {
-        button.hidden = true;
-      });
-      return edgeLayer;
-    }
-
-    storeCursorPosition(wrapper, cursorPosition);
+    const position = cursorPosition || getHandleActionPosition(wrapper, table);
+    storeCursorPosition(wrapper, position);
 
     const rows = getTableRows(table);
-    const row = rows[cursorPosition.rowIndex];
-    const cell = row?.cells[cursorPosition.colIndex];
+    const row = rows[position.rowIndex];
+    const cell = row?.cells[position.colIndex];
     if (!row || !cell) {
       edgeLayer.querySelectorAll("button[data-table-action]").forEach((button) => {
         button.hidden = true;
@@ -1164,6 +1171,61 @@
     syncTableEditorState();
   }
 
+  function ensureHoverBridges(wrapper) {
+    if (wrapper.querySelector(".table-hover-bridge")) {
+      return;
+    }
+
+    const leftBridge = document.createElement("div");
+    leftBridge.className = "table-hover-bridge table-hover-bridge-left";
+    leftBridge.setAttribute("contenteditable", "false");
+
+    const topBridge = document.createElement("div");
+    topBridge.className = "table-hover-bridge table-hover-bridge-top";
+    topBridge.setAttribute("contenteditable", "false");
+
+    wrapper.appendChild(leftBridge);
+    wrapper.appendChild(topBridge);
+  }
+
+  function bindWrapperHover(wrapper) {
+    if (wrapper.dataset.tableHoverBound === "true") {
+      return;
+    }
+
+    wrapper.dataset.tableHoverBound = "true";
+
+    const revealHandles = (event) => {
+      const table = wrapper.querySelector("table");
+      if (!table) {
+        return;
+      }
+
+      const eventTarget = event.target;
+      const target =
+        eventTarget && eventTarget.nodeType === Node.TEXT_NODE
+          ? eventTarget.parentElement
+          : eventTarget;
+      const cell = target?.closest?.("th, td");
+      const hoverPosition =
+        cell && table.contains(cell) ? getCellPosition(table, cell) : null;
+      const position =
+        hoverPosition ||
+        getStoredCursorPosition(wrapper) ||
+        getCursorPosition(table) ||
+        getDefaultHandlePosition();
+      const nextKey = getCursorKey(position);
+      const rowInsert = wrapper.querySelector(".table-row-insert-handle");
+      if (nextKey === wrapperCursorKeys.get(wrapper) && rowInsert && !rowInsert.hidden) {
+        return;
+      }
+      updateEdgeHandlePositions(wrapper, table, position);
+    };
+
+    wrapper.addEventListener("mouseenter", revealHandles);
+    wrapper.addEventListener("mousemove", revealHandles);
+  }
+
   function decorateTableWrapper(wrapper) {
     const table = wrapper.querySelector("table");
     if (!table || wrapper.dataset.tableDecorated === "true") {
@@ -1173,6 +1235,8 @@
     wrapper.dataset.tableDecorated = "true";
     buildFloatingToolbar(wrapper, table);
     buildEdgeLayer(wrapper, table);
+    ensureHoverBridges(wrapper);
+    bindWrapperHover(wrapper);
   }
 
   function wrapTable(table) {
@@ -1207,7 +1271,7 @@
       wrapper.classList.remove(DELETE_SELECTED_WRAPPER_CLASS);
       wrapper
         .querySelectorAll(
-          ".table-edge-layer, .table-floating-toolbar, .table-edge-controls, .table-insert-preview-layer",
+          ".table-edge-layer, .table-floating-toolbar, .table-edge-controls, .table-insert-preview-layer, .table-hover-bridge",
         )
         .forEach((node) => {
           node.remove();

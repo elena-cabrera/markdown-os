@@ -719,7 +719,18 @@ def test_wysiwyg_table_controls_support_row_and_column_actions() -> None:
     assert "padding-top" not in wrapper_css
     assert "#wysiwyg-editor td:empty::before" in css_source
     assert ".table-row-insert-handle" in css_source
-    assert ".table-editor-wrapper.table-editor-active .table-row-delete-handle" in css_source
+    assert ".table-editor-wrapper:hover .table-row-delete-handle" in css_source
+    assert ".table-editor-wrapper.table-editor-active .table-row-delete-handle" not in css_source
+    assert ".table-hover-bridge-left" in css_source
+    assert "function bindWrapperHover(wrapper)" in tables_source
+    assert "function ensureHoverBridges(wrapper)" in tables_source
+    assert "function getHandleActionPosition(wrapper, table)" in tables_source
+    assert "table-hover-bridge" in tables_source
+    table_css = css_source.split("#wysiwyg-editor table {", 1)[1].split("}", 1)[0]
+    assert "display: table;" in table_css
+    assert "display: block;" not in table_css
+    assert "overflow-x: auto;" not in table_css
+    assert "table-layout: auto;" in table_css
     assert "pointer-events: auto" in css_source
     assert "--table-radius: 8px" in css_source
     assert "border-radius: var(--table-radius)" in css_source
