@@ -383,10 +383,55 @@ def test_wysiwyg_restores_editable_body_for_empty_documents() -> None:
 
     source = _read_static_js("wysiwyg.js")
 
-    assert "function ensureEditableBody()" in source
-    assert "node.matches(\".frontmatter-properties, .frontmatter-properties-create\")" in source
+    assert "function ensureEditableGaps()" in source
+    assert "function createEmptyParagraph()" in source
     assert "paragraph.appendChild(document.createElement(\"br\"));" in source
-    assert "refreshFrontmatterPanel();\n    ensureEditableBody();" in source
+    assert "window.wysiwygTables?.decorateTables?.(state.root);\n    ensureEditableGaps();" in source
+
+
+def test_wysiwyg_keeps_gaps_around_atomic_blocks() -> None:
+    """Verify diagrams and other locked blocks stay typeable and removable."""
+
+    source = _read_static_js("wysiwyg.js")
+    styles = _read_static_css("styles.css")
+
+    assert "const ATOMIC_BLOCK_SELECTOR =" in source
+    assert "function attachGapInsertHandles(block)" in source
+    assert "Add paragraph above" in source
+    assert "Add paragraph below" in source
+    assert "function deleteAtomicBlock(block)" in source
+    assert "block.remove();" in source.split("function deleteAtomicBlock(block)", 1)[1].split("function bindAtomicBlockDeleteButton", 1)[0]
+    assert 'createActionButton("delete", "Remove diagram")' in source
+    assert "block.before(createGapInsertButton(block, \"before\"));" in source
+    assert "block.after(createGapInsertButton(block, \"after\"));" in source
+    assert ".block-gap-insert" in styles
+    assert ".block-gap-insert-before" in styles
+    assert ".block-gap-insert-after" in styles
+    assert "--block-gap-preview-height: 36px" in styles
+    assert "height: var(--block-gap-preview-height);" in styles
+    assert "border: 0 dashed transparent;" in styles
+    assert "border-width: 1px;\n  border-color: var(--border);" in styles
+    assert ".block-gap-insert-plus {" in styles
+    assert ".action-icon-button,\n.copy-button,\n.block-edit-trigger,\n.block-gap-insert-plus {" in styles
+    assert "function pruneOrphanGapInserts()" in source
+    assert "function bindGapPreviewHover(block)" in source
+    assert "function bindGapHandleUnlock(block, handle)" in source
+    assert "const inBeforeGap =" in source
+    assert "const inAfterGap =" in source
+    assert "function bindEditorGapPreviewTracking()" in source
+    assert "updateGapPreviewsAtPoint(event.clientX, event.clientY)" in source
+    assert ":scope > .mermaid-inline-toolbar, :scope > .code-block-header" in source
+    assert "handle.replaceWith(paragraph)" in source
+    assert "function setGapPreviewLocked(block, locked)" in source
+    assert 'block.dataset.gapPreviewLocked = "true"' in source
+    assert ".block-gap-insert.is-preview" in styles
+    assert ".block-gap-insert.is-locked" in styles
+    assert ".block-gap-insert-before.is-preview" in styles
+    assert ".block-gap-insert-before + .mermaid-container" in styles
+    assert ".mermaid-container:has(+ .block-gap-insert-after)" in styles
+    assert "--atomic-block-gap: 16px" in styles
+    assert "margin-bottom: var(--atomic-block-gap);" in styles
+    assert "top: calc(-1 * var(--atomic-block-gap));" in styles
 
 
 def test_wysiwyg_uses_icon_action_buttons_for_edit_and_copy() -> None:
@@ -515,12 +560,17 @@ def test_wysiwyg_links_support_open_and_edit_click_paths() -> None:
 
 
 def test_wysiwyg_mermaid_canvas_click_no_longer_opens_editor() -> None:
-    """Verify Mermaid block clicks do not trigger click-to-edit modal."""
+    """Verify Mermaid canvas clicks do not trigger click-to-edit modal."""
 
     source = _read_static_js("wysiwyg.js")
+    mermaid_click_branch = source.split(
+        'if (block.classList.contains("mermaid-container"))',
+        1,
+    )[1].split('if (block.classList.contains("code-block"))', 1)[0]
 
     assert 'event.target.closest("button, input")' in source
-    assert 'block.classList.contains("mermaid-container")' not in source
+    assert "selectAtomicBlock(block);" in mermaid_click_branch
+    assert "openBlockEditor(" not in mermaid_click_branch
 
 
 def test_wysiwyg_modifier_key_updates_link_cursor_state() -> None:

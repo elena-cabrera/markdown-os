@@ -464,25 +464,520 @@
     state.root.prepend(renderFrontmatterPanel());
   }
 
-  function ensureEditableBody() {
+  const ATOMIC_BLOCK_SELECTOR =
+    ".mermaid-container, .code-block, .math-display, .table-editor-wrapper, hr";
+  const ATOMIC_GAP_HOST_SELECTOR =
+    ".mermaid-container, .code-block, .math-display";
+  const GAP_PREVIEW_EDGE_PX = 40;
+  const EDITOR_FRONTMATTER_SELECTOR =
+    ".frontmatter-properties, .frontmatter-properties-create";
+
+  function isFrontmatterNode(node) {
+    return Boolean(
+      node?.nodeType === Node.ELEMENT_NODE &&
+        node.matches(EDITOR_FRONTMATTER_SELECTOR),
+    );
+  }
+
+  function isGapInsertNode(node) {
+    return Boolean(
+      node?.nodeType === Node.ELEMENT_NODE &&
+        node.matches(".block-gap-insert"),
+    );
+  }
+
+  function isEditorChromeNode(node) {
+    return isFrontmatterNode(node) || isGapInsertNode(node);
+  }
+
+  function isAtomicEditorBlock(node) {
+    return Boolean(
+      node?.nodeType === Node.ELEMENT_NODE && node.matches(ATOMIC_BLOCK_SELECTOR),
+    );
+  }
+
+  function isGapInsertHost(node) {
+    return Boolean(
+      node?.nodeType === Node.ELEMENT_NODE &&
+        node.matches(ATOMIC_GAP_HOST_SELECTOR),
+    );
+  }
+
+  function createEmptyParagraph() {
+    const paragraph = document.createElement("p");
+    paragraph.appendChild(document.createElement("br"));
+    return paragraph;
+  }
+
+  function isEmptyParagraph(node) {
+    if (!node || node.nodeName !== "P") {
+      return false;
+    }
+
+    const text = (node.textContent || "")
+      .replace(/[\u200b\u00a0]/g, "")
+      .trim();
+    if (text) {
+      return false;
+    }
+
+    return !node.querySelector(
+      "img, table, hr, .mermaid-container, .code-block, .math-display, .table-editor-wrapper",
+    );
+  }
+
+  function editorContentChildren() {
+    if (!state.root) {
+      return [];
+    }
+
+    return Array.from(state.root.children).filter(
+      (node) => node.nodeType === Node.ELEMENT_NODE && !isEditorChromeNode(node),
+    );
+  }
+
+  function adjacentContentSibling(node, direction) {
+    let sibling =
+      direction === "before" ? node?.previousElementSibling : node?.nextElementSibling;
+    while (sibling) {
+      if (!isEditorChromeNode(sibling)) {
+        return sibling;
+      }
+      sibling =
+        direction === "before"
+          ? sibling.previousElementSibling
+          : sibling.nextElementSibling;
+    }
+    return null;
+  }
+
+  function getTopLevelEditorNode(node) {
+    if (!node || !state.root) {
+      return null;
+    }
+
+    let current = node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+    if (current === state.root) {
+      return null;
+    }
+
+    while (current && current.parentElement && current.parentElement !== state.root) {
+      current = current.parentElement;
+    }
+
+    if (!current || current === state.root || !state.root.contains(current)) {
+      return null;
+    }
+    return current;
+  }
+
+  function hoistAtomicBlockToRoot(block) {
+    while (block?.parentElement && block.parentElement !== state.root) {
+      const parent = block.parentElement;
+      parent.after(block);
+      if (isEmptyParagraph(parent) || parent.childNodes.length === 0) {
+        parent.remove();
+      }
+    }
+  }
+
+  function createGapInsertButton(block, side) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `block-gap-insert block-gap-insert-${side}`;
+    button.setAttribute("contenteditable", "false");
+    const label = side === "before" ? "Add paragraph above" : "Add paragraph below";
+    button.setAttribute("aria-label", label);
+    button.setAttribute("data-tooltip", label);
+    button.tabIndex = -1;
+
+    const hit = document.createElement("span");
+    hit.className = "block-gap-insert-hit";
+    hit.setAttribute("aria-hidden", "true");
+
+    const plus = document.createElement("span");
+    plus.className = "block-gap-insert-plus";
+    plus.setAttribute("aria-hidden", "true");
+    plus.innerHTML = actionIconSvg("add");
+
+    button.appendChild(hit);
+    button.appendChild(plus);
+
+    button.addEventListener("mousedown", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+    });
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      insertParagraphBesideBlock(block, side);
+    });
+
+    return button;
+  }
+
+  function gapHandleFor(block, side) {
+    const sibling =
+      side === "before" ? block.previousElementSibling : block.nextElementSibling;
+    const className =
+      side === "before" ? "block-gap-insert-before" : "block-gap-insert-after";
+    return sibling?.matches(`.${className}`) ? sibling : null;
+  }
+
+  function setBlockGapPreview(block, side) {
+    const before = gapHandleFor(block, "before");
+    const after = gapHandleFor(block, "after");
+    before?.classList.toggle("is-preview", side === "before");
+    after?.classList.toggle("is-preview", side === "after");
+  }
+
+  function pointInRect(rect, clientX, clientY) {
+    return Boolean(
+      rect &&
+        clientX >= rect.left &&
+        clientX <= rect.right &&
+        clientY >= rect.top &&
+        clientY <= rect.bottom,
+    );
+  }
+
+  function gapPreviewSideForPoint(block, clientX, clientY) {
+    const rect = block.getBoundingClientRect();
+    const beforeHandle = gapHandleFor(block, "before");
+    const afterHandle = gapHandleFor(block, "after");
+    const beforeRect = beforeHandle?.getBoundingClientRect();
+    const afterRect = afterHandle?.getBoundingClientRect();
+    const header = block.querySelector(
+      ":scope > .mermaid-inline-toolbar, :scope > .code-block-header",
+    );
+    const headerRect = header?.getBoundingClientRect();
+    const inBlockX = clientX >= rect.left && clientX <= rect.right;
+    const beforeOpen =
+      beforeHandle?.classList.contains("is-preview") ||
+      (beforeRect?.height ?? 0) > 2;
+    const afterOpen =
+      afterHandle?.classList.contains("is-preview") ||
+      (afterRect?.height ?? 0) > 2;
+    const onBeforeHandle = beforeOpen && pointInRect(beforeRect, clientX, clientY);
+    const onAfterHandle = afterOpen && pointInRect(afterRect, clientX, clientY);
+    const mermaidTopZone =
+      inBlockX &&
+      clientY >= rect.top &&
+      clientY <= Math.max(rect.top + GAP_PREVIEW_EDGE_PX, headerRect?.bottom ?? 0);
+    const mermaidBottomZone =
+      inBlockX &&
+      clientY >= rect.bottom - GAP_PREVIEW_EDGE_PX &&
+      clientY <= rect.bottom;
+    const inBeforeGap =
+      beforeOpen &&
+      inBlockX &&
+      clientY > (beforeRect?.bottom ?? rect.top) &&
+      clientY < rect.top;
+    const inAfterGap =
+      afterOpen &&
+      inBlockX &&
+      clientY > rect.bottom &&
+      clientY < (afterRect?.top ?? rect.bottom);
+
+    if (onBeforeHandle || mermaidTopZone || inBeforeGap) {
+      return "before";
+    }
+    if (onAfterHandle || mermaidBottomZone || inAfterGap) {
+      return "after";
+    }
+    return null;
+  }
+
+  function setGapPreviewLocked(block, locked) {
+    if (!block) {
+      return;
+    }
+
+    if (locked) {
+      block.dataset.gapPreviewLocked = "true";
+    } else {
+      delete block.dataset.gapPreviewLocked;
+    }
+
+    gapHandleFor(block, "before")?.classList.toggle("is-locked", locked);
+    gapHandleFor(block, "after")?.classList.toggle("is-locked", locked);
+  }
+
+  function updateGapPreviewsAtPoint(clientX, clientY) {
     if (!state.root) {
       return;
     }
 
-    const hasEditableBodyNode = Array.from(state.root.children).some((node) => {
-      return (
-        !node.matches(".frontmatter-properties, .frontmatter-properties-create") &&
-        node.getAttribute("contenteditable") !== "false"
-      );
+    state.root.querySelectorAll(ATOMIC_GAP_HOST_SELECTOR).forEach((block) => {
+      if (block.dataset.gapPreviewLocked === "true") {
+        return;
+      }
+      setBlockGapPreview(block, gapPreviewSideForPoint(block, clientX, clientY));
     });
+  }
 
-    if (hasEditableBodyNode) {
+  function clearAllGapPreviews() {
+    if (!state.root) {
       return;
     }
 
-    const paragraph = document.createElement("p");
-    paragraph.appendChild(document.createElement("br"));
-    state.root.appendChild(paragraph);
+    state.root.querySelectorAll(ATOMIC_GAP_HOST_SELECTOR).forEach((block) => {
+      setBlockGapPreview(block, null);
+    });
+  }
+
+  function bindEditorGapPreviewTracking() {
+    if (document.documentElement.dataset.gapPreviewTracking === "true") {
+      return;
+    }
+    document.documentElement.dataset.gapPreviewTracking = "true";
+
+    document.addEventListener(
+      "pointermove",
+      (event) => {
+        updateGapPreviewsAtPoint(event.clientX, event.clientY);
+      },
+      { passive: true },
+    );
+    document.addEventListener("pointerleave", () => {
+      clearAllGapPreviews();
+    });
+  }
+
+  function bindGapPreviewHover(block) {
+    if (block.dataset.gapPreviewBound === "true") {
+      return;
+    }
+    block.dataset.gapPreviewBound = "true";
+
+    block.addEventListener("mouseenter", () => {
+      setGapPreviewLocked(block, false);
+    });
+  }
+
+  function bindGapHandleUnlock(block, handle) {
+    if (!handle || handle.dataset.gapUnlockBound === "true") {
+      return;
+    }
+    handle.dataset.gapUnlockBound = "true";
+    handle.addEventListener("mouseenter", () => {
+      setGapPreviewLocked(block, false);
+    });
+  }
+
+  function attachGapInsertHandles(block) {
+    if (!isGapInsertHost(block) || !block.parentElement) {
+      return;
+    }
+
+    const previous = block.previousElementSibling;
+    if (!previous || !previous.matches(".block-gap-insert-before")) {
+      block.before(createGapInsertButton(block, "before"));
+    }
+
+    const next = block.nextElementSibling;
+    if (!next || !next.matches(".block-gap-insert-after")) {
+      block.after(createGapInsertButton(block, "after"));
+    }
+
+    bindGapPreviewHover(block);
+    bindGapHandleUnlock(block, gapHandleFor(block, "before"));
+    bindGapHandleUnlock(block, gapHandleFor(block, "after"));
+    bindEditorGapPreviewTracking();
+  }
+
+  function pruneOrphanGapInserts() {
+    if (!state.root) {
+      return;
+    }
+
+    state.root.querySelectorAll(".block-gap-insert-before").forEach((handle) => {
+      const next = handle.nextElementSibling;
+      if (!next || !isGapInsertHost(next)) {
+        handle.remove();
+      }
+    });
+    state.root.querySelectorAll(".block-gap-insert-after").forEach((handle) => {
+      const previous = handle.previousElementSibling;
+      if (!previous || !isGapInsertHost(previous)) {
+        handle.remove();
+      }
+    });
+  }
+
+  function decorateAtomicBlockInsertHandles() {
+    if (!state.root) {
+      return;
+    }
+
+    pruneOrphanGapInserts();
+    state.root.querySelectorAll(ATOMIC_GAP_HOST_SELECTOR).forEach((block) => {
+      attachGapInsertHandles(block);
+    });
+  }
+
+  function insertParagraphBesideBlock(block, side) {
+    if (!state.root || !block) {
+      return;
+    }
+
+    const sibling = adjacentContentSibling(block, side);
+    if (sibling && isEmptyParagraph(sibling)) {
+      setBlockGapPreview(block, null);
+      setGapPreviewLocked(block, true);
+      state.root.focus();
+      placeCaretAtStart(sibling);
+      return;
+    }
+
+    const paragraph = createEmptyParagraph();
+    const handle = gapHandleFor(block, side);
+
+    if (handle) {
+      handle.replaceWith(paragraph);
+    } else if (side === "before") {
+      block.before(paragraph);
+    } else {
+      block.after(paragraph);
+    }
+
+    attachGapInsertHandles(block);
+    setBlockGapPreview(block, null);
+    setGapPreviewLocked(block, true);
+    state.root.focus();
+    placeCaretAtStart(paragraph);
+    emitChange();
+  }
+
+  function clearAtomicBlockSelection() {
+    if (!state.root) {
+      return;
+    }
+
+    state.root.querySelectorAll(".is-block-selected").forEach((block) => {
+      block.classList.remove("is-block-selected");
+    });
+  }
+
+  function selectAtomicBlock(block) {
+    if (!block || !state.root?.contains(block)) {
+      return;
+    }
+
+    clearAtomicBlockSelection();
+    block.classList.add("is-block-selected");
+    state.root.focus();
+
+    const selection = window.getSelection();
+    if (!selection) {
+      return;
+    }
+
+    const range = document.createRange();
+    range.selectNode(block);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+
+  function getSelectedAtomicBlock() {
+    if (!state.root) {
+      return null;
+    }
+
+    const marked = state.root.querySelector(".is-block-selected");
+    if (marked && isAtomicEditorBlock(marked)) {
+      return marked;
+    }
+
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) {
+      return null;
+    }
+
+    const range = selection.getRangeAt(0);
+    const node =
+      range.startContainer.nodeType === Node.ELEMENT_NODE
+        ? range.startContainer
+        : range.startContainer.parentElement;
+    const block = node?.closest?.(ATOMIC_BLOCK_SELECTOR);
+    if (!block || !state.root.contains(block)) {
+      return null;
+    }
+
+    if (!selection.isCollapsed && range.intersectsNode(block)) {
+      return block;
+    }
+    return null;
+  }
+
+  function deleteAtomicBlock(block) {
+    if (!block || !state.root?.contains(block)) {
+      return;
+    }
+
+    const next = adjacentContentSibling(block, "after");
+    const prev = adjacentContentSibling(block, "before");
+    gapHandleFor(block, "before")?.remove();
+    gapHandleFor(block, "after")?.remove();
+    block.remove();
+    clearAtomicBlockSelection();
+    ensureEditableGaps();
+
+    state.root.focus();
+    if (next && state.root.contains(next)) {
+      placeCaretAtStart(next);
+    } else if (prev && state.root.contains(prev)) {
+      placeCaretAtEnd(prev);
+    } else {
+      const fallback = editorContentChildren()[0];
+      if (fallback) {
+        placeCaretAtStart(fallback);
+      }
+    }
+
+    emitChange();
+  }
+
+  function bindAtomicBlockDeleteButton(button, block) {
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      deleteAtomicBlock(block);
+    });
+  }
+
+  function ensureEditableGaps() {
+    if (!state.root) {
+      return;
+    }
+
+    decorateAtomicBlockInsertHandles();
+
+    const children = editorContentChildren();
+    if (children.length === 0) {
+      state.root.appendChild(createEmptyParagraph());
+      return;
+    }
+
+    children.forEach((node) => {
+      if (!isAtomicEditorBlock(node) || isGapInsertHost(node)) {
+        return;
+      }
+
+      const previous = adjacentContentSibling(node, "before");
+      if (!previous || isAtomicEditorBlock(previous)) {
+        node.before(createEmptyParagraph());
+      }
+
+      const next = adjacentContentSibling(node, "after");
+      if (!next || isAtomicEditorBlock(next)) {
+        node.after(createEmptyParagraph());
+      }
+    });
+
+    if (editorContentChildren().length === 0) {
+      state.root.appendChild(createEmptyParagraph());
+    }
   }
 
   async function promptFrontmatterProperty(initial = null) {
@@ -857,8 +1352,13 @@
       openBlockEditor("code", wrapper);
     });
 
+    const deleteButton = createActionButton("delete", "Remove code block");
+    deleteButton.classList.add("block-delete-trigger");
+    bindAtomicBlockDeleteButton(deleteButton, wrapper);
+
     actions.appendChild(editButton);
     actions.appendChild(copyButton);
+    actions.appendChild(deleteButton);
 
     header.appendChild(label);
     header.appendChild(actions);
@@ -958,6 +1458,12 @@
           openBlockEditor("math-display", element);
         });
 
+        const deleteButton = createActionButton("delete", "Remove equation");
+        deleteButton.classList.add("block-delete-trigger", "math-copy-button");
+        deleteButton.style.right = "74px";
+        bindAtomicBlockDeleteButton(deleteButton, element);
+
+        actions.appendChild(deleteButton);
         actions.appendChild(editButton);
         actions.appendChild(copyButton);
         element.appendChild(actions);
@@ -1169,6 +1675,14 @@
         openMermaidFullscreen(source, svg);
       });
       toolbar.appendChild(fullscreenButton);
+    }
+
+    const existingDelete = toolbar.querySelector(".block-delete-trigger");
+    if (!existingDelete) {
+      const deleteButton = createActionButton("delete", "Remove diagram");
+      deleteButton.classList.add("block-delete-trigger");
+      bindAtomicBlockDeleteButton(deleteButton, container);
+      toolbar.appendChild(deleteButton);
     }
 
     let controls = container.querySelector(".mermaid-zoom-controls");
@@ -1494,6 +2008,7 @@
     makeTaskListsInteractive();
     decorateLinks();
     window.wysiwygTables?.decorateTables?.(state.root);
+    ensureEditableGaps();
   }
 
   function getTurndownService() {
@@ -1574,7 +2089,7 @@
     });
     cloneRoot
       .querySelectorAll(
-        ".copy-button, .block-edit-trigger, .mermaid-fullscreen-trigger",
+        ".copy-button, .block-edit-trigger, .block-delete-trigger, .block-gap-insert, .mermaid-fullscreen-trigger",
       )
       .forEach((node) => {
         node.remove();
@@ -1669,7 +2184,6 @@
       ? window.DOMPurify.sanitize(rawHtml, { ADD_ATTR: ["contenteditable"] })
       : rawHtml;
     refreshFrontmatterPanel();
-    ensureEditableBody();
     await decorateDocument();
     state.suppressInput = false;
 
@@ -1719,15 +2233,14 @@
     }
 
     const mermaidContainer = createMermaidContainerFromSource(sourceContent);
-    const trailingParagraph = document.createElement("p");
-    trailingParagraph.innerHTML = "<br>";
-
-    const fragment = document.createDocumentFragment();
-    fragment.appendChild(mermaidContainer);
-    fragment.appendChild(trailingParagraph);
-
-    range.insertNode(fragment);
-    placeCaretAtEnd(trailingParagraph);
+    range.deleteContents();
+    range.insertNode(mermaidContainer);
+    hoistAtomicBlockToRoot(mermaidContainer);
+    ensureEditableGaps();
+    const following = adjacentContentSibling(mermaidContainer, "after");
+    if (following) {
+      placeCaretAtStart(following);
+    }
     return mermaidContainer;
   }
 
@@ -2089,6 +2602,7 @@
 
     if (command === "horizontalRule") {
       document.execCommand("insertHorizontalRule", false);
+      ensureEditableGaps();
       emitChange();
       return;
     }
@@ -2107,6 +2621,7 @@
         '<div class="math-display" contenteditable="false" data-math-source="x^2 + y^2 = z^2"></div><p><br></p>',
       );
       renderMathEquations();
+      ensureEditableGaps();
       emitChange();
       return;
     }
@@ -2116,6 +2631,7 @@
         '<pre><code class="language-text">// code</code></pre><p><br></p>',
       );
       decorateCodeBlocks();
+      ensureEditableGaps();
       emitChange();
       return;
     }
@@ -2129,6 +2645,7 @@
           '<table><thead><tr><th>Column 1</th><th>Column 2</th></tr></thead><tbody><tr><td>Value</td><td>Value</td></tr></tbody></table><p><br></p>',
         );
       }
+      ensureEditableGaps();
       emitChange();
       return;
     }
@@ -2163,6 +2680,7 @@
       } else {
         await renderMermaidContainer(inserted);
       }
+      ensureEditableGaps();
       emitChange();
     }
   }
@@ -2270,6 +2788,7 @@
         window.hljs.highlightElement(code);
       }
       closeBlockEditor();
+      ensureEditableGaps();
       emitChange();
       return;
     }
@@ -2278,6 +2797,7 @@
       state.blockEditTarget.dataset.mermaidSource = source;
       await renderMermaidContainer(state.blockEditTarget);
       closeBlockEditor();
+      ensureEditableGaps();
       emitChange();
       return;
     }
@@ -2290,6 +2810,7 @@
       state.blockEditTarget.textContent = source;
       renderMathEquations();
       closeBlockEditor();
+      ensureEditableGaps();
       emitChange();
     }
   }
@@ -2882,12 +3403,93 @@
     void executeCommand(command);
   }
 
+  function isRangeAtElementEnd(range, element) {
+    const probe = range.cloneRange();
+    probe.setEnd(element, element.childNodes.length);
+    const suffixText = (probe.toString() || "").replace(/\u00a0/g, " ").trim();
+    return suffixText.length === 0;
+  }
+
   async function handleRootKeyDown(event) {
     if (state.suppressInput) {
       return;
     }
 
-    if (event.key !== "Backspace") {
+    const selectedAtomic = getSelectedAtomicBlock();
+    if (selectedAtomic) {
+      if (event.key === "Backspace" || event.key === "Delete") {
+        event.preventDefault();
+        deleteAtomicBlock(selectedAtomic);
+        return;
+      }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        clearAtomicBlockSelection();
+        return;
+      }
+      if (
+        event.key === "ArrowDown" ||
+        event.key === "ArrowRight" ||
+        event.key === "Enter"
+      ) {
+        event.preventDefault();
+        clearAtomicBlockSelection();
+        insertParagraphBesideBlock(selectedAtomic, "after");
+        return;
+      }
+      if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
+        event.preventDefault();
+        clearAtomicBlockSelection();
+        insertParagraphBesideBlock(selectedAtomic, "before");
+        return;
+      }
+      if (event.metaKey || event.ctrlKey || event.altKey) {
+        return;
+      }
+      if (event.key.length === 1) {
+        event.preventDefault();
+        clearAtomicBlockSelection();
+        insertParagraphBesideBlock(selectedAtomic, "after");
+        document.execCommand("insertText", false, event.key);
+      }
+      return;
+    }
+
+    if (event.key !== "Backspace" && event.key !== "Delete") {
+      const selection = window.getSelection();
+      if (
+        selection &&
+        selection.isCollapsed &&
+        selection.rangeCount > 0 &&
+        !isWithinNonEditable(selection.anchorNode)
+      ) {
+        const topLevel = getTopLevelEditorNode(selection.anchorNode);
+        const range = selection.getRangeAt(0);
+        if (
+          topLevel &&
+          event.key === "ArrowUp" &&
+          isRangeAtElementStart(range, topLevel)
+        ) {
+          const previous = adjacentContentSibling(topLevel, "before");
+          if (isAtomicEditorBlock(previous)) {
+            event.preventDefault();
+            selectAtomicBlock(previous);
+            return;
+          }
+        }
+        if (
+          topLevel &&
+          event.key === "ArrowDown" &&
+          isRangeAtElementEnd(range, topLevel)
+        ) {
+          const next = adjacentContentSibling(topLevel, "after");
+          if (isAtomicEditorBlock(next)) {
+            event.preventDefault();
+            selectAtomicBlock(next);
+            return;
+          }
+        }
+      }
       return;
     }
 
@@ -2898,6 +3500,29 @@
 
     const anchorNode = selection.anchorNode;
     if (!anchorNode || isWithinNonEditable(anchorNode)) {
+      return;
+    }
+
+    const topLevel = getTopLevelEditorNode(anchorNode);
+    const range = selection.getRangeAt(0);
+    if (topLevel && event.key === "Backspace" && isRangeAtElementStart(range, topLevel)) {
+      const previous = adjacentContentSibling(topLevel, "before");
+      if (isAtomicEditorBlock(previous)) {
+        event.preventDefault();
+        selectAtomicBlock(previous);
+        return;
+      }
+    }
+    if (topLevel && event.key === "Delete" && isRangeAtElementEnd(range, topLevel)) {
+      const next = adjacentContentSibling(topLevel, "after");
+      if (isAtomicEditorBlock(next)) {
+        event.preventDefault();
+        selectAtomicBlock(next);
+        return;
+      }
+    }
+
+    if (event.key !== "Backspace") {
       return;
     }
 
@@ -2917,7 +3542,6 @@
       return;
     }
 
-    const range = selection.getRangeAt(0);
     if (!isRangeAtElementStart(range, listItem)) {
       return;
     }
@@ -2933,12 +3557,17 @@
     emitChange();
   }
 
-  function handleRootInput() {
+  function handleRootInput(event) {
     if (state.suppressInput) {
       return;
     }
 
     addHeadingIds(state.root);
+    if (!event.isComposing) {
+      state.suppressInput = true;
+      ensureEditableGaps();
+      state.suppressInput = false;
+    }
     ensureCaretAboveFloatingToolbar();
     emitChange();
   }
@@ -3029,6 +3658,16 @@
       ".code-block, .mermaid-container, .math-display, .math-inline",
     );
     if (!block || event.target.closest("button, input")) {
+      if (!block) {
+        clearAtomicBlockSelection();
+      }
+      return;
+    }
+
+    if (block.classList.contains("mermaid-container")) {
+      if (!event.target.closest(".mermaid-canvas, .mermaid-zoom-controls")) {
+        selectAtomicBlock(block);
+      }
       return;
     }
 
@@ -3162,6 +3801,13 @@
     state.root.addEventListener("change", handleRootChange);
     state.root.addEventListener("click", handleRootClick);
     state.root.addEventListener("keyup", handleRootKeyUp);
+    document.addEventListener("mousedown", (event) => {
+      const selected = state.root?.querySelector(".is-block-selected");
+      if (!selected || selected.contains(event.target)) {
+        return;
+      }
+      clearAtomicBlockSelection();
+    });
     document.addEventListener("selectionchange", () => {
       if (document.activeElement !== state.root) {
         return;

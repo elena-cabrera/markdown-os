@@ -1523,6 +1523,8 @@ body.file-drop-active #app-container {
   color: var(--editor-text);
   line-height: 1.7;
   font-size: 16px;
+  --block-gap-preview-height: 36px;
+  --atomic-block-gap: 16px;
   /* In-flow space after the last line (padding extends the scrollable box reliably in normal mode). */
   padding-bottom: calc(20px + var(--editor-end-scroll-padding));
 }
@@ -2109,15 +2111,18 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 }
 
 .code-block {
+  position: relative;
   border: 1px solid var(--border);
   border-radius: 10px;
   overflow: hidden;
+  margin: var(--atomic-block-gap, 16px) 0;
   background: var(--code-block-bg);
 }
 
 .code-block-header {
   height: 34px;
   border-bottom: 1px solid var(--border);
+  border-radius: 10px 10px 0 0;
   padding: 0 10px;
   display: flex;
   align-items: center;
@@ -2141,7 +2146,8 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 
 .action-icon-button,
 .copy-button,
-.block-edit-trigger {
+.block-edit-trigger,
+.block-gap-insert-plus {
   width: 28px;
   height: 28px;
   border: 1px solid var(--border);
@@ -2159,7 +2165,8 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 
 .action-icon-button svg,
 .copy-button svg,
-.block-edit-trigger svg {
+.block-edit-trigger svg,
+.block-gap-insert-plus svg {
   width: 15px;
   height: 15px;
 }
@@ -2168,6 +2175,13 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 .copy-button:hover,
 .block-edit-trigger:hover {
   opacity: 1;
+}
+
+.block-delete-trigger:hover,
+.block-delete-trigger:focus-visible {
+  opacity: 1;
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
 }
 
 .action-icon-button:focus-visible,
@@ -2194,6 +2208,8 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 .code-block-content {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
+  overflow: hidden;
+  border-radius: 0 0 10px 10px;
 }
 
 .code-line-numbers {
@@ -2237,11 +2253,140 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   position: relative;
   border: 1px solid var(--border);
   border-radius: 10px;
-  margin: 16px 0;
+  margin: var(--atomic-block-gap, 16px) 0;
   overflow: hidden;
   background: var(--mermaid-bg);
   display: flex;
   flex-direction: column;
+}
+
+.mermaid-container.is-block-selected,
+.code-block.is-block-selected,
+.math-display.is-block-selected {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.block-gap-insert {
+  position: relative;
+  appearance: none;
+  -webkit-appearance: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 100%;
+  height: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0 dashed transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--accent);
+  font-size: inherit;
+  line-height: 0;
+  cursor: pointer;
+  opacity: 0;
+  overflow: visible;
+  user-select: none;
+  z-index: 3;
+  pointer-events: none;
+  transition: height 0.16s ease, margin 0.16s ease, opacity 0s;
+}
+
+#wysiwyg-editor > .block-gap-insert-before {
+  margin-top: var(--atomic-block-gap);
+}
+
+#wysiwyg-editor > .block-gap-insert-after {
+  margin-bottom: var(--atomic-block-gap);
+}
+
+#wysiwyg-editor > .block-gap-insert-before + .mermaid-container,
+#wysiwyg-editor > .block-gap-insert-before + .code-block,
+#wysiwyg-editor > .block-gap-insert-before + .math-display {
+  margin-top: 0;
+}
+
+#wysiwyg-editor > .mermaid-container:has(+ .block-gap-insert-after),
+#wysiwyg-editor > .code-block:has(+ .block-gap-insert-after),
+#wysiwyg-editor > .math-display:has(+ .block-gap-insert-after) {
+  margin-bottom: 0;
+}
+
+#wysiwyg-editor > .block-gap-insert-before.is-preview,
+#wysiwyg-editor > .block-gap-insert-before:focus-visible:not(.is-locked) {
+  margin-bottom: var(--atomic-block-gap);
+}
+
+#wysiwyg-editor > .block-gap-insert-after.is-preview,
+#wysiwyg-editor > .block-gap-insert-after:focus-visible:not(.is-locked) {
+  margin-top: var(--atomic-block-gap);
+}
+
+.block-gap-insert-hit {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.block-gap-insert.is-preview .block-gap-insert-hit,
+.block-gap-insert:focus-visible:not(.is-locked) .block-gap-insert-hit {
+  pointer-events: auto;
+}
+
+.block-gap-insert-before.is-preview .block-gap-insert-hit,
+.block-gap-insert-before:focus-visible:not(.is-locked) .block-gap-insert-hit {
+  top: 0;
+  bottom: calc(-1 * var(--atomic-block-gap));
+  height: auto;
+}
+
+.block-gap-insert-after.is-preview .block-gap-insert-hit,
+.block-gap-insert-after:focus-visible:not(.is-locked) .block-gap-insert-hit {
+  top: calc(-1 * var(--atomic-block-gap));
+  bottom: 0;
+  height: auto;
+}
+
+.block-gap-insert:focus-visible:not(.is-locked),
+.block-gap-insert.is-preview {
+  height: var(--block-gap-preview-height);
+  line-height: inherit;
+  opacity: 1;
+  overflow: visible;
+  border-width: 1px;
+  border-color: var(--border);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+  pointer-events: auto;
+  z-index: 5;
+  transition: height 0.16s ease, margin 0.16s ease, opacity 0s linear 0.1s;
+}
+
+.block-gap-insert.is-locked,
+.block-gap-insert.is-locked .block-gap-insert-hit {
+  pointer-events: none;
+}
+
+.block-gap-insert-plus {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  box-shadow: none;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.block-gap-insert:focus-visible:not(.is-locked) .block-gap-insert-plus,
+.block-gap-insert.is-preview .block-gap-insert-plus {
+  opacity: 1;
+  transition: opacity 0.12s ease 0.1s;
+}
+
+.block-gap-insert:focus-visible {
+  outline: none;
 }
 
 .mermaid-inline-toolbar {
@@ -2252,6 +2397,7 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   gap: 6px;
   padding: 4px 8px;
   border-bottom: 1px solid var(--border);
+  border-radius: 10px 10px 0 0;
   background: var(--panel-bg);
   z-index: 4;
 }
@@ -2265,6 +2411,7 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   min-height: 120px;
   max-height: var(--mermaid-max-height);
   overflow: auto;
+  border-radius: 0 0 10px 10px;
 }
 
 .mermaid-container .mermaid {
@@ -2344,8 +2491,10 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 
 .mermaid-inline-toolbar .block-edit-trigger,
 .mermaid-inline-toolbar .mermaid-fullscreen-trigger,
+.mermaid-inline-toolbar .block-delete-trigger,
 .mermaid-container .block-edit-trigger,
-.mermaid-container .mermaid-fullscreen-trigger {
+.mermaid-container .mermaid-fullscreen-trigger,
+.mermaid-container .block-delete-trigger {
   cursor: pointer !important;
 }
 
@@ -2382,7 +2531,7 @@ body > div:has(> svg .error-icon) {
   border: 1px solid var(--math-display-border);
   border-radius: 10px;
   padding: 20px 24px;
-  margin: 16px 0;
+  margin: var(--atomic-block-gap, 16px) 0;
   overflow-x: auto;
   text-align: center;
   background: var(--math-display-bg);
