@@ -726,7 +726,9 @@ def test_wysiwyg_table_controls_support_row_and_column_actions() -> None:
     assert ".table-hover-bridge-left" not in css_source
     assert "function bindWrapperHover(wrapper)" in tables_source
     assert "HANDLE_HOVER_HIDE_DELAY_MS" in tables_source
+    assert "HANDLE_GUTTER_PX" in tables_source
     assert "table-editor-hovered" in tables_source
+    assert "isPointerInHandleGutter" in tables_source
     assert "function ensureHoverBridges(wrapper)" not in tables_source
     assert "function getHandleActionPosition(wrapper, table)" in tables_source
     assert ".table-row-insert-handle::after" in css_source

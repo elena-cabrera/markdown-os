@@ -9,7 +9,8 @@
   const DELETE_TABLE_SELECTED_CLASS = "table-delete-selected";
   const DELETE_SELECTED_WRAPPER_CLASS = "table-editor-delete-selected";
   const HOVERED_CLASS = "table-editor-hovered";
-  const HANDLE_HOVER_HIDE_DELAY_MS = 320;
+  const HANDLE_HOVER_HIDE_DELAY_MS = 400;
+  const HANDLE_GUTTER_PX = 40;
 
   let changeCallback = null;
   let rootElement = null;
@@ -1181,6 +1182,8 @@
 
     wrapper.dataset.tableHoverBound = "true";
 
+    let isTrackingPointer = false;
+
     const revealHandles = (event) => {
       const table = wrapper.querySelector("table");
       if (!table) {
@@ -1216,10 +1219,14 @@
       }
     };
 
-    const showHandles = (event) => {
-      clearHoverHideTimer();
-      wrapper.classList.add(HOVERED_CLASS);
-      revealHandles(event);
+    const isPointerInHandleGutter = (event) => {
+      const rect = wrapper.getBoundingClientRect();
+      return (
+        event.clientX >= rect.left - HANDLE_GUTTER_PX &&
+        event.clientX <= rect.right + HANDLE_GUTTER_PX &&
+        event.clientY >= rect.top - HANDLE_GUTTER_PX &&
+        event.clientY <= rect.bottom + HANDLE_GUTTER_PX
+      );
     };
 
     const scheduleHideHandles = () => {
@@ -1231,9 +1238,40 @@
       wrapperHoverHideTimers.set(wrapper, timer);
     };
 
+    const stopPointerTracking = () => {
+      if (!isTrackingPointer) {
+        return;
+      }
+      isTrackingPointer = false;
+      document.removeEventListener("pointermove", onDocumentPointerMove, true);
+      scheduleHideHandles();
+    };
+
+    const onDocumentPointerMove = (event) => {
+      if (!wrapper.isConnected) {
+        stopPointerTracking();
+        return;
+      }
+      if (isPointerInHandleGutter(event)) {
+        clearHoverHideTimer();
+        wrapper.classList.add(HOVERED_CLASS);
+        return;
+      }
+      stopPointerTracking();
+    };
+
+    const showHandles = (event) => {
+      clearHoverHideTimer();
+      wrapper.classList.add(HOVERED_CLASS);
+      if (!isTrackingPointer) {
+        isTrackingPointer = true;
+        document.addEventListener("pointermove", onDocumentPointerMove, true);
+      }
+      revealHandles(event);
+    };
+
     wrapper.addEventListener("mouseenter", showHandles);
     wrapper.addEventListener("mousemove", revealHandles);
-    wrapper.addEventListener("mouseleave", scheduleHideHandles);
   }
 
   function decorateTableWrapper(wrapper) {
