@@ -727,6 +727,7 @@ def test_wysiwyg_table_controls_support_row_and_column_actions() -> None:
     assert ".table-hover-bridge-top" in css_source
     assert ".table-hover-bridge-left" in css_source
     assert ".table-editor-wrapper:hover .table-hover-bridge" in css_source
+    assert "z-index: 5;" in css_source.split(".table-editor-wrapper.table-editor-hovered {", 1)[1].split("}", 1)[0]
     assert "function bindWrapperHover(wrapper)" in tables_source
     assert "function ensureHoverBridges(wrapper)" in tables_source
     assert "function ensureHandleGutters(wrapper)" not in tables_source

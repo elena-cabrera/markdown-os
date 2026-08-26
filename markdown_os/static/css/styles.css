@@ -1800,6 +1800,11 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   height: 40px;
 }
 
+.table-editor-wrapper:hover,
+.table-editor-wrapper.table-editor-hovered {
+  z-index: 5;
+}
+
 .table-editor-wrapper:hover .table-hover-bridge,
 .table-editor-wrapper.table-editor-hovered .table-hover-bridge {
   pointer-events: auto;

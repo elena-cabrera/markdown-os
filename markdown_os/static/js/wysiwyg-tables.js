@@ -10,7 +10,7 @@
   const DELETE_SELECTED_WRAPPER_CLASS = "table-editor-delete-selected";
   const HOVERED_CLASS = "table-editor-hovered";
   const HANDLE_HOVER_HIDE_DELAY_MS = 400;
-  const HANDLE_GUTTER_PX = 40;
+  const HANDLE_GUTTER_PX = 48;
 
   let changeCallback = null;
   let rootElement = null;
