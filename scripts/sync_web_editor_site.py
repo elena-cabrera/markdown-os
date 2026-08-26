@@ -25,6 +25,14 @@ WEB_APP_GOOGLE_FONTS_LINKS = """    <link rel="preconnect" href="https://fonts.g
     />
 """
 
+# Vercel Speed Insights is online-only. The CLI editor template must not load it.
+WEB_APP_SPEED_INSIGHTS_SCRIPTS = """    <!-- Vercel Speed Insights -->
+    <script>
+      window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };
+    </script>
+    <script defer src="/_vercel/speed-insights/script.js"></script>
+"""
+
 
 def copy_directory(source: Path, destination: Path) -> None:
     """
@@ -67,6 +75,30 @@ def inject_web_app_google_fonts(index_html: Path) -> None:
     )
 
 
+def inject_web_app_speed_insights(index_html: Path) -> None:
+    """
+    Insert Vercel Speed Insights scripts into the web editor HTML.
+
+    Args:
+    - index_html (Path): Path to ``site/app/index.html`` after it is copied
+      from the shared editor template.
+
+    Returns:
+    - None: The HTML file is updated in place when the head marker is found.
+    """
+
+    html = index_html.read_text(encoding="utf-8")
+    if "/_vercel/speed-insights/script.js" in html:
+        return
+    marker = "  </head>\n"
+    if marker not in html:
+        raise ValueError(f"Could not find </head> marker in {index_html}")
+    index_html.write_text(
+        html.replace(marker, WEB_APP_SPEED_INSIGHTS_SCRIPTS + marker, 1),
+        encoding="utf-8",
+    )
+
+
 def sync_web_editor_site() -> None:
     """
     Copy the shared web editor into the Vercel static output directory.
@@ -82,6 +114,7 @@ def sync_web_editor_site() -> None:
     app_index = SITE_APP_ROOT / "index.html"
     shutil.copy2(EDITOR_STATIC_ROOT / "index.html", app_index)
     inject_web_app_google_fonts(app_index)
+    inject_web_app_speed_insights(app_index)
 
     SITE_STATIC_ROOT.mkdir(parents=True, exist_ok=True)
     for directory_name in STATIC_DIRECTORIES:
