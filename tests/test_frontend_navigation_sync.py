@@ -416,8 +416,8 @@ def test_wysiwyg_keeps_gaps_around_atomic_blocks() -> None:
     assert "function pruneOrphanGapInserts()" in source
     assert "function bindGapPreviewHover(block)" in source
     assert "function bindGapHandleUnlock(block, handle)" in source
-    assert "const GAP_PREVIEW_STICKY_MOVE_PX = 2;" in source
     assert "const inBeforeGap =" in source
+    assert "const inAfterGap =" in source
     assert "function bindEditorGapPreviewTracking()" in source
     assert "updateGapPreviewsAtPoint(event.clientX, event.clientY)" in source
     assert ":scope > .mermaid-inline-toolbar, :scope > .code-block-header" in source
@@ -431,6 +431,7 @@ def test_wysiwyg_keeps_gaps_around_atomic_blocks() -> None:
     assert ".mermaid-container:has(+ .block-gap-insert-after)" in styles
     assert "--atomic-block-gap: 16px" in styles
     assert "margin-bottom: var(--atomic-block-gap);" in styles
+    assert "top: calc(-1 * var(--atomic-block-gap));" in styles
 
 
 def test_wysiwyg_uses_icon_action_buttons_for_edit_and_copy() -> None:

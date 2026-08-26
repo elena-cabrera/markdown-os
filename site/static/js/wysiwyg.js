@@ -469,9 +469,6 @@
   const ATOMIC_GAP_HOST_SELECTOR =
     ".mermaid-container, .code-block, .math-display";
   const GAP_PREVIEW_EDGE_PX = 40;
-  const GAP_PREVIEW_STICKY_MOVE_PX = 2;
-  const gapPreviewSticky = new WeakMap();
-  const gapPreviewSuppressed = new WeakMap();
   const EDITOR_FRONTMATTER_SELECTOR =
     ".frontmatter-properties, .frontmatter-properties-create";
 
@@ -681,49 +678,13 @@
       inBlockX &&
       clientY > rect.bottom &&
       clientY < (afterRect?.top ?? rect.bottom);
-    const insideBlock = pointInRect(rect, clientX, clientY);
-    const sticky = gapPreviewSticky.get(block);
 
-    if (gapPreviewSuppressed.has(block)) {
-      if (
-        onBeforeHandle ||
-        onAfterHandle ||
-        mermaidTopZone ||
-        mermaidBottomZone ||
-        inBeforeGap ||
-        inAfterGap ||
-        insideBlock
-      ) {
-        return null;
-      }
-      gapPreviewSuppressed.delete(block);
+    if (onBeforeHandle || mermaidTopZone || inBeforeGap) {
+      return "before";
     }
-
-    if ((inBeforeGap || inAfterGap) && sticky?.side) {
-      const moved =
-        Math.hypot(clientX - sticky.x, clientY - sticky.y) >
-        GAP_PREVIEW_STICKY_MOVE_PX;
-      if (!moved) {
-        return sticky.side;
-      }
-      gapPreviewSuppressed.set(block, true);
-      gapPreviewSticky.delete(block);
-      return null;
+    if (onAfterHandle || mermaidBottomZone || inAfterGap) {
+      return "after";
     }
-
-    let side = null;
-    if (onBeforeHandle || mermaidTopZone) {
-      side = "before";
-    } else if (onAfterHandle || mermaidBottomZone) {
-      side = "after";
-    }
-
-    if (side) {
-      gapPreviewSticky.set(block, { x: clientX, y: clientY, side });
-      return side;
-    }
-
-    gapPreviewSticky.delete(block);
     return null;
   }
 
@@ -734,8 +695,6 @@
 
     if (locked) {
       block.dataset.gapPreviewLocked = "true";
-      gapPreviewSticky.delete(block);
-      gapPreviewSuppressed.delete(block);
     } else {
       delete block.dataset.gapPreviewLocked;
     }

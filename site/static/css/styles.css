@@ -2237,6 +2237,20 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   pointer-events: auto;
 }
 
+.block-gap-insert-before.is-preview .block-gap-insert-hit,
+.block-gap-insert-before:focus-visible:not(.is-locked) .block-gap-insert-hit {
+  top: 0;
+  bottom: calc(-1 * var(--atomic-block-gap));
+  height: auto;
+}
+
+.block-gap-insert-after.is-preview .block-gap-insert-hit,
+.block-gap-insert-after:focus-visible:not(.is-locked) .block-gap-insert-hit {
+  top: calc(-1 * var(--atomic-block-gap));
+  bottom: 0;
+  height: auto;
+}
+
 .block-gap-insert:focus-visible:not(.is-locked),
 .block-gap-insert.is-preview {
   height: var(--block-gap-preview-height);
@@ -2247,6 +2261,7 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   border-color: var(--border);
   background: color-mix(in srgb, var(--accent) 6%, transparent);
   pointer-events: auto;
+  z-index: 5;
   transition: height 0.16s ease, margin 0.16s ease, opacity 0s linear 0.1s;
 }
 
