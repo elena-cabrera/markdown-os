@@ -649,7 +649,7 @@
         if (
           !svg ||
           svg.includes('class="error-icon"') ||
-          svg.includes("Syntax error in text")
+          svg.includes("class='error-icon'")
         ) {
           continue;
         }

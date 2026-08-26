@@ -591,6 +591,15 @@ def test_wysiwyg_suppresses_mermaid_error_diagram_svg() -> None:
     source = _read_static_js("wysiwyg.js")
     pdf_source = _read_static_js("pdf-export.js")
     styles = _read_static_css("styles.css")
+    detector = source.split("function isMermaidErrorSvg", 1)[1].split(
+        "function createMermaidSourceNode", 1
+    )[0]
+    container_render = source.split("async function renderMermaidContainer", 1)[1].split(
+        "function renderMermaidError", 1
+    )[0]
+    pdf_fallback = pdf_source.split("window.mermaid.render(renderId, source)", 1)[1].split(
+        "restoreMermaidGlobalConfig();", 1
+    )[0]
 
     assert "suppressErrorRendering: true" in source
     assert "function removeMermaidTempElements(renderId)" in source
@@ -599,7 +608,12 @@ def test_wysiwyg_suppresses_mermaid_error_diagram_svg() -> None:
     assert "window.mermaid.run(" not in source
     assert "suppressErrorRendering: true" in pdf_source
     assert "body > svg:has(.error-icon)" in styles
-    assert 'Syntax error in text' in source
+    assert 'class="error-icon"' in detector
+    assert "class='error-icon'" in detector
+    assert "Syntax error in text" not in detector
+    assert "Syntax error in text" not in pdf_fallback
+    assert "if (!state.mermaidInitialized)" in container_render
+    assert "ensureMermaidInitialized();" in container_render
 
 
 def test_wysiwyg_inline_code_has_background_highlight() -> None:

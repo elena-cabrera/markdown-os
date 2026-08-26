@@ -1016,7 +1016,8 @@
   }
 
   /**
-   * Detects Mermaid's built-in parse-error diagram (bomb + status text).
+   * Detects Mermaid's built-in parse-error diagram by its bomb-icon class.
+   * Visible label text is not used: a valid diagram can contain that phrase.
    * @param {string} svgMarkup - SVG markup returned by mermaid.render().
    * @returns {boolean} - True when the markup is the error diagram, not a chart.
    */
@@ -1026,7 +1027,7 @@
     }
     return (
       svgMarkup.includes('class="error-icon"') ||
-      svgMarkup.includes("Syntax error in text")
+      svgMarkup.includes("class='error-icon'")
     );
   }
 
@@ -1082,7 +1083,11 @@
     const renderSource = normalizeMermaidSource(rawSource);
     const canvas = ensureMermaidCanvas(container);
     canvas.replaceChildren();
-    ensureMermaidInitialized();
+    // Callers may already have initialized Mermaid with an explicit theme
+    // (PDF export uses light). Do not recompute from the live app theme.
+    if (!state.mermaidInitialized) {
+      ensureMermaidInitialized();
+    }
 
     const renderId = `mermaid-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     try {
