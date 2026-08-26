@@ -2543,7 +2543,12 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 
 .mermaid-fullscreen-modal {
   position: fixed;
-  inset: 20px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  transform-origin: center center;
+  width: calc(100% - 40px);
+  height: calc(100% - 40px);
   border-radius: 12px;
   border: 1px solid var(--border);
   background: var(--mermaid-bg);
@@ -2555,7 +2560,7 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 }
 
 .mermaid-fullscreen-modal:not(.hidden) {
-  animation: modal-fade-in 0.2s ease;
+  animation: mermaid-modal-fade-in 0.2s ease;
 }
 
 .mermaid-fullscreen-toolbar {
@@ -2652,6 +2657,18 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   to {
     opacity: 1;
     transform: translate(-50%, -50%);
+  }
+}
+
+@keyframes mermaid-modal-fade-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.92);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
   }
 }
 
@@ -2799,7 +2816,8 @@ body.focus-mode-css-fallback {
   }
 
   .mermaid-fullscreen-modal {
-    inset: 10px;
+    width: calc(100% - 20px);
+    height: calc(100% - 20px);
   }
 
   .mermaid-fullscreen-content {

@@ -611,6 +611,36 @@ def test_wysiwyg_mermaid_inline_uses_layout_not_panzoom() -> None:
     assert "width: 100% !important" not in canvas_svg_rule
 
 
+def test_mermaid_fullscreen_modal_animates_from_center() -> None:
+    """Verify the mermaid fullscreen modal opens from the center, not top-left."""
+
+    styles = _read_static_css("styles.css")
+
+    mermaid_rule = styles.split(".mermaid-fullscreen-modal:not(.hidden) {", 1)[1].split(
+        "}",
+        1,
+    )[0]
+    assert "animation: mermaid-modal-fade-in" in mermaid_rule
+    assert "animation: modal-fade-in" not in mermaid_rule
+
+    keyframes = styles.split("@keyframes mermaid-modal-fade-in {", 1)[1]
+    from_block = keyframes.split("from {", 1)[1].split("}", 1)[0]
+    to_block = keyframes.split("to {", 1)[1].split("}", 1)[0]
+    assert "opacity: 0" in from_block
+    assert "translate(-50%, -50%)" in from_block
+    assert "scale(" in from_block
+    assert "opacity: 1" in to_block
+    assert "translate(-50%, -50%)" in to_block
+    assert "scale(1)" in to_block
+
+    origin_rule = styles.split(".mermaid-fullscreen-modal {", 1)[1].split("}", 1)[0]
+    assert "top: 50%" in origin_rule
+    assert "left: 50%" in origin_rule
+    assert "transform: translate(-50%, -50%)" in origin_rule
+    assert "transform-origin: center" in origin_rule
+    assert "inset:" not in origin_rule
+
+
 def test_wysiwyg_mermaid_toolbar_is_separate_from_canvas_layer() -> None:
     """Verify Mermaid controls are outside the zoomable canvas layer."""
 
