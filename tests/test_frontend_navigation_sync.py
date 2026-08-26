@@ -585,6 +585,23 @@ def test_wysiwyg_mermaid_renders_each_diagram_independently() -> None:
     assert "renderMermaidError(container, rawSource)" in source
 
 
+def test_wysiwyg_suppresses_mermaid_error_diagram_svg() -> None:
+    """Verify parse errors never inject Mermaid's bomb SVG onto the page."""
+
+    source = _read_static_js("wysiwyg.js")
+    pdf_source = _read_static_js("pdf-export.js")
+    styles = _read_static_css("styles.css")
+
+    assert "suppressErrorRendering: true" in source
+    assert "function removeMermaidTempElements(renderId)" in source
+    assert "function isMermaidErrorSvg(svgMarkup)" in source
+    assert "removeMermaidTempElements(renderId)" in source
+    assert "window.mermaid.run(" not in source
+    assert "suppressErrorRendering: true" in pdf_source
+    assert "body > svg:has(.error-icon)" in styles
+    assert 'Syntax error in text' in source
+
+
 def test_wysiwyg_inline_code_has_background_highlight() -> None:
     """Verify inline code uses a subtle background without a custom text color."""
 
