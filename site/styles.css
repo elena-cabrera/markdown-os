@@ -1780,6 +1780,31 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   border-color: var(--table-border-active);
 }
 
+.table-hover-bridge {
+  position: absolute;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.table-hover-bridge-left {
+  top: -40px;
+  left: -40px;
+  width: 40px;
+  bottom: 0;
+}
+
+.table-hover-bridge-top {
+  top: -40px;
+  left: 0;
+  right: 0;
+  height: 40px;
+}
+
+.table-editor-wrapper:hover .table-hover-bridge,
+.table-editor-wrapper.table-editor-hovered .table-hover-bridge {
+  pointer-events: auto;
+}
+
 .table-edge-layer {
   position: absolute;
   inset: 0;
@@ -1875,20 +1900,20 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 .table-row-delete-handle::after {
   content: "";
   position: absolute;
-  top: -16px;
-  bottom: -16px;
+  top: -6px;
+  bottom: -6px;
   left: 0;
-  width: 44px;
+  width: 40px;
 }
 
 .table-col-insert-handle::after,
 .table-col-delete-handle::after {
   content: "";
   position: absolute;
-  left: -16px;
-  right: -16px;
+  left: -6px;
+  right: -6px;
   top: 0;
-  height: 44px;
+  height: 40px;
 }
 
 .table-row-delete-handle,
@@ -1907,11 +1932,7 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 .table-editor-wrapper:hover .table-row-insert-handle,
 .table-editor-wrapper:hover .table-col-insert-handle,
 .table-editor-wrapper:hover .table-row-delete-handle,
-.table-editor-wrapper:hover .table-col-delete-handle {
-  opacity: 1;
-  transform: scale(1);
-}
-
+.table-editor-wrapper:hover .table-col-delete-handle,
 .table-editor-wrapper.table-editor-hovered .table-row-insert-handle,
 .table-editor-wrapper.table-editor-hovered .table-col-insert-handle,
 .table-editor-wrapper.table-editor-hovered .table-row-delete-handle,

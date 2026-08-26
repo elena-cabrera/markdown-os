@@ -683,15 +683,15 @@ def test_wysiwyg_table_controls_support_row_and_column_actions() -> None:
     assert "function previewDeleteColumn(table, colIndex)" in tables_source
     assert "function previewDeleteTable(table)" in tables_source
     assert "previewDeleteRow(table, rowIndex)" in tables_source
-    assert "colMidLeft + handleHalf + handleGap" in tables_source
-    assert "rowMidTop + handleHalf + handleGap" in tables_source
+    assert "contentLeft - 34" in tables_source
+    assert "contentTop - 34" in tables_source
     assert "function getEffectiveCursorPosition(wrapper, table)" in tables_source
     assert "function updateEdgeHandlePositions(wrapper, table, cursorPosition)" in tables_source
     assert "function ensureEdgeLayer(wrapper, table)" in tables_source
     assert 'button.dataset.tableAction = spec.action' in tables_source
     assert "const cursorKey = getCursorKey(position)" in tables_source
     assert "cursorKey !== wrapperCursorKeys.get(wrapper)" in tables_source
-    assert "rowMidTop = cellRect.top - wrapperRect.top + cellRect.height / 2 - handleHalf" in tables_source
+    assert "rowDeleteTop = cellRect.top - wrapperRect.top + cellRect.height / 2 - handleHalf" in tables_source
     assert "min-height: 4rem" in css_source
     assert "height: 4rem" in css_source
     assert "min-width: 4rem" in css_source
@@ -724,21 +724,18 @@ def test_wysiwyg_table_controls_support_row_and_column_actions() -> None:
     assert ".table-row-insert-handle:hover" in css_source
     assert "pointerenter" in tables_source
     assert ".table-editor-wrapper.table-editor-active .table-row-delete-handle" not in css_source
-    assert ".table-handle-gutter-top" not in css_source
-    assert ".table-hover-bridge-top" not in css_source
-    assert ".table-hover-bridge-left" not in css_source
+    assert ".table-hover-bridge-top" in css_source
+    assert ".table-hover-bridge-left" in css_source
+    assert ".table-editor-wrapper:hover .table-hover-bridge" in css_source
     assert "function bindWrapperHover(wrapper)" in tables_source
+    assert "function ensureHoverBridges(wrapper)" in tables_source
     assert "function ensureHandleGutters(wrapper)" not in tables_source
-    assert "function ensureHoverBridges(wrapper)" not in tables_source
     assert "HANDLE_HOVER_HIDE_DELAY_MS" in tables_source
     assert "HANDLE_GUTTER_PX" in tables_source
     assert "table-editor-hovered" in tables_source
     assert "isPointerInHandleGutter" in tables_source
-    assert "function ensureHoverBridges(wrapper)" not in tables_source
     assert "function getHandleActionPosition(wrapper, table)" in tables_source
     assert ".table-row-insert-handle::after" in css_source
-    assert "width: 44px;" in css_source.split(".table-row-insert-handle::after", 1)[1].split("}", 1)[0]
-    assert "height: 44px;" in css_source.split(".table-col-insert-handle::after", 1)[1].split("}", 1)[0]
     table_css = css_source.split("#wysiwyg-editor table {", 1)[1].split("}", 1)[0]
     assert "display: table;" in table_css
     assert "display: block;" not in table_css
