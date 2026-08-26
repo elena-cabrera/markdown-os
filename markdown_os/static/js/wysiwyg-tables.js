@@ -8,11 +8,14 @@
   const DELETE_TABLE_PREVIEW_CLASS = "table-delete-preview";
   const DELETE_TABLE_SELECTED_CLASS = "table-delete-selected";
   const DELETE_SELECTED_WRAPPER_CLASS = "table-editor-delete-selected";
+  const HOVERED_CLASS = "table-editor-hovered";
+  const HANDLE_HOVER_HIDE_DELAY_MS = 320;
 
   let changeCallback = null;
   let rootElement = null;
   let pendingDeleteWrapper = null;
   const wrapperCursorKeys = new WeakMap();
+  const wrapperHoverHideTimers = new WeakMap();
 
   function getCursorKey(position) {
     if (!position) {
@@ -1205,8 +1208,32 @@
       updateEdgeHandlePositions(wrapper, table, position);
     };
 
-    wrapper.addEventListener("mouseenter", revealHandles);
+    const clearHoverHideTimer = () => {
+      const timer = wrapperHoverHideTimers.get(wrapper);
+      if (timer !== undefined) {
+        window.clearTimeout(timer);
+        wrapperHoverHideTimers.delete(wrapper);
+      }
+    };
+
+    const showHandles = (event) => {
+      clearHoverHideTimer();
+      wrapper.classList.add(HOVERED_CLASS);
+      revealHandles(event);
+    };
+
+    const scheduleHideHandles = () => {
+      clearHoverHideTimer();
+      const timer = window.setTimeout(() => {
+        wrapper.classList.remove(HOVERED_CLASS);
+        wrapperHoverHideTimers.delete(wrapper);
+      }, HANDLE_HOVER_HIDE_DELAY_MS);
+      wrapperHoverHideTimers.set(wrapper, timer);
+    };
+
+    wrapper.addEventListener("mouseenter", showHandles);
     wrapper.addEventListener("mousemove", revealHandles);
+    wrapper.addEventListener("mouseleave", scheduleHideHandles);
   }
 
   function decorateTableWrapper(wrapper) {

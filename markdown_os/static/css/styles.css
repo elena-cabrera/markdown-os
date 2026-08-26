@@ -1905,7 +1905,11 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 .table-editor-wrapper:hover .table-row-insert-handle,
 .table-editor-wrapper:hover .table-col-insert-handle,
 .table-editor-wrapper:hover .table-row-delete-handle,
-.table-editor-wrapper:hover .table-col-delete-handle {
+.table-editor-wrapper:hover .table-col-delete-handle,
+.table-editor-wrapper.table-editor-hovered .table-row-insert-handle,
+.table-editor-wrapper.table-editor-hovered .table-col-insert-handle,
+.table-editor-wrapper.table-editor-hovered .table-row-delete-handle,
+.table-editor-wrapper.table-editor-hovered .table-col-delete-handle {
   opacity: 1;
   transform: scale(1);
   pointer-events: auto;
