@@ -630,23 +630,43 @@
     after?.classList.toggle("is-preview", side === "after");
   }
 
-  function isGapPreviewTarget(block, node) {
-    if (!block || !node) {
-      return false;
-    }
-
-    const target = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
-    if (!target) {
-      return false;
-    }
-    if (block.contains(target)) {
-      return true;
-    }
-
-    return Boolean(
-      gapHandleFor(block, "before")?.contains(target) ||
-        gapHandleFor(block, "after")?.contains(target),
+  function gapPreviewSideForPoint(block, clientX, clientY) {
+    const rect = block.getBoundingClientRect();
+    const beforeRect = gapHandleFor(block, "before")?.getBoundingClientRect();
+    const afterRect = gapHandleFor(block, "after")?.getBoundingClientRect();
+    const edgePx = 40;
+    const left = Math.min(
+      rect.left,
+      beforeRect?.left ?? rect.left,
+      afterRect?.left ?? rect.left,
     );
+    const right = Math.max(
+      rect.right,
+      beforeRect?.right ?? rect.right,
+      afterRect?.right ?? rect.right,
+    );
+    if (clientX < left || clientX > right) {
+      return null;
+    }
+
+    const beforeTop = beforeRect ? Math.min(beforeRect.top, rect.top) : rect.top;
+    const beforeBottom = Math.max(rect.top + edgePx, beforeRect?.bottom ?? rect.top);
+    const afterTop = Math.min(rect.bottom - edgePx, afterRect?.top ?? rect.bottom);
+    const afterBottom = afterRect
+      ? Math.max(afterRect.bottom, rect.bottom)
+      : rect.bottom;
+    const inBefore = clientY >= beforeTop && clientY <= beforeBottom;
+    const inAfter = clientY >= afterTop && clientY <= afterBottom;
+    if (inBefore && inAfter) {
+      return clientY - rect.top <= rect.bottom - clientY ? "before" : "after";
+    }
+    if (inBefore) {
+      return "before";
+    }
+    if (inAfter) {
+      return "after";
+    }
+    return null;
   }
 
   function setGapPreviewLocked(block, locked) {
@@ -664,6 +684,46 @@
     gapHandleFor(block, "after")?.classList.toggle("is-locked", locked);
   }
 
+  function updateGapPreviewsAtPoint(clientX, clientY) {
+    if (!state.root) {
+      return;
+    }
+
+    state.root.querySelectorAll(ATOMIC_GAP_HOST_SELECTOR).forEach((block) => {
+      if (block.dataset.gapPreviewLocked === "true") {
+        return;
+      }
+      setBlockGapPreview(block, gapPreviewSideForPoint(block, clientX, clientY));
+    });
+  }
+
+  function clearAllGapPreviews() {
+    if (!state.root) {
+      return;
+    }
+
+    state.root.querySelectorAll(ATOMIC_GAP_HOST_SELECTOR).forEach((block) => {
+      setBlockGapPreview(block, null);
+    });
+  }
+
+  function bindEditorGapPreviewTracking() {
+    if (!state.root || state.root.dataset.gapPreviewTracking === "true") {
+      return;
+    }
+    state.root.dataset.gapPreviewTracking = "true";
+
+    state.root.addEventListener("pointermove", (event) => {
+      updateGapPreviewsAtPoint(event.clientX, event.clientY);
+    });
+    state.root.addEventListener("pointerleave", (event) => {
+      if (event.relatedTarget && state.root.contains(event.relatedTarget)) {
+        return;
+      }
+      clearAllGapPreviews();
+    });
+  }
+
   function bindGapPreviewHover(block) {
     if (block.dataset.gapPreviewBound === "true") {
       return;
@@ -672,42 +732,6 @@
 
     block.addEventListener("mouseenter", () => {
       setGapPreviewLocked(block, false);
-    });
-
-    block.addEventListener("mousemove", (event) => {
-      if (block.dataset.gapPreviewLocked === "true") {
-        return;
-      }
-
-      const rect = block.getBoundingClientRect();
-      const edgePx = 40;
-      if (event.clientY <= rect.top + edgePx) {
-        setBlockGapPreview(block, "before");
-      } else if (event.clientY >= rect.bottom - edgePx) {
-        setBlockGapPreview(block, "after");
-      } else {
-        setBlockGapPreview(block, null);
-      }
-    });
-
-    block.addEventListener("mouseleave", (event) => {
-      if (isGapPreviewTarget(block, event.relatedTarget)) {
-        return;
-      }
-      setBlockGapPreview(block, null);
-    });
-  }
-
-  function bindGapHandleLeave(block, handle) {
-    if (!handle || handle.dataset.gapPreviewBound === "true") {
-      return;
-    }
-    handle.dataset.gapPreviewBound = "true";
-    handle.addEventListener("mouseleave", (event) => {
-      if (isGapPreviewTarget(block, event.relatedTarget)) {
-        return;
-      }
-      setBlockGapPreview(block, null);
     });
   }
 
@@ -727,8 +751,7 @@
     }
 
     bindGapPreviewHover(block);
-    bindGapHandleLeave(block, gapHandleFor(block, "before"));
-    bindGapHandleLeave(block, gapHandleFor(block, "after"));
+    bindEditorGapPreviewTracking();
   }
 
   function pruneOrphanGapInserts() {

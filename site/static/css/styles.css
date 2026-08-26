@@ -2191,6 +2191,26 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   transition: height 0.16s ease, opacity 0s;
 }
 
+#wysiwyg-editor > .block-gap-insert-before {
+  margin-top: 16px;
+}
+
+#wysiwyg-editor > .block-gap-insert-after {
+  margin-bottom: 16px;
+}
+
+#wysiwyg-editor > .block-gap-insert-before + .mermaid-container,
+#wysiwyg-editor > .block-gap-insert-before + .code-block,
+#wysiwyg-editor > .block-gap-insert-before + .math-display {
+  margin-top: 0;
+}
+
+#wysiwyg-editor > .mermaid-container:has(+ .block-gap-insert-after),
+#wysiwyg-editor > .code-block:has(+ .block-gap-insert-after),
+#wysiwyg-editor > .math-display:has(+ .block-gap-insert-after) {
+  margin-bottom: 0;
+}
+
 .block-gap-insert-hit {
   position: absolute;
   left: 0;
@@ -2213,7 +2233,7 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 .block-gap-insert.is-preview {
   height: var(--block-gap-preview-height);
   opacity: 1;
-  overflow: hidden;
+  overflow: visible;
   border-width: 2px;
   border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
   background: color-mix(in srgb, var(--accent) 6%, transparent);
@@ -2224,8 +2244,21 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 .block-gap-insert:hover:not(.is-locked) .block-gap-insert-hit,
 .block-gap-insert:focus-visible:not(.is-locked) .block-gap-insert-hit,
 .block-gap-insert.is-preview .block-gap-insert-hit {
-  inset: 0;
+  top: 0;
+  bottom: 0;
   height: auto;
+}
+
+.block-gap-insert-before:hover:not(.is-locked) .block-gap-insert-hit,
+.block-gap-insert-before:focus-visible:not(.is-locked) .block-gap-insert-hit,
+.block-gap-insert-before.is-preview .block-gap-insert-hit {
+  bottom: -8px;
+}
+
+.block-gap-insert-after:hover:not(.is-locked) .block-gap-insert-hit,
+.block-gap-insert-after:focus-visible:not(.is-locked) .block-gap-insert-hit,
+.block-gap-insert-after.is-preview .block-gap-insert-hit {
+  top: -8px;
 }
 
 .block-gap-insert.is-locked,
