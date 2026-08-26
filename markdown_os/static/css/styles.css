@@ -2239,6 +2239,7 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   line-height: inherit;
   opacity: 1;
   overflow: visible;
+  z-index: 5;
   border-width: 2px;
   border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
   background: color-mix(in srgb, var(--accent) 6%, transparent);

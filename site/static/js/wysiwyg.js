@@ -639,6 +639,7 @@
     );
     const headerRect = header?.getBoundingClientRect();
     const edgePx = 40;
+    const hitExtendPx = 40;
     const left = Math.min(
       rect.left,
       beforeRect?.left ?? rect.left,
@@ -655,12 +656,17 @@
 
     const beforeTop = beforeRect ? Math.min(beforeRect.top, rect.top) : rect.top;
     let beforeBottom = rect.top + edgePx;
-    if (headerRect && headerRect.top <= rect.top + edgePx) {
+    if (headerRect) {
       beforeBottom = Math.max(beforeBottom, headerRect.bottom);
     }
-    beforeBottom = Math.max(beforeBottom, beforeRect?.bottom ?? rect.top);
+    if (beforeRect) {
+      beforeBottom = Math.max(beforeBottom, beforeRect.bottom + hitExtendPx);
+    }
 
-    const afterTop = Math.min(rect.bottom - edgePx, afterRect?.top ?? rect.bottom);
+    const afterTop = Math.min(
+      rect.bottom - edgePx,
+      afterRect ? afterRect.top - hitExtendPx : rect.bottom,
+    );
     const afterBottom = afterRect
       ? Math.max(afterRect.bottom, rect.bottom)
       : rect.bottom;
@@ -745,6 +751,16 @@
     });
   }
 
+  function bindGapHandleUnlock(block, handle) {
+    if (!handle || handle.dataset.gapUnlockBound === "true") {
+      return;
+    }
+    handle.dataset.gapUnlockBound = "true";
+    handle.addEventListener("mouseenter", () => {
+      setGapPreviewLocked(block, false);
+    });
+  }
+
   function attachGapInsertHandles(block) {
     if (!isGapInsertHost(block) || !block.parentElement) {
       return;
@@ -761,6 +777,8 @@
     }
 
     bindGapPreviewHover(block);
+    bindGapHandleUnlock(block, gapHandleFor(block, "before"));
+    bindGapHandleUnlock(block, gapHandleFor(block, "after"));
     bindEditorGapPreviewTracking();
   }
 

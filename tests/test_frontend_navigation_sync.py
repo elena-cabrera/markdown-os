@@ -413,7 +413,9 @@ def test_wysiwyg_keeps_gaps_around_atomic_blocks() -> None:
     assert "border-width: 2px;" in styles
     assert "function pruneOrphanGapInserts()" in source
     assert "function bindGapPreviewHover(block)" in source
-    assert "function gapPreviewSideForPoint(block, clientX, clientY)" in source
+    assert "function bindGapHandleUnlock(block, handle)" in source
+    assert "const hitExtendPx = 40;" in source
+    assert "beforeRect.bottom + hitExtendPx" in source
     assert "function bindEditorGapPreviewTracking()" in source
     assert "updateGapPreviewsAtPoint(event.clientX, event.clientY)" in source
     assert ":scope > .mermaid-inline-toolbar, :scope > .code-block-header" in source
