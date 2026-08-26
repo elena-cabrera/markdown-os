@@ -468,6 +468,10 @@
     ".mermaid-container, .code-block, .math-display, .table-editor-wrapper, hr";
   const ATOMIC_GAP_HOST_SELECTOR =
     ".mermaid-container, .code-block, .math-display";
+  const GAP_PREVIEW_EDGE_PX = 40;
+  const GAP_PREVIEW_STICKY_MOVE_PX = 6;
+  const gapPreviewSticky = new WeakMap();
+  const gapPreviewSuppressed = new WeakMap();
   const EDITOR_FRONTMATTER_SELECTOR =
     ".frontmatter-properties, .frontmatter-properties-create";
 
@@ -630,57 +634,96 @@
     after?.classList.toggle("is-preview", side === "after");
   }
 
+  function pointInRect(rect, clientX, clientY) {
+    return Boolean(
+      rect &&
+        clientX >= rect.left &&
+        clientX <= rect.right &&
+        clientY >= rect.top &&
+        clientY <= rect.bottom,
+    );
+  }
+
   function gapPreviewSideForPoint(block, clientX, clientY) {
     const rect = block.getBoundingClientRect();
-    const beforeRect = gapHandleFor(block, "before")?.getBoundingClientRect();
-    const afterRect = gapHandleFor(block, "after")?.getBoundingClientRect();
+    const beforeHandle = gapHandleFor(block, "before");
+    const afterHandle = gapHandleFor(block, "after");
+    const beforeRect = beforeHandle?.getBoundingClientRect();
+    const afterRect = afterHandle?.getBoundingClientRect();
     const header = block.querySelector(
       ":scope > .mermaid-inline-toolbar, :scope > .code-block-header",
     );
     const headerRect = header?.getBoundingClientRect();
-    const edgePx = 40;
-    const hitExtendPx = 40;
-    const left = Math.min(
-      rect.left,
-      beforeRect?.left ?? rect.left,
-      afterRect?.left ?? rect.left,
-    );
-    const right = Math.max(
-      rect.right,
-      beforeRect?.right ?? rect.right,
-      afterRect?.right ?? rect.right,
-    );
-    if (clientX < left || clientX > right) {
+    const inBlockX = clientX >= rect.left && clientX <= rect.right;
+    const beforeOpen =
+      beforeHandle?.classList.contains("is-preview") ||
+      (beforeRect?.height ?? 0) > 2;
+    const afterOpen =
+      afterHandle?.classList.contains("is-preview") ||
+      (afterRect?.height ?? 0) > 2;
+    const onBeforeHandle = beforeOpen && pointInRect(beforeRect, clientX, clientY);
+    const onAfterHandle = afterOpen && pointInRect(afterRect, clientX, clientY);
+    const mermaidTopZone =
+      inBlockX &&
+      clientY >= rect.top &&
+      clientY <= Math.max(rect.top + GAP_PREVIEW_EDGE_PX, headerRect?.bottom ?? 0);
+    const mermaidBottomZone =
+      inBlockX &&
+      clientY >= rect.bottom - GAP_PREVIEW_EDGE_PX &&
+      clientY <= rect.bottom;
+    const inBeforeGap =
+      beforeOpen &&
+      inBlockX &&
+      clientY > (beforeRect?.bottom ?? rect.top) &&
+      clientY < rect.top;
+    const inAfterGap =
+      afterOpen &&
+      inBlockX &&
+      clientY > rect.bottom &&
+      clientY < (afterRect?.top ?? rect.bottom);
+    const insideBlock = pointInRect(rect, clientX, clientY);
+    const sticky = gapPreviewSticky.get(block);
+
+    if (gapPreviewSuppressed.has(block)) {
+      if (
+        onBeforeHandle ||
+        onAfterHandle ||
+        mermaidTopZone ||
+        mermaidBottomZone ||
+        inBeforeGap ||
+        inAfterGap ||
+        insideBlock
+      ) {
+        return null;
+      }
+      gapPreviewSuppressed.delete(block);
+    }
+
+    if ((inBeforeGap || inAfterGap) && sticky?.side) {
+      const moved =
+        Math.hypot(clientX - sticky.x, clientY - sticky.y) >
+        GAP_PREVIEW_STICKY_MOVE_PX;
+      if (!moved) {
+        return sticky.side;
+      }
+      gapPreviewSuppressed.set(block, true);
+      gapPreviewSticky.delete(block);
       return null;
     }
 
-    const beforeTop = beforeRect ? Math.min(beforeRect.top, rect.top) : rect.top;
-    let beforeBottom = rect.top + edgePx;
-    if (headerRect) {
-      beforeBottom = Math.max(beforeBottom, headerRect.bottom);
-    }
-    if (beforeRect) {
-      beforeBottom = Math.max(beforeBottom, beforeRect.bottom + hitExtendPx);
+    let side = null;
+    if (onBeforeHandle || mermaidTopZone) {
+      side = "before";
+    } else if (onAfterHandle || mermaidBottomZone) {
+      side = "after";
     }
 
-    const afterTop = Math.min(
-      rect.bottom - edgePx,
-      afterRect ? afterRect.top - hitExtendPx : rect.bottom,
-    );
-    const afterBottom = afterRect
-      ? Math.max(afterRect.bottom, rect.bottom)
-      : rect.bottom;
-    const inBefore = clientY >= beforeTop && clientY <= beforeBottom;
-    const inAfter = clientY >= afterTop && clientY <= afterBottom;
-    if (inBefore && inAfter) {
-      return clientY - rect.top <= rect.bottom - clientY ? "before" : "after";
+    if (side) {
+      gapPreviewSticky.set(block, { x: clientX, y: clientY, side });
+      return side;
     }
-    if (inBefore) {
-      return "before";
-    }
-    if (inAfter) {
-      return "after";
-    }
+
+    gapPreviewSticky.delete(block);
     return null;
   }
 
@@ -691,6 +734,8 @@
 
     if (locked) {
       block.dataset.gapPreviewLocked = "true";
+      gapPreviewSticky.delete(block);
+      gapPreviewSuppressed.delete(block);
     } else {
       delete block.dataset.gapPreviewLocked;
     }

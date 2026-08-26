@@ -414,8 +414,8 @@ def test_wysiwyg_keeps_gaps_around_atomic_blocks() -> None:
     assert "function pruneOrphanGapInserts()" in source
     assert "function bindGapPreviewHover(block)" in source
     assert "function bindGapHandleUnlock(block, handle)" in source
-    assert "const hitExtendPx = 40;" in source
-    assert "beforeRect.bottom + hitExtendPx" in source
+    assert "const GAP_PREVIEW_STICKY_MOVE_PX = 6;" in source
+    assert "const inBeforeGap =" in source
     assert "function bindEditorGapPreviewTracking()" in source
     assert "updateGapPreviewsAtPoint(event.clientX, event.clientY)" in source
     assert ":scope > .mermaid-inline-toolbar, :scope > .code-block-header" in source
@@ -424,11 +424,11 @@ def test_wysiwyg_keeps_gaps_around_atomic_blocks() -> None:
     assert 'block.dataset.gapPreviewLocked = "true"' in source
     assert ".block-gap-insert.is-preview" in styles
     assert ".block-gap-insert.is-locked" in styles
-    assert ".block-gap-insert:hover:not(.is-locked)" in styles
+    assert ".block-gap-insert-before.is-preview" in styles
     assert ".block-gap-insert-before + .mermaid-container" in styles
     assert ".mermaid-container:has(+ .block-gap-insert-after)" in styles
-    assert "--block-gap-hit-extend: 40px" in styles
-    assert "bottom: calc(-1 * var(--block-gap-hit-extend));" in styles
+    assert "--atomic-block-gap: 16px" in styles
+    assert "margin-bottom: var(--atomic-block-gap);" in styles
 
 
 def test_wysiwyg_uses_icon_action_buttons_for_edit_and_copy() -> None:
