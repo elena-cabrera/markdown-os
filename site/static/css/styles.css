@@ -1521,6 +1521,7 @@ body.file-drop-active #app-container {
   line-height: 1.7;
   font-size: 16px;
   --block-gap-preview-height: 1.7em;
+  --block-gap-hit-extend: 40px;
   /* In-flow space after the last line (padding extends the scrollable box reliably in normal mode). */
   padding-bottom: calc(20px + var(--editor-end-scroll-padding));
 }
@@ -2187,14 +2188,13 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   opacity: 0;
   overflow: visible;
   user-select: none;
-  z-index: 5;
+  z-index: 3;
   pointer-events: none;
   transition: height 0.16s ease, opacity 0s;
 }
 
 #wysiwyg-editor > .block-gap-insert-before {
   margin-top: 16px;
-  margin-bottom: -8px;
 }
 
 #wysiwyg-editor > .block-gap-insert-after {
@@ -2217,17 +2217,19 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   position: absolute;
   left: 0;
   right: 0;
-  height: 40px;
+  height: var(--block-gap-hit-extend);
   z-index: 3;
   pointer-events: auto;
 }
 
 .block-gap-insert-before .block-gap-insert-hit {
-  top: -8px;
+  top: 0;
+  height: calc(var(--block-gap-hit-extend) + 8px);
 }
 
 .block-gap-insert-after .block-gap-insert-hit {
-  bottom: -8px;
+  bottom: 0;
+  height: calc(var(--block-gap-hit-extend) + 8px);
 }
 
 .block-gap-insert:hover:not(.is-locked),
@@ -2255,29 +2257,17 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 .block-gap-insert-before:hover:not(.is-locked) .block-gap-insert-hit,
 .block-gap-insert-before:focus-visible:not(.is-locked) .block-gap-insert-hit,
 .block-gap-insert-before.is-preview .block-gap-insert-hit {
-  bottom: -12px;
+  bottom: calc(-1 * var(--block-gap-hit-extend));
 }
 
 .block-gap-insert-after:hover:not(.is-locked) .block-gap-insert-hit,
 .block-gap-insert-after:focus-visible:not(.is-locked) .block-gap-insert-hit,
 .block-gap-insert-after.is-preview .block-gap-insert-hit {
-  top: -12px;
-}
-
-.block-gap-insert-before.is-preview::after,
-.block-gap-insert-before:hover:not(.is-locked)::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 100%;
-  height: 12px;
-  pointer-events: auto;
+  top: calc(-1 * var(--block-gap-hit-extend));
 }
 
 .block-gap-insert.is-locked,
-.block-gap-insert.is-locked .block-gap-insert-hit,
-.block-gap-insert.is-locked::after {
+.block-gap-insert.is-locked .block-gap-insert-hit {
   pointer-events: none;
 }
 
