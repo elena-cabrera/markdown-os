@@ -1277,7 +1277,7 @@
 
   function cleanupTableWrappers(cloneRoot) {
     cloneRoot.querySelectorAll(`.${WRAPPER_CLASS}`).forEach((wrapper) => {
-      wrapper.classList.remove(DELETE_SELECTED_WRAPPER_CLASS);
+      wrapper.classList.remove(DELETE_SELECTED_WRAPPER_CLASS, HOVERED_CLASS);
       wrapper
         .querySelectorAll(
           ".table-edge-layer, .table-floating-toolbar, .table-edge-controls, .table-insert-preview-layer, .table-hover-bridge",
