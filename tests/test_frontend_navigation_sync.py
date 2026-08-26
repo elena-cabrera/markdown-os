@@ -683,8 +683,8 @@ def test_wysiwyg_table_controls_support_row_and_column_actions() -> None:
     assert "function previewDeleteColumn(table, colIndex)" in tables_source
     assert "function previewDeleteTable(table)" in tables_source
     assert "previewDeleteRow(table, rowIndex)" in tables_source
-    assert "contentLeft - 34" in tables_source
-    assert "contentTop - 34" in tables_source
+    assert "contentLeft - 12" in tables_source
+    assert "contentTop - 12" in tables_source
     assert "function getEffectiveCursorPosition(wrapper, table)" in tables_source
     assert "function updateEdgeHandlePositions(wrapper, table, cursorPosition)" in tables_source
     assert "function ensureEdgeLayer(wrapper, table)" in tables_source
@@ -722,11 +722,11 @@ def test_wysiwyg_table_controls_support_row_and_column_actions() -> None:
     assert ".table-editor-wrapper:hover .table-row-delete-handle" in css_source
     assert ".table-editor-wrapper.table-editor-hovered .table-row-delete-handle" in css_source
     assert ".table-editor-wrapper.table-editor-active .table-row-delete-handle" not in css_source
-    assert ".table-handle-gutter-top" in css_source
+    assert ".table-handle-gutter-top" not in css_source
     assert ".table-hover-bridge-top" not in css_source
     assert ".table-hover-bridge-left" not in css_source
     assert "function bindWrapperHover(wrapper)" in tables_source
-    assert "function ensureHandleGutters(wrapper)" in tables_source
+    assert "function ensureHandleGutters(wrapper)" not in tables_source
     assert "function ensureHoverBridges(wrapper)" not in tables_source
     assert "HANDLE_HOVER_HIDE_DELAY_MS" in tables_source
     assert "HANDLE_GUTTER_PX" in tables_source

@@ -1026,25 +1026,7 @@
     });
 
     wrapper.insertBefore(edgeLayer, table);
-    ensureHandleGutters(wrapper);
     return edgeLayer;
-  }
-
-  function ensureHandleGutters(wrapper) {
-    if (wrapper.querySelector(".table-handle-gutter")) {
-      return;
-    }
-
-    const topGutter = document.createElement("div");
-    topGutter.className = "table-handle-gutter table-handle-gutter-top";
-    topGutter.setAttribute("contenteditable", "false");
-
-    const leftGutter = document.createElement("div");
-    leftGutter.className = "table-handle-gutter table-handle-gutter-left";
-    leftGutter.setAttribute("contenteditable", "false");
-
-    wrapper.appendChild(topGutter);
-    wrapper.appendChild(leftGutter);
   }
 
   function updateEdgeHandlePositions(wrapper, table, cursorPosition) {
@@ -1082,26 +1064,26 @@
     if (rowInsert) {
       rowInsert.hidden = false;
       rowInsert.style.top = `${rowInsertTop}px`;
-      rowInsert.style.left = `${contentLeft - 34}px`;
+      rowInsert.style.left = `${contentLeft - 12}px`;
     }
 
     if (rowDelete) {
       rowDelete.hidden = false;
       rowDelete.style.top = `${rowDeleteTop}px`;
-      rowDelete.style.left = `${contentLeft - 34}px`;
+      rowDelete.style.left = `${contentLeft - 12}px`;
       rowDelete.disabled = rows.length <= 1;
     }
 
     if (colInsert) {
       colInsert.hidden = false;
       colInsert.style.left = `${columnBorderLeft - 12}px`;
-      colInsert.style.top = `${contentTop - 34}px`;
+      colInsert.style.top = `${contentTop - 12}px`;
     }
 
     if (colDelete) {
       colDelete.hidden = false;
       colDelete.style.left = `${cellRect.left - wrapperRect.left + cellRect.width / 2 - 12}px`;
-      colDelete.style.top = `${contentTop - 34}px`;
+      colDelete.style.top = `${contentTop - 12}px`;
       colDelete.disabled = getColumnCount(table) <= 1;
     }
 

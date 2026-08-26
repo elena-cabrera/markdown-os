@@ -1780,29 +1780,11 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   border-color: var(--table-border-active);
 }
 
-.table-handle-gutter {
+.table-edge-layer {
   position: absolute;
+  inset: 0;
   pointer-events: none;
-  z-index: 2;
-}
-
-.table-handle-gutter-top {
-  top: -40px;
-  left: 0;
-  right: 0;
-  height: 44px;
-}
-
-.table-handle-gutter-left {
-  top: 0;
-  left: -40px;
-  width: 44px;
-  bottom: 0;
-}
-
-.table-editor-wrapper:hover .table-handle-gutter,
-.table-editor-wrapper.table-editor-hovered .table-handle-gutter {
-  pointer-events: auto;
+  z-index: 3;
 }
 
 #wysiwyg-editor tr.table-insert-after-row > th,
@@ -1845,6 +1827,7 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   pointer-events: none;
   opacity: 0;
   transform: scale(0.92);
+  z-index: 4;
   transition: opacity 0.15s ease, transform 0.15s ease, color 0.15s ease,
     border-color 0.15s ease, background 0.15s ease;
   box-shadow: none;
@@ -1874,6 +1857,7 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   pointer-events: none;
   opacity: 0;
   transform: scale(0.92);
+  z-index: 4;
   transition: opacity 0.15s ease, transform 0.15s ease, color 0.15s ease;
   box-shadow: none;
 }
