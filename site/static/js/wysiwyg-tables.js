@@ -1026,7 +1026,25 @@
     });
 
     wrapper.insertBefore(edgeLayer, table);
+    ensureHandleGutters(wrapper);
     return edgeLayer;
+  }
+
+  function ensureHandleGutters(wrapper) {
+    if (wrapper.querySelector(".table-handle-gutter")) {
+      return;
+    }
+
+    const topGutter = document.createElement("div");
+    topGutter.className = "table-handle-gutter table-handle-gutter-top";
+    topGutter.setAttribute("contenteditable", "false");
+
+    const leftGutter = document.createElement("div");
+    leftGutter.className = "table-handle-gutter table-handle-gutter-left";
+    leftGutter.setAttribute("contenteditable", "false");
+
+    wrapper.appendChild(topGutter);
+    wrapper.appendChild(leftGutter);
   }
 
   function updateEdgeHandlePositions(wrapper, table, cursorPosition) {
@@ -1318,7 +1336,7 @@
       wrapper.classList.remove(DELETE_SELECTED_WRAPPER_CLASS, HOVERED_CLASS);
       wrapper
         .querySelectorAll(
-          ".table-edge-layer, .table-floating-toolbar, .table-edge-controls, .table-insert-preview-layer, .table-hover-bridge",
+          ".table-edge-layer, .table-floating-toolbar, .table-edge-controls, .table-insert-preview-layer, .table-hover-bridge, .table-handle-gutter",
         )
         .forEach((node) => {
           node.remove();
