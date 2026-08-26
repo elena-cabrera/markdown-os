@@ -683,15 +683,15 @@ def test_wysiwyg_table_controls_support_row_and_column_actions() -> None:
     assert "function previewDeleteColumn(table, colIndex)" in tables_source
     assert "function previewDeleteTable(table)" in tables_source
     assert "previewDeleteRow(table, rowIndex)" in tables_source
-    assert "contentLeft - 4" in tables_source
-    assert "contentTop - 4" in tables_source
+    assert "colMidLeft + handleHalf + handleGap" in tables_source
+    assert "rowMidTop + handleHalf + handleGap" in tables_source
     assert "function getEffectiveCursorPosition(wrapper, table)" in tables_source
     assert "function updateEdgeHandlePositions(wrapper, table, cursorPosition)" in tables_source
     assert "function ensureEdgeLayer(wrapper, table)" in tables_source
     assert 'button.dataset.tableAction = spec.action' in tables_source
     assert "const cursorKey = getCursorKey(position)" in tables_source
     assert "cursorKey !== wrapperCursorKeys.get(wrapper)" in tables_source
-    assert "rowDeleteTop = cellRect.top - wrapperRect.top + cellRect.height / 2 - handleHalf" in tables_source
+    assert "rowMidTop = cellRect.top - wrapperRect.top + cellRect.height / 2 - handleHalf" in tables_source
     assert "min-height: 4rem" in css_source
     assert "height: 4rem" in css_source
     assert "min-width: 4rem" in css_source

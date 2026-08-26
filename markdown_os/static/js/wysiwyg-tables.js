@@ -1049,15 +1049,13 @@
 
     const contentRect = getTableContentRect(table);
     const wrapperRect = wrapper.getBoundingClientRect();
-    const rowRect = row.getBoundingClientRect();
     const cellRect = cell.getBoundingClientRect();
-    const rowBorderTop = rowRect.bottom - wrapperRect.top;
-    const columnBorderLeft = cellRect.right - wrapperRect.left;
     const contentTop = contentRect.top - wrapperRect.top;
     const contentLeft = contentRect.left - wrapperRect.left;
     const handleHalf = 12;
-    const rowInsertTop = rowBorderTop - handleHalf;
-    const rowDeleteTop = cellRect.top - wrapperRect.top + cellRect.height / 2 - handleHalf;
+    const handleGap = 4;
+    const rowMidTop = cellRect.top - wrapperRect.top + cellRect.height / 2 - handleHalf;
+    const colMidLeft = cellRect.left - wrapperRect.left + cellRect.width / 2 - handleHalf;
 
     const rowInsert = edgeLayer.querySelector(".table-row-insert-handle");
     const rowDelete = edgeLayer.querySelector(".table-row-delete-handle");
@@ -1066,26 +1064,26 @@
 
     if (rowInsert) {
       rowInsert.hidden = false;
-      rowInsert.style.top = `${rowInsertTop}px`;
+      rowInsert.style.top = `${rowMidTop + handleHalf + handleGap}px`;
       rowInsert.style.left = `${contentLeft - 4}px`;
     }
 
     if (rowDelete) {
       rowDelete.hidden = false;
-      rowDelete.style.top = `${rowDeleteTop}px`;
+      rowDelete.style.top = `${rowMidTop - handleHalf - handleGap}px`;
       rowDelete.style.left = `${contentLeft - 4}px`;
       rowDelete.disabled = rows.length <= 1;
     }
 
     if (colInsert) {
       colInsert.hidden = false;
-      colInsert.style.left = `${columnBorderLeft - 12}px`;
+      colInsert.style.left = `${colMidLeft + handleHalf + handleGap}px`;
       colInsert.style.top = `${contentTop - 4}px`;
     }
 
     if (colDelete) {
       colDelete.hidden = false;
-      colDelete.style.left = `${cellRect.left - wrapperRect.left + cellRect.width / 2 - 12}px`;
+      colDelete.style.left = `${colMidLeft - handleHalf - handleGap}px`;
       colDelete.style.top = `${contentTop - 4}px`;
       colDelete.disabled = getColumnCount(table) <= 1;
     }
