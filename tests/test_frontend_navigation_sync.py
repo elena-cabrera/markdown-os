@@ -407,10 +407,12 @@ def test_wysiwyg_keeps_gaps_around_atomic_blocks() -> None:
     assert ".block-gap-insert" in styles
     assert ".block-gap-insert-before" in styles
     assert ".block-gap-insert-after" in styles
-    assert "--block-gap-preview-height: 1.7em" in styles
+    assert "--block-gap-preview-height: 36px" in styles
     assert "height: var(--block-gap-preview-height);" in styles
     assert "border: 0 dashed transparent;" in styles
-    assert "border-width: 2px;" in styles
+    assert "border-width: 1px;\n  border-color: var(--border);" in styles
+    assert ".block-gap-insert-plus {" in styles
+    assert ".action-icon-button,\n.copy-button,\n.block-edit-trigger,\n.block-gap-insert-plus {" in styles
     assert "function pruneOrphanGapInserts()" in source
     assert "function bindGapPreviewHover(block)" in source
     assert "function bindGapHandleUnlock(block, handle)" in source

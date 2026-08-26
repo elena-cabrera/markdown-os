@@ -1520,7 +1520,7 @@ body.file-drop-active #app-container {
   color: var(--editor-text);
   line-height: 1.7;
   font-size: 16px;
-  --block-gap-preview-height: 1.7em;
+  --block-gap-preview-height: 36px;
   --atomic-block-gap: 16px;
   /* In-flow space after the last line (padding extends the scrollable box reliably in normal mode). */
   padding-bottom: calc(20px + var(--editor-end-scroll-padding));
@@ -2046,7 +2046,8 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 
 .action-icon-button,
 .copy-button,
-.block-edit-trigger {
+.block-edit-trigger,
+.block-gap-insert-plus {
   width: 28px;
   height: 28px;
   border: 1px solid var(--border);
@@ -2064,7 +2065,8 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 
 .action-icon-button svg,
 .copy-button svg,
-.block-edit-trigger svg {
+.block-edit-trigger svg,
+.block-gap-insert-plus svg {
   width: 15px;
   height: 15px;
 }
@@ -2241,8 +2243,8 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   line-height: inherit;
   opacity: 1;
   overflow: visible;
-  border-width: 2px;
-  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+  border-width: 1px;
+  border-color: var(--border);
   background: color-mix(in srgb, var(--accent) 6%, transparent);
   pointer-events: auto;
   transition: height 0.16s ease, margin 0.16s ease, opacity 0s linear 0.1s;
@@ -2256,31 +2258,14 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 .block-gap-insert-plus {
   position: relative;
   z-index: 1;
-  width: 22px;
-  height: 22px;
   flex-shrink: 0;
-  border-radius: 50%;
-  border: 1px solid var(--border);
-  background: var(--panel-bg);
-  color: var(--accent);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: var(--shadow);
+  box-shadow: none;
   pointer-events: none;
   opacity: 0;
 }
 
-.block-gap-insert-plus svg {
-  width: 12px;
-  height: 12px;
-}
-
-.block-gap-insert:hover:not(.is-locked) .block-gap-insert-plus,
 .block-gap-insert:focus-visible:not(.is-locked) .block-gap-insert-plus,
 .block-gap-insert.is-preview .block-gap-insert-plus {
-  border-color: var(--accent);
-  color: var(--accent);
   opacity: 1;
   transition: opacity 0.12s ease 0.1s;
 }
