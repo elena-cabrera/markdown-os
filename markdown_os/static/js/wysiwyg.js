@@ -469,7 +469,7 @@
   const ATOMIC_GAP_HOST_SELECTOR =
     ".mermaid-container, .code-block, .math-display";
   const GAP_PREVIEW_EDGE_PX = 40;
-  const GAP_PREVIEW_STICKY_MOVE_PX = 6;
+  const GAP_PREVIEW_STICKY_MOVE_PX = 2;
   const gapPreviewSticky = new WeakMap();
   const gapPreviewSuppressed = new WeakMap();
   const EDITOR_FRONTMATTER_SELECTOR =

@@ -414,7 +414,7 @@ def test_wysiwyg_keeps_gaps_around_atomic_blocks() -> None:
     assert "function pruneOrphanGapInserts()" in source
     assert "function bindGapPreviewHover(block)" in source
     assert "function bindGapHandleUnlock(block, handle)" in source
-    assert "const GAP_PREVIEW_STICKY_MOVE_PX = 6;" in source
+    assert "const GAP_PREVIEW_STICKY_MOVE_PX = 2;" in source
     assert "const inBeforeGap =" in source
     assert "function bindEditorGapPreviewTracking()" in source
     assert "updateGapPreviewsAtPoint(event.clientX, event.clientY)" in source
