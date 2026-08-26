@@ -627,13 +627,18 @@ def test_mermaid_fullscreen_modal_animates_from_center() -> None:
     from_block = keyframes.split("from {", 1)[1].split("}", 1)[0]
     to_block = keyframes.split("to {", 1)[1].split("}", 1)[0]
     assert "opacity: 0" in from_block
+    assert "translate(-50%, -50%)" in from_block
     assert "scale(" in from_block
-    assert "translate(-50%" not in from_block
     assert "opacity: 1" in to_block
+    assert "translate(-50%, -50%)" in to_block
     assert "scale(1)" in to_block
 
     origin_rule = styles.split(".mermaid-fullscreen-modal {", 1)[1].split("}", 1)[0]
+    assert "top: 50%" in origin_rule
+    assert "left: 50%" in origin_rule
+    assert "transform: translate(-50%, -50%)" in origin_rule
     assert "transform-origin: center" in origin_rule
+    assert "inset:" not in origin_rule
 
 
 def test_wysiwyg_mermaid_toolbar_is_separate_from_canvas_layer() -> None:
