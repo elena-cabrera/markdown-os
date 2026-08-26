@@ -1053,7 +1053,7 @@
     const contentTop = contentRect.top - wrapperRect.top;
     const contentLeft = contentRect.left - wrapperRect.left;
     const handleHalf = 12;
-    const handleGap = 4;
+    const handleGap = 0;
     const rowMidTop = cellRect.top - wrapperRect.top + cellRect.height / 2 - handleHalf;
     const colMidLeft = cellRect.left - wrapperRect.left + cellRect.width / 2 - handleHalf;
 
