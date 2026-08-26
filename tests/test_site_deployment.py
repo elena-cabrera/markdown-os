@@ -42,12 +42,14 @@ def test_vercel_site_contains_web_editor_entrypoint() -> None:
     assert deployed.is_file()
     source_html = source.read_text(encoding="utf-8")
     deployed_html = deployed.read_text(encoding="utf-8")
-    # Web /app injects Google Fonts after fonts.css; everything else matches.
+    # Web /app injects Google Fonts and Speed Insights; everything else matches.
     assert 'href="/static/css/fonts.css"' in deployed_html
     assert "fonts.googleapis.com" in deployed_html
     assert "fonts.googleapis.com" not in source_html
+    assert "/_vercel/speed-insights/script.js" in deployed_html
+    assert "/_vercel/speed-insights/script.js" not in source_html
     assert '/static/js/storage-backend.js' in deployed_html
-    assert deployed_html.replace(
+    stripped = deployed_html.replace(
         '    <link rel="stylesheet" href="/static/css/fonts.css" />\n'
         '    <link rel="preconnect" href="https://fonts.googleapis.com" />\n'
         '    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />\n'
@@ -57,7 +59,16 @@ def test_vercel_site_contains_web_editor_entrypoint() -> None:
         "    />\n",
         '    <link rel="stylesheet" href="/static/css/fonts.css" />\n',
         1,
-    ) == source_html
+    ).replace(
+        "    <!-- Vercel Speed Insights -->\n"
+        "    <script>\n"
+        "      window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };\n"
+        "    </script>\n"
+        '    <script defer src="/_vercel/speed-insights/script.js"></script>\n',
+        "",
+        1,
+    )
+    assert stripped == source_html
 
 
 def test_vercel_site_contains_static_editor_assets() -> None:
@@ -127,3 +138,32 @@ def test_landing_hero_cta_hierarchy() -> None:
     assert 'class="install-widget"' not in index
     assert 'install-command' not in index
     assert 'data-tab="uv"' not in index
+
+
+def test_vercel_pages_include_speed_insights() -> None:
+    """Verify every Vercel-hosted HTML page loads Speed Insights."""
+
+    root = _repo_root()
+    pages = [
+        root / "site" / "index.html",
+        root / "site" / "downloads.html",
+        root / "site" / "demo-frame.html",
+        root / "site" / "app" / "index.html",
+    ]
+    for page in pages:
+        html = page.read_text(encoding="utf-8")
+        assert "window.si" in html, f"Missing Speed Insights queue in {page.name}"
+        assert "/_vercel/speed-insights/script.js" in html, (
+            f"Missing Speed Insights script in {page.name}"
+        )
+
+
+def test_local_editor_does_not_include_speed_insights() -> None:
+    """Verify the CLI editor does not load Vercel Speed Insights."""
+
+    html = (_repo_root() / "markdown_os" / "static" / "index.html").read_text(
+        encoding="utf-8"
+    )
+
+    assert "/_vercel/speed-insights/script.js" not in html
+    assert "window.si" not in html
