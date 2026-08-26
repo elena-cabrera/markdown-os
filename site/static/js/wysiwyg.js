@@ -634,6 +634,10 @@
     const rect = block.getBoundingClientRect();
     const beforeRect = gapHandleFor(block, "before")?.getBoundingClientRect();
     const afterRect = gapHandleFor(block, "after")?.getBoundingClientRect();
+    const header = block.querySelector(
+      ":scope > .mermaid-inline-toolbar, :scope > .code-block-header",
+    );
+    const headerRect = header?.getBoundingClientRect();
     const edgePx = 40;
     const left = Math.min(
       rect.left,
@@ -650,7 +654,12 @@
     }
 
     const beforeTop = beforeRect ? Math.min(beforeRect.top, rect.top) : rect.top;
-    const beforeBottom = Math.max(rect.top + edgePx, beforeRect?.bottom ?? rect.top);
+    let beforeBottom = rect.top + edgePx;
+    if (headerRect && headerRect.top <= rect.top + edgePx) {
+      beforeBottom = Math.max(beforeBottom, headerRect.bottom);
+    }
+    beforeBottom = Math.max(beforeBottom, beforeRect?.bottom ?? rect.top);
+
     const afterTop = Math.min(rect.bottom - edgePx, afterRect?.top ?? rect.bottom);
     const afterBottom = afterRect
       ? Math.max(afterRect.bottom, rect.bottom)
@@ -708,18 +717,19 @@
   }
 
   function bindEditorGapPreviewTracking() {
-    if (!state.root || state.root.dataset.gapPreviewTracking === "true") {
+    if (document.documentElement.dataset.gapPreviewTracking === "true") {
       return;
     }
-    state.root.dataset.gapPreviewTracking = "true";
+    document.documentElement.dataset.gapPreviewTracking = "true";
 
-    state.root.addEventListener("pointermove", (event) => {
-      updateGapPreviewsAtPoint(event.clientX, event.clientY);
-    });
-    state.root.addEventListener("pointerleave", (event) => {
-      if (event.relatedTarget && state.root.contains(event.relatedTarget)) {
-        return;
-      }
+    document.addEventListener(
+      "pointermove",
+      (event) => {
+        updateGapPreviewsAtPoint(event.clientX, event.clientY);
+      },
+      { passive: true },
+    );
+    document.addEventListener("pointerleave", () => {
       clearAllGapPreviews();
     });
   }

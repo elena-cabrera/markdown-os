@@ -416,6 +416,7 @@ def test_wysiwyg_keeps_gaps_around_atomic_blocks() -> None:
     assert "function gapPreviewSideForPoint(block, clientX, clientY)" in source
     assert "function bindEditorGapPreviewTracking()" in source
     assert "updateGapPreviewsAtPoint(event.clientX, event.clientY)" in source
+    assert ":scope > .mermaid-inline-toolbar, :scope > .code-block-header" in source
     assert "handle.replaceWith(paragraph)" in source
     assert "function setGapPreviewLocked(block, locked)" in source
     assert 'block.dataset.gapPreviewLocked = "true"' in source
@@ -424,6 +425,7 @@ def test_wysiwyg_keeps_gaps_around_atomic_blocks() -> None:
     assert ".block-gap-insert:hover:not(.is-locked)" in styles
     assert ".block-gap-insert-before + .mermaid-container" in styles
     assert ".mermaid-container:has(+ .block-gap-insert-after)" in styles
+    assert "margin-bottom: -8px;" in styles
 
 
 def test_wysiwyg_uses_icon_action_buttons_for_edit_and_copy() -> None:
