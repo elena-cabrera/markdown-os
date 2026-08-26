@@ -721,11 +721,14 @@ def test_wysiwyg_table_controls_support_row_and_column_actions() -> None:
     assert ".table-row-insert-handle" in css_source
     assert ".table-editor-wrapper:hover .table-row-delete-handle" in css_source
     assert ".table-editor-wrapper.table-editor-active .table-row-delete-handle" not in css_source
-    assert ".table-hover-bridge-left" in css_source
+    assert ".table-hover-bridge-top" not in css_source
+    assert ".table-hover-bridge-left" not in css_source
     assert "function bindWrapperHover(wrapper)" in tables_source
-    assert "function ensureHoverBridges(wrapper)" in tables_source
+    assert "function ensureHoverBridges(wrapper)" not in tables_source
     assert "function getHandleActionPosition(wrapper, table)" in tables_source
-    assert "table-hover-bridge" in tables_source
+    assert ".table-row-insert-handle::after" in css_source
+    assert "width: 44px;" in css_source.split(".table-row-insert-handle::after", 1)[1].split("}", 1)[0]
+    assert "height: 44px;" in css_source.split(".table-col-insert-handle::after", 1)[1].split("}", 1)[0]
     table_css = css_source.split("#wysiwyg-editor table {", 1)[1].split("}", 1)[0]
     assert "display: table;" in table_css
     assert "display: block;" not in table_css

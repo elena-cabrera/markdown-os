@@ -1771,26 +1771,6 @@ html.link-open-modifier #wysiwyg-editor a[href] {
   overflow: visible;
 }
 
-.table-hover-bridge {
-  position: absolute;
-  pointer-events: auto;
-  z-index: 1;
-}
-
-.table-hover-bridge-left {
-  top: -40px;
-  left: -40px;
-  width: 40px;
-  bottom: 0;
-}
-
-.table-hover-bridge-top {
-  top: -40px;
-  left: 0;
-  right: 0;
-  height: 40px;
-}
-
 .table-editor-wrapper > table {
   margin: 0;
 }
@@ -1893,20 +1873,20 @@ html.link-open-modifier #wysiwyg-editor a[href] {
 .table-row-delete-handle::after {
   content: "";
   position: absolute;
-  top: -6px;
-  bottom: -6px;
+  top: -8px;
+  bottom: -8px;
   left: 0;
-  width: 40px;
+  width: 44px;
 }
 
 .table-col-insert-handle::after,
 .table-col-delete-handle::after {
   content: "";
   position: absolute;
-  left: -6px;
-  right: -6px;
+  left: -8px;
+  right: -8px;
   top: 0;
-  height: 40px;
+  height: 44px;
 }
 
 .table-row-delete-handle,

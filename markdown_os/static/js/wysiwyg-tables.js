@@ -1171,23 +1171,6 @@
     syncTableEditorState();
   }
 
-  function ensureHoverBridges(wrapper) {
-    if (wrapper.querySelector(".table-hover-bridge")) {
-      return;
-    }
-
-    const leftBridge = document.createElement("div");
-    leftBridge.className = "table-hover-bridge table-hover-bridge-left";
-    leftBridge.setAttribute("contenteditable", "false");
-
-    const topBridge = document.createElement("div");
-    topBridge.className = "table-hover-bridge table-hover-bridge-top";
-    topBridge.setAttribute("contenteditable", "false");
-
-    wrapper.appendChild(leftBridge);
-    wrapper.appendChild(topBridge);
-  }
-
   function bindWrapperHover(wrapper) {
     if (wrapper.dataset.tableHoverBound === "true") {
       return;
@@ -1235,7 +1218,6 @@
     wrapper.dataset.tableDecorated = "true";
     buildFloatingToolbar(wrapper, table);
     buildEdgeLayer(wrapper, table);
-    ensureHoverBridges(wrapper);
     bindWrapperHover(wrapper);
   }
 
