@@ -19,7 +19,11 @@ import {
   openReleaseUrl,
   releaseFeedUrl,
 } from "./updater";
-import { shouldInstallApplicationMenu } from "./application-menu";
+import {
+  buildApplicationMenuTemplate,
+  buildEditorContextMenuTemplate,
+  shouldInstallApplicationMenu,
+} from "./application-menu";
 
 let mainWindow: BrowserWindow | null = null;
 let backendHandle: BackendHandle | null = null;
@@ -93,42 +97,40 @@ async function sendWorkspaceToRenderer(filePath: string): Promise<void> {
   );
 }
 
-function buildMenu(): Menu | null {
-  if (!shouldInstallApplicationMenu(process.platform)) {
-    return null;
-  }
+function buildMenu(): Menu {
+  return Menu.buildFromTemplate(
+    buildApplicationMenuTemplate(process.platform, {
+      onOpen: async () => {
+        const selectedPath = await pickFileOrFolder(currentWindow());
+        if (!selectedPath) {
+          return;
+        }
+        await sendWorkspaceToRenderer(selectedPath);
+      },
+      onBackToPicker: async () => {
+        await currentWindow().webContents.executeJavaScript(
+          `
+            window.MarkdownOS?.desktopShell?.closeWorkspace?.();
+          `,
+          true,
+        );
+      },
+    }),
+  );
+}
 
-  return Menu.buildFromTemplate([
-    {
-      label: "File",
-      submenu: [
-        {
-          label: "Open...",
-          accelerator: "CmdOrCtrl+O",
-          click: async () => {
-            const selectedPath = await pickFileOrFolder(currentWindow());
-            if (!selectedPath) {
-              return;
-            }
-            await sendWorkspaceToRenderer(selectedPath);
-          },
-        },
-        {
-          label: "Back to Picker",
-          click: async () => {
-            await currentWindow().webContents.executeJavaScript(
-              `
-                window.MarkdownOS?.desktopShell?.closeWorkspace?.();
-              `,
-              true,
-            );
-          },
-        },
-        { type: "separator" },
-        { role: "quit" },
-      ],
-    },
-  ]);
+function registerEditorContextMenu(window: BrowserWindow): void {
+  window.webContents.on("context-menu", (_event, params) => {
+    const template = buildEditorContextMenuTemplate({
+      isEditable: params.isEditable,
+      selectionText: params.selectionText,
+      editFlags: params.editFlags,
+    });
+    if (template.length === 0) {
+      return;
+    }
+    Menu.buildFromTemplate(template).popup({ window });
+  });
 }
 
 async function createMainWindow(): Promise<void> {
@@ -147,6 +149,10 @@ async function createMainWindow(): Promise<void> {
   });
 
   Menu.setApplicationMenu(buildMenu());
+  if (!shouldInstallApplicationMenu(process.platform)) {
+    mainWindow.setMenuBarVisibility(false);
+  }
+  registerEditorContextMenu(mainWindow);
   await mainWindow.loadURL(backendHandle!.url);
 
   if (pendingOpenPath) {
