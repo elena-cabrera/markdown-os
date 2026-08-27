@@ -76,10 +76,27 @@ describe("buildEditorContextMenuTemplate", () => {
     assert.deepEqual(roles, ["undo", "redo", "cut", "copy", "paste", "selectAll"]);
   });
 
+  it("offers copy for a whitespace-only read-only selection", () => {
+    const items = buildEditorContextMenuTemplate({
+      isEditable: false,
+      selectionText: "    \n  ",
+      editFlags: {
+        canUndo: false,
+        canRedo: false,
+        canCut: false,
+        canCopy: true,
+        canPaste: false,
+        canSelectAll: true,
+      },
+    });
+    assert.deepEqual(collectMenuRoles(items), ["copy"]);
+    assert.equal(items[0]?.enabled, true);
+  });
+
   it("hides the context menu when nothing can be copied", () => {
     const items = buildEditorContextMenuTemplate({
       isEditable: false,
-      selectionText: "   ",
+      selectionText: "",
       editFlags: {
         canUndo: false,
         canRedo: false,

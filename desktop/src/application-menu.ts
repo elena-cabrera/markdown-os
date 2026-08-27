@@ -135,8 +135,8 @@ export function buildApplicationMenuTemplate(
 export function buildEditorContextMenuTemplate(
   params: EditorContextMenuParams,
 ): MenuTemplateItem[] {
-  const hasSelection = params.selectionText.trim().length > 0;
-  if (!params.isEditable && !hasSelection) {
+  const hasSelection = params.selectionText.length > 0;
+  if (!params.isEditable && !hasSelection && !params.editFlags.canCopy) {
     return [];
   }
 
